@@ -9,6 +9,7 @@ import {
   type StageShellScenarioId,
   type TimedStageEvent
 } from "@blackstage/stage-core";
+import { createBuildBlackstageHarnessStageEvents } from "../harness/harnessStageProjection";
 
 export type SimulatedAgentRuntime = {
   mode: "simulated";
@@ -61,5 +62,14 @@ export function createSimulatedApprovalContinuation(
   scenario: StageShellScenario,
   resolvedAt = new Date().toISOString()
 ): TimedStageEvent[] {
-  return createApprovedScenarioStageEvents(scenario, resolvedAt);
+  const approvedEvents = createApprovedScenarioStageEvents(scenario, resolvedAt);
+
+  if (scenario.id !== "build_blackstage") {
+    return approvedEvents;
+  }
+
+  return [
+    ...approvedEvents,
+    ...createBuildBlackstageHarnessStageEvents(scenario.threadId, resolvedAt)
+  ];
 }

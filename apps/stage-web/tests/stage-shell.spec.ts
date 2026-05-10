@@ -332,6 +332,15 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
   await expect(page.getByTestId("simulation-surface")).toContainText("First five seconds");
   await expect(page.getByTestId("memory-surface")).toContainText("local-first");
   await expect(page.getByTestId("memory-surface")).toContainText("Memory writes require approval");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Background harness recorder"
+  );
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Approval gate blocked workspace write"
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Replayable failure captured"
+  );
 });
 
 test("Stage Shell v0 attaches local context as a private document object", async ({ page }) => {

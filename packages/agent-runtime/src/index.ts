@@ -1,4 +1,5 @@
 export * from "./approvals/approvalDraft";
+export * from "./harness/harnessStageProjection";
 export * from "./harness/harnessTypes";
 export * from "./harness/inMemoryHarnessScheduler";
 export * from "./harness/simulatedHarnessAdapter";

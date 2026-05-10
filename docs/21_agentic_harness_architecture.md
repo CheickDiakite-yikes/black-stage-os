@@ -102,6 +102,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - one blocked approval
    - one completed artifact
    - one replayable failure
+   - Status: implemented as local scheduler proof projected into Stage events after the Build BlackStage approval.
 
 4. Add docs and tests before live API calls:
    - local-only harness test

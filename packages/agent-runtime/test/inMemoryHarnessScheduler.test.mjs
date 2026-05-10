@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import {
+  createBuildBlackstageHarnessSnapshot,
+  projectHarnessSnapshotToStageEvents
+} from "../dist/harness/harnessStageProjection.js";
 import { InMemoryHarnessScheduler } from "../dist/harness/inMemoryHarnessScheduler.js";
 import { createSimulatedHarnessAdapter } from "../dist/harness/simulatedHarnessAdapter.js";
 
@@ -94,6 +98,43 @@ describe("InMemoryHarnessScheduler", () => {
     assert.deepEqual(
       snapshot.tasks.map((task) => task.status),
       ["completed", "completed"]
+    );
+  });
+});
+
+describe("Harness stage projection", () => {
+  it("projects scheduler proof into replayable stage events", () => {
+    const snapshot = createBuildBlackstageHarnessSnapshot(
+      "thread_build_blackstage",
+      "2026-05-10T22:50:00.000Z"
+    );
+    const stageEvents = projectHarnessSnapshotToStageEvents(
+      snapshot,
+      "thread_build_blackstage",
+      "2026-05-10T22:50:00.000Z",
+      100
+    );
+
+    assert.ok(
+      stageEvents.some(
+        (event) =>
+          event.event.type === "object.created" &&
+          event.event.payload.title === "Background harness recorder"
+      )
+    );
+    assert.ok(
+      stageEvents.some(
+        (event) =>
+          event.event.type === "agent.progress" &&
+          event.event.payload.summary === "Replayable failure captured."
+      )
+    );
+    assert.ok(
+      stageEvents.some(
+        (event) =>
+          event.event.type === "agent.progress" &&
+          event.event.payload.summary === "Approval gate blocked workspace write."
+      )
     );
   });
 });
