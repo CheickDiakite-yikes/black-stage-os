@@ -1,0 +1,6 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+BlackStage_OS_Build_Pack
+*.xlsx

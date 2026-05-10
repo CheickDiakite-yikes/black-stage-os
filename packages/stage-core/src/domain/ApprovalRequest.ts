@@ -1,0 +1,37 @@
+import type { IsoTimestamp } from "./shared";
+
+export type ApprovalActionType =
+  | "external_message"
+  | "file_write"
+  | "file_delete"
+  | "purchase"
+  | "calendar_action"
+  | "data_share"
+  | "network_access"
+  | "code_execution"
+  | "credential_use";
+
+export type ApprovalRiskLevel = "low" | "medium" | "high" | "critical";
+
+export type ApprovalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "edited"
+  | "expired";
+
+export type ApprovalRequest = {
+  id: string;
+  threadId: string;
+  actionType: ApprovalActionType;
+  title: string;
+  summary: string;
+  riskLevel: ApprovalRiskLevel;
+  proposedBy: string;
+  scope: string;
+  consequence: string;
+  undoPath?: string;
+  status: ApprovalStatus;
+  createdAt: IsoTimestamp;
+  resolvedAt?: IsoTimestamp;
+};

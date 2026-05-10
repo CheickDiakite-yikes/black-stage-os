@@ -1,0 +1,28 @@
+{
+  "name": "@blackstage/stage-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"No stage-web tests configured yet.\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@blackstage/agent-runtime": "workspace:*",
+    "@blackstage/memory-core": "workspace:*",
+    "@blackstage/stage-core": "workspace:*",
+    "@blackstage/stage-ui": "workspace:*",
+    "@blackstage/voice-core": "workspace:*",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.11"
+  }
+}

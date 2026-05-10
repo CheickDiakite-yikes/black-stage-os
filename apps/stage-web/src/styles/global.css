@@ -1,0 +1,667 @@
+:root {
+  color: #efe4d2;
+  background: #000000;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.stage-shell {
+  --stage-accent: #d8bd85;
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 52%, rgba(206, 181, 128, 0.1), transparent 9rem),
+    radial-gradient(circle at 52% 44%, rgba(255, 255, 255, 0.045), transparent 30rem),
+    linear-gradient(180deg, #020202 0%, #050606 45%, #000000 100%);
+  color: #efe4d2;
+}
+
+.stage-shell::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(circle at 6% 8%, rgba(216, 189, 133, 0.28) 0 1px, transparent 2px),
+    radial-gradient(circle at 18% 27%, rgba(238, 222, 185, 0.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 38% 14%, rgba(238, 222, 185, 0.14) 0 1px, transparent 2px),
+    radial-gradient(circle at 57% 36%, rgba(216, 189, 133, 0.23) 0 1px, transparent 2px),
+    radial-gradient(circle at 76% 18%, rgba(238, 222, 185, 0.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 91% 52%, rgba(216, 189, 133, 0.2) 0 1px, transparent 2px),
+    radial-gradient(circle at 84% 86%, rgba(238, 222, 185, 0.16) 0 1px, transparent 2px),
+    radial-gradient(circle at 29% 74%, rgba(238, 222, 185, 0.12) 0 1px, transparent 2px);
+  animation: distant-stars-twinkle 18s ease-in-out infinite alternate;
+  opacity: 0.64;
+  pointer-events: none;
+}
+
+.stage-shell::after {
+  position: absolute;
+  inset: -1px;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.75)),
+    radial-gradient(circle at 50% 52%, transparent 0 11rem, rgba(0, 0, 0, 0.3) 34rem),
+    radial-gradient(circle at center, transparent 0 46%, rgba(0, 0, 0, 0.62) 100%);
+  pointer-events: none;
+}
+
+.stage-depth {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0 49.9%, rgba(216, 189, 133, 0.1) 50%, transparent 50.1%),
+    linear-gradient(0deg, transparent 0 49.9%, rgba(216, 189, 133, 0.04) 50%, transparent 50.1%);
+  mask-image: radial-gradient(circle at center, black 0 7rem, transparent 21rem);
+  opacity: 0.52;
+  pointer-events: none;
+}
+
+.stage-fluid-field {
+  position: absolute;
+  inset: -18%;
+  z-index: 0;
+  background:
+    conic-gradient(
+      from 18deg at 50% 48%,
+      transparent 0deg,
+      rgba(216, 189, 133, 0.035) 54deg,
+      transparent 108deg,
+      rgba(239, 228, 210, 0.026) 172deg,
+      transparent 232deg,
+      rgba(216, 189, 133, 0.032) 294deg,
+      transparent 360deg
+    ),
+    linear-gradient(115deg, transparent 12%, rgba(216, 189, 133, 0.03) 43%, transparent 72%),
+    linear-gradient(255deg, transparent 18%, rgba(255, 255, 255, 0.022) 50%, transparent 82%);
+  filter: blur(26px);
+  mask-image: radial-gradient(ellipse at center, black 0 38%, transparent 72%);
+  opacity: 0.68;
+  pointer-events: none;
+  transform-origin: 50% 48%;
+  animation: fluid-field-drift 32s ease-in-out infinite alternate;
+}
+
+.stage-stars {
+  position: absolute;
+  inset: -8%;
+  z-index: 1;
+  background-repeat: repeat;
+  mask-image: radial-gradient(circle at center, black 0 62%, transparent 98%);
+  pointer-events: none;
+}
+
+.stage-stars-slow {
+  background-image:
+    radial-gradient(circle at 11% 22%, rgba(239, 228, 210, 0.18) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 33% 68%, rgba(216, 189, 133, 0.14) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 38%, rgba(239, 228, 210, 0.13) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 91% 82%, rgba(216, 189, 133, 0.16) 0 1px, transparent 1.7px);
+  background-size:
+    31rem 24rem,
+    27rem 34rem,
+    42rem 29rem,
+    36rem 40rem;
+  opacity: 0.72;
+  animation:
+    star-drift-slow 62s linear infinite,
+    star-breathe 11s ease-in-out infinite alternate;
+}
+
+.stage-stars-near {
+  background-image:
+    radial-gradient(circle at 18% 47%, rgba(216, 189, 133, 0.24) 0 1px, transparent 2px),
+    radial-gradient(circle at 46% 18%, rgba(239, 228, 210, 0.18) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 64% 72%, rgba(216, 189, 133, 0.18) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 82% 28%, rgba(239, 228, 210, 0.16) 0 1px, transparent 1.7px);
+  background-size:
+    24rem 19rem,
+    34rem 28rem,
+    29rem 22rem,
+    38rem 31rem;
+  opacity: 0.4;
+  animation:
+    star-drift-near 44s linear infinite,
+    star-breathe 8s ease-in-out infinite alternate-reverse;
+}
+
+.stage-map {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.constellation {
+  position: absolute;
+  overflow: visible;
+  color: var(--stage-accent);
+  opacity: 0.38;
+  transform-origin: center;
+  animation:
+    constellation-float 28s ease-in-out infinite alternate,
+    constellation-breathe 9s ease-in-out infinite alternate;
+}
+
+.constellation path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  animation: line-current 12s ease-in-out infinite alternate;
+}
+
+.constellation circle {
+  fill: rgba(216, 189, 133, 0.62);
+  stroke: rgba(239, 228, 210, 0.28);
+  stroke-width: 1;
+  filter: drop-shadow(0 0 6px rgba(216, 189, 133, 0.22));
+  transform-origin: center;
+  animation: star-node-pulse 7s ease-in-out infinite alternate;
+}
+
+.constellation-nw {
+  top: -1rem;
+  left: -1.5rem;
+  width: min(29vw, 21rem);
+  animation-duration: 31s, 11s;
+}
+
+.constellation-sw {
+  bottom: -1.5rem;
+  left: -2.5rem;
+  width: min(33vw, 24rem);
+  animation-duration: 37s, 13s;
+  animation-direction: alternate-reverse, alternate;
+}
+
+.constellation-ne {
+  top: -2rem;
+  right: -1rem;
+  width: min(35vw, 25rem);
+  animation-duration: 34s, 10s;
+  animation-direction: alternate, alternate-reverse;
+}
+
+.constellation-se {
+  right: -2rem;
+  bottom: 5rem;
+  width: min(38vw, 29rem);
+  animation-duration: 42s, 12s;
+}
+
+.stage-presence {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(86vw, 34rem);
+  place-items: center;
+  gap: 9.5rem;
+  text-align: center;
+  transform: translateY(-1rem);
+}
+
+.presence-orbit {
+  position: relative;
+  width: 8.25rem;
+  aspect-ratio: 1;
+  border: 1px solid rgba(216, 189, 133, 0.16);
+  border-radius: 50%;
+  box-shadow:
+    0 0 42px rgba(216, 189, 133, 0.09),
+    inset 0 0 24px rgba(216, 189, 133, 0.05);
+  animation:
+    stage-breathe 8.5s ease-in-out infinite,
+    ring-drift 38s linear infinite;
+}
+
+.presence-orbit::before,
+.presence-orbit::after {
+  position: absolute;
+  inset: 22%;
+  content: "";
+  border: 1px solid rgba(239, 228, 210, 0.085);
+  border-radius: inherit;
+  animation: inner-ring-drift 26s linear infinite;
+}
+
+.presence-orbit::after {
+  inset: 38%;
+  border-color: rgba(216, 189, 133, 0.22);
+  filter: blur(0.2px);
+  animation-direction: reverse;
+  animation-duration: 18s;
+}
+
+.presence-core {
+  position: absolute;
+  inset: 44%;
+  border-radius: 50%;
+  background: var(--stage-accent);
+  box-shadow:
+    0 0 10px rgba(255, 243, 217, 0.9),
+    0 0 28px rgba(216, 189, 133, 0.54),
+    0 0 90px rgba(216, 189, 133, 0.16);
+  animation: core-pulse 5.8s ease-in-out infinite alternate;
+}
+
+.presence-core::before,
+.presence-core::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.presence-core::before {
+  top: 50%;
+  left: 50%;
+  width: 7rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(216, 189, 133, 0.34), transparent);
+  transform: translate(-50%, -50%);
+  animation: light-sweep 7s ease-in-out infinite alternate;
+}
+
+.presence-core::after {
+  inset: -75%;
+  border: 1px solid rgba(239, 228, 210, 0.22);
+  border-radius: 50%;
+}
+
+.stage-copy {
+  display: grid;
+  place-items: center;
+  gap: 1.25rem;
+}
+
+.stage-copy h1 {
+  margin: 0;
+  color: rgba(239, 218, 180, 0.92);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 1.38rem;
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  text-shadow:
+    0 0 12px rgba(216, 189, 133, 0.2),
+    0 0 32px rgba(216, 189, 133, 0.1);
+  white-space: nowrap;
+}
+
+.prompt-rule {
+  position: relative;
+  width: 4rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(216, 189, 133, 0.34), transparent);
+  animation: prompt-line-breathe 5.5s ease-in-out infinite alternate;
+}
+
+.prompt-rule::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.32rem;
+  height: 0.32rem;
+  content: "";
+  background: var(--stage-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 11px rgba(216, 189, 133, 0.5);
+  transform: translate(-50%, -50%) rotate(45deg);
+  animation: prompt-glyph-pulse 4.5s ease-in-out infinite alternate;
+}
+
+.intent-capture {
+  position: absolute;
+  right: 50%;
+  bottom: 2.2rem;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  width: min(18rem, calc(100vw - 2rem));
+  opacity: 0.44;
+  transform: translateX(50%);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.intent-capture:focus-within {
+  opacity: 1;
+  transform: translateX(50%) translateY(-0.25rem);
+}
+
+.intent-capture input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid rgba(216, 189, 133, 0.22);
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: #efe4d2;
+  padding: 0.35rem 0.25rem 0.55rem;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  text-align: center;
+  box-shadow: none;
+}
+
+.intent-capture input::placeholder {
+  color: rgba(239, 218, 180, 0.54);
+}
+
+.intent-capture input:focus {
+  border-color: rgba(239, 218, 180, 0.74);
+}
+
+.stage-memory-status {
+  position: absolute;
+  right: 5.2rem;
+  bottom: 4.2rem;
+  z-index: 2;
+  margin: 0;
+  color: rgba(239, 218, 180, 0.8);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.34em;
+  text-shadow: 0 0 16px rgba(216, 189, 133, 0.16);
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes stage-breathe {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.035);
+  }
+}
+
+@keyframes distant-stars-twinkle {
+  0% {
+    opacity: 0.48;
+  }
+
+  55% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 0.58;
+  }
+}
+
+@keyframes fluid-field-drift {
+  0% {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+    opacity: 0.42;
+    transform: scale(1) rotate(0deg);
+  }
+
+  45% {
+    opacity: 0.7;
+    transform: scale(1.04) rotate(4deg);
+  }
+
+  100% {
+    background-position:
+      5rem -3rem,
+      -6rem 3rem,
+      4rem 5rem;
+    opacity: 0.55;
+    transform: scale(1.02) rotate(-3deg);
+  }
+}
+
+@keyframes star-drift-slow {
+  100% {
+    background-position:
+      10rem -7rem,
+      -8rem 11rem,
+      13rem 8rem,
+      -12rem -9rem;
+  }
+}
+
+@keyframes star-drift-near {
+  100% {
+    background-position:
+      -8rem 5rem,
+      9rem -7rem,
+      -12rem -6rem,
+      8rem 10rem;
+  }
+}
+
+@keyframes star-breathe {
+  0% {
+    filter: brightness(0.82);
+  }
+
+  100% {
+    filter: brightness(1.18);
+  }
+}
+
+@keyframes constellation-float {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+
+  100% {
+    transform: translate3d(0.7rem, -0.55rem, 0) rotate(1.4deg);
+  }
+}
+
+@keyframes constellation-breathe {
+  0% {
+    opacity: 0.26;
+  }
+
+  100% {
+    opacity: 0.44;
+  }
+}
+
+@keyframes line-current {
+  0% {
+    opacity: 0.38;
+  }
+
+  100% {
+    opacity: 0.66;
+  }
+}
+
+@keyframes star-node-pulse {
+  0% {
+    opacity: 0.48;
+  }
+
+  100% {
+    opacity: 0.86;
+  }
+}
+
+@keyframes ring-drift {
+  100% {
+    rotate: 360deg;
+  }
+}
+
+@keyframes inner-ring-drift {
+  100% {
+    rotate: -360deg;
+  }
+}
+
+@keyframes core-pulse {
+  0% {
+    opacity: 0.76;
+    transform: scale(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes light-sweep {
+  0% {
+    opacity: 0.22;
+    width: 5rem;
+  }
+
+  100% {
+    opacity: 0.58;
+    width: 8rem;
+  }
+}
+
+@keyframes prompt-line-breathe {
+  0% {
+    opacity: 0.42;
+    width: 3.2rem;
+  }
+
+  100% {
+    opacity: 0.88;
+    width: 4.6rem;
+  }
+}
+
+@keyframes prompt-glyph-pulse {
+  0% {
+    opacity: 0.66;
+    box-shadow: 0 0 8px rgba(216, 189, 133, 0.34);
+  }
+
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 18px rgba(216, 189, 133, 0.58);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow: auto;
+  }
+
+  .stage-shell {
+    min-height: 100svh;
+    padding: 2rem 1rem 8rem;
+  }
+
+  .stage-presence {
+    width: min(92vw, 32rem);
+    gap: 7.5rem;
+    transform: translateY(-0.6rem);
+  }
+
+  .presence-orbit {
+    width: 7rem;
+  }
+
+  .stage-copy h1 {
+    font-size: 1.05rem;
+    letter-spacing: 0.28em;
+  }
+
+  .constellation {
+    opacity: 0.28;
+  }
+
+  .constellation-nw,
+  .constellation-ne {
+    width: 14rem;
+  }
+
+  .constellation-sw,
+  .constellation-se {
+    width: 15rem;
+  }
+
+  .constellation-se {
+    bottom: 9rem;
+  }
+
+  .intent-capture input {
+    font-size: 0.86rem;
+    text-align: center;
+  }
+
+  .intent-capture {
+    bottom: 3.8rem;
+    width: min(16rem, calc(100vw - 2rem));
+  }
+
+  .stage-memory-status {
+    right: 50%;
+    bottom: 1.25rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.24em;
+    transform: translateX(50%);
+  }
+}

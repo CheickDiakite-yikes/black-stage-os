@@ -1,0 +1,31 @@
+{
+  "name": "black-stage-os",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CheickDiakite-yikes/black-stage-os.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CheickDiakite-yikes/black-stage-os/issues"
+  },
+  "homepage": "https://github.com/CheickDiakite-yikes/black-stage-os#readme",
+  "packageManager": "pnpm@8.15.7",
+  "scripts": {
+    "dev": "pnpm --filter @blackstage/stage-web dev",
+    "build": "pnpm -r --sort build",
+    "lint": "eslint .",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --sort typecheck",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2"
+  }
+}

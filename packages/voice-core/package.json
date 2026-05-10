@@ -1,0 +1,20 @@
+{
+  "name": "@blackstage/voice-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"No voice-core tests configured yet.\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}
