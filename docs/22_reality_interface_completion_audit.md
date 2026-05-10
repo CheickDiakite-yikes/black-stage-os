@@ -51,22 +51,22 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Gesture/direct manipulation | Focus, pin, collapse, nudge, drag handle | Partial |
 | Non-chatbot aesthetics | Screenshot, layout, object field, no chat bubbles/sidebar-dominant shell | Covered for v0 |
 | Instrumentation | `researchLogger`, redaction, research trace, run logs under `docs/research/runs/` | Covered locally |
-| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
-| Live Codex worker | Dry-run Codex worker envelope exists; no Codex subprocess/App Server execution yet | Contract only |
+| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
+| Live Codex worker | Dry-run envelope and disabled-by-default local `codex exec` command plan exist; no real Codex subprocess/App Server execution yet | Contract only |
 | Live Agents SDK worker | No Agents SDK adapter yet | Missing |
 | Live Realtime session | No server broker or live API session yet | Missing |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
 
 ## Evidence From Current Gate
 
-Most recent full validation after the local assistant speech slice:
+Most recent full validation after the local Codex runner boundary slice:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 4 voice-core subtests and 7 agent-runtime subtests.
+- `pnpm test`: passed with 4 voice-core subtests and 10 agent-runtime subtests.
 - `pnpm build`: passed.
 - `pnpm test:e2e`: passed with 8 browser tests.
-- `pnpm scan:secrets`: passed after the Realtime broker contracts slice.
+- `pnpm scan:secrets`: passed after the local Codex runner boundary slice.
 
 ## Gaps That Block Goal Completion
 

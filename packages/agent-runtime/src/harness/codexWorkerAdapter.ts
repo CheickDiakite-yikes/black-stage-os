@@ -7,7 +7,7 @@ import type {
 
 export type CodexWorkerTransport = "cli" | "app_server";
 
-export type CodexWorkerExecutionMode = "dry_run";
+export type CodexWorkerExecutionMode = "dry_run" | "local_exec";
 
 export type CodexWorkerPolicy = {
   allowNetwork: boolean;
@@ -30,6 +30,7 @@ export type CodexWorkerEnvelope = {
 };
 
 export type CodexWorkerAdapterOptions = {
+  executionMode?: CodexWorkerExecutionMode;
   transport?: CodexWorkerTransport;
   validationCommands?: string[];
   policy?: Partial<CodexWorkerPolicy>;
@@ -62,7 +63,7 @@ export function createCodexWorkerEnvelope(
   return {
     provider: "openai_codex",
     transport: options.transport ?? "cli",
-    executionMode: "dry_run",
+    executionMode: options.executionMode ?? "dry_run",
     taskId: task.id,
     threadId: task.threadId,
     title: task.title,

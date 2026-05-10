@@ -152,7 +152,7 @@ export class InMemoryHarnessScheduler {
     });
     this.recordEvent(
       run.taskId,
-      result.status === "completed" ? "task.completed" : "task.failed",
+      eventTypeFromRunStatus(result.status),
       result.summary,
       undefined,
       run.id
@@ -204,4 +204,17 @@ export class InMemoryHarnessScheduler {
 
 function createHarnessId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function eventTypeFromRunStatus(status: HarnessRunResult["status"]): HarnessEventType {
+  switch (status) {
+    case "completed":
+      return "task.completed";
+    case "blocked":
+      return "task.blocked";
+    case "cancelled":
+      return "task.cancelled";
+    case "failed":
+      return "task.failed";
+  }
 }

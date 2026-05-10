@@ -9,6 +9,11 @@ import {
   createDryRunCodexWorkerAdapter,
   isApprovedHarnessWorkspace
 } from "../dist/harness/codexWorkerAdapter.js";
+import {
+  createCodexCommandPlan,
+  createLocalCodexWorkerAdapter,
+  inspectLocalCodexRunnerReadiness
+} from "../dist/harness/codexLocalRunner.js";
 import { InMemoryHarnessScheduler } from "../dist/harness/inMemoryHarnessScheduler.js";
 import { createSimulatedHarnessAdapter } from "../dist/harness/simulatedHarnessAdapter.js";
 import { createSymphonyControlPlaneSnapshot } from "../dist/harness/symphonyControlPlane.js";
@@ -213,6 +218,139 @@ describe("Codex worker adapter", () => {
           updatedAt: now()
         }),
       /approved local workspace/
+    );
+  });
+});
+
+describe("Local Codex runner", () => {
+  it("blocks local execution by default before invoking an executor", async () => {
+    let executorCalls = 0;
+    const scheduler = new InMemoryHarnessScheduler({
+      adapters: [
+        createLocalCodexWorkerAdapter({
+          executor: () => {
+            executorCalls += 1;
+            return {
+              exitCode: 0,
+              stdout: "should not run",
+              stderr: ""
+            };
+          }
+        })
+      ],
+      now
+    });
+
+    scheduler.enqueueTask({
+      id: "task_disabled_runner",
+      threadId: "thread_build_blackstage",
+      title: "Try disabled runner",
+      objective: "This must not execute without explicit enablement.",
+      kind: "codex",
+      workspace: {
+        kind: "local",
+        path: ".blackstage/workspaces/task_disabled_runner"
+      }
+    });
+    const run = await scheduler.runNext();
+    const snapshot = scheduler.getSnapshot();
+
+    assert.equal(executorCalls, 0);
+    assert.equal(run?.status, "blocked");
+    assert.equal(snapshot.tasks[0]?.status, "blocked");
+    assert.ok(snapshot.events.some((event) => event.type === "task.blocked"));
+  });
+
+  it("creates an explicit Codex exec command plan for approved local workspaces", () => {
+    const envelope = createCodexWorkerEnvelope(
+      {
+        id: "task_plan_command",
+        threadId: "thread_build_blackstage",
+        title: "Plan command",
+        objective: "Create a command plan.",
+        kind: "codex",
+        status: "queued",
+        priority: 0,
+        approvalRequired: false,
+        blockedBy: [],
+        workspace: {
+          kind: "local",
+          path: ".blackstage/workspaces/task_plan_command"
+        },
+        createdAt: now(),
+        updatedAt: now()
+      },
+      {
+        executionMode: "local_exec"
+      }
+    );
+    const plan = createCodexCommandPlan(envelope);
+    const readiness = inspectLocalCodexRunnerReadiness(envelope, {
+      enabled: true
+    });
+
+    assert.equal(readiness.allowed, true);
+    assert.equal(plan.command, "codex");
+    assert.deepEqual(plan.args.slice(0, 7), [
+      "exec",
+      "--cd",
+      ".blackstage/workspaces/task_plan_command",
+      "--sandbox",
+      "workspace-write",
+      "--ask-for-approval",
+      "never"
+    ]);
+    assert.ok(plan.args.includes("--json"));
+    assert.ok(plan.args.includes("--ephemeral"));
+    assert.equal(plan.args.at(-1), "-");
+    assert.equal(plan.cwd, ".blackstage/workspaces/task_plan_command");
+    assert.match(plan.stdin, /Return validation evidence/);
+    assert.equal(plan.env.BLACKSTAGE_HARNESS_TASK_ID, "task_plan_command");
+  });
+
+  it("runs through an injected executor only when explicitly enabled", async () => {
+    let commandPlan;
+    const scheduler = new InMemoryHarnessScheduler({
+      adapters: [
+        createLocalCodexWorkerAdapter({
+          enabled: true,
+          executor: (plan) => {
+            commandPlan = plan;
+            return {
+              exitCode: 0,
+              stdout: "validated patch packet",
+              stderr: ""
+            };
+          }
+        })
+      ],
+      now
+    });
+
+    scheduler.enqueueTask({
+      id: "task_enabled_runner",
+      threadId: "thread_build_blackstage",
+      title: "Run enabled local runner",
+      objective: "Exercise the local runner seam with an injected executor.",
+      kind: "codex",
+      workspace: {
+        kind: "local",
+        path: ".blackstage/workspaces/task_enabled_runner"
+      }
+    });
+    const run = await scheduler.runNext();
+    const snapshot = scheduler.getSnapshot();
+
+    assert.equal(run?.status, "completed");
+    assert.equal(commandPlan?.command, "codex");
+    assert.equal(commandPlan?.cwd, ".blackstage/workspaces/task_enabled_runner");
+    assert.ok(
+      snapshot.events.some(
+        (event) =>
+          event.type === "task.progress" &&
+          event.payload?.exit_code === 0 &&
+          event.payload?.cwd === ".blackstage/workspaces/task_enabled_runner"
+      )
     );
   });
 });

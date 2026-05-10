@@ -131,6 +131,14 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - internal Symphony-style control-plane projection
    - Status: implemented as local-only contracts and Node tests; no Codex subprocess, App Server, Linear, or network call runs yet.
 
+6. Add disabled-by-default local Codex runner seam:
+   - explicit `codex exec` command plan
+   - injected executor only
+   - `.blackstage/workspaces/*` boundary
+   - `workspace-write` sandbox and `never` approval policy in the worker plan
+   - JSON events and ephemeral session flags
+   - Status: implemented as a local runner boundary with tests; no real Codex subprocess is launched by default.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.

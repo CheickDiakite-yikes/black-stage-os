@@ -1,4 +1,5 @@
 export * from "./approvals/approvalDraft";
+export * from "./harness/codexLocalRunner";
 export * from "./harness/codexWorkerAdapter";
 export * from "./harness/harnessStageProjection";
 export * from "./harness/harnessTypes";
