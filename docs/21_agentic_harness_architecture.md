@@ -89,6 +89,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - `HarnessEvent`
    - `HarnessAdapter`
    - in-memory scheduler fixture
+   - Status: implemented as a local-only first slice with a simulated adapter and Node tests.
 
 2. Add Realtime voice contracts in `packages/voice-core`:
    - session config type
