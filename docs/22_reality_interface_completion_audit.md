@@ -51,8 +51,8 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Gesture/direct manipulation | Focus, pin, collapse, nudge, drag handle | Partial |
 | Non-chatbot aesthetics | Screenshot, layout, object field, no chat bubbles/sidebar-dominant shell | Covered for v0 |
 | Instrumentation | `researchLogger`, redaction, research trace, run logs under `docs/research/runs/` | Covered locally |
-| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, architecture doc | Local simulation only |
-| Live Codex worker | No Codex subprocess/CLI adapter yet | Missing |
+| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
+| Live Codex worker | Dry-run Codex worker envelope exists; no Codex subprocess/App Server execution yet | Contract only |
 | Live Agents SDK worker | No Agents SDK adapter yet | Missing |
 | Live Realtime session | No server broker or live API session yet | Missing |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
@@ -63,17 +63,17 @@ Most recent full validation after the local assistant speech slice:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 2 voice-core subtests and 4 agent-runtime subtests.
+- `pnpm test`: passed with 2 voice-core subtests and 7 agent-runtime subtests.
 - `pnpm build`: passed.
 - `pnpm test:e2e`: passed with 8 browser tests.
-- `pnpm scan:secrets`: passed after staging the local assistant speech slice.
+- `pnpm scan:secrets`: passed after the Codex/Symphony contracts slice.
 
 ## Gaps That Block Goal Completion
 
 The goal is not complete yet. The largest remaining gaps are:
 
 1. Live Realtime voice is not connected. The contract exists and local browser-native assistant speech works, but there is no server broker or live Realtime session.
-2. Live agentic work is not connected. Codex, Agents SDK, and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
+2. Live agentic work is not connected. Codex and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
 5. Multimodal context is shallow. Attachments become local document objects, but image understanding and richer context parsing are not implemented.

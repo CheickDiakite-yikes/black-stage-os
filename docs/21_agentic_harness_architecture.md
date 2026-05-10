@@ -125,6 +125,12 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - approval gate coverage
    - research log entry
 
+5. Add provider boundary contracts:
+   - dry-run Codex worker envelope
+   - approved workspace guard
+   - internal Symphony-style control-plane projection
+   - Status: implemented as local-only contracts and Node tests; no Codex subprocess, App Server, Linear, or network call runs yet.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.
