@@ -27,7 +27,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Begins empty | E2e asserts idle presence says `Speak when ready` in `apps/stage-web/tests/stage-shell.spec.ts` | Covered |
 | Text precision | `intent-input` flow in `StageShell.tsx`; e2e submits text commands and scenarios | Covered |
 | Natural voice input | Web Speech path in `StageShell.tsx`; mocked browser speech e2e | Covered for browser prototype |
-| Realtime voice foundation | `packages/voice-core/src/realtime/realtimeVoiceSession.ts` defaults to `gpt-realtime-2` in simulation mode with server-broker safety policy | Contract only |
+| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and now defines a server-mediated WebRTC broker plan with safety identifier checks | Contract only |
 | Assistant speech output | Stage voice toggle speaks sparse browser-native status, shows the last spoken line, and records `assistant.speech` research events | Covered locally |
 | Multimodal precision | File attach creates local document objects; image files are accepted as context metadata | Partial |
 | Intent thread | `IntentThread`, local persistence, session export/replay | Covered for v0 |
@@ -63,10 +63,10 @@ Most recent full validation after the local assistant speech slice:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 2 voice-core subtests and 7 agent-runtime subtests.
+- `pnpm test`: passed with 4 voice-core subtests and 7 agent-runtime subtests.
 - `pnpm build`: passed.
 - `pnpm test:e2e`: passed with 8 browser tests.
-- `pnpm scan:secrets`: passed after the Codex/Symphony contracts slice.
+- `pnpm scan:secrets`: passed after the Realtime broker contracts slice.
 
 ## Gaps That Block Goal Completion
 

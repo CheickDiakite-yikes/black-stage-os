@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  createRealtimeVoiceBrokerPlan,
+  inspectRealtimeVoiceBrokerReadiness
+} from "../dist/realtime/realtimeVoiceBroker.js";
+import {
   DEFAULT_REALTIME_VOICE_MODEL,
   createRealtimeVoiceSessionConfig,
   inspectRealtimeVoiceSessionSafety
@@ -33,5 +37,48 @@ describe("Realtime voice session contracts", () => {
     assert.equal(config.policy.requiresServerBroker, true);
     assert.equal(config.policy.forbidsBrowserApiKey, true);
     assert.equal(config.policy.toolCallsRequireStageApproval, true);
+  });
+
+  it("creates a server-mediated WebRTC broker plan for configured live voice", () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_live",
+      threadId: "thread_build_blackstage",
+      networkMode: "configured_live"
+    });
+    const plan = createRealtimeVoiceBrokerPlan(config, {
+      requestedAt: "2026-05-10T23:20:00.000Z",
+      safetyIdentifier: "hashed-user-id"
+    });
+
+    assert.equal(plan.model, "gpt-realtime-2");
+    assert.equal(plan.brokerMode, "server_unified_webrtc");
+    assert.equal(plan.openAiEndpointPath, "/v1/realtime/calls");
+    assert.equal(plan.standardApiKeyLocation, "server_environment_only");
+    assert.equal(plan.exposesApiKeyToBrowser, false);
+    assert.equal(plan.forwardsClientSdp, true);
+    assert.equal(plan.dataChannelName, "oai-events");
+    assert.equal(plan.stageEventPolicy.assistantSpeechEvent, "assistant.speech");
+    assert.equal(plan.stageEventPolicy.toolCallsRequireApproval, true);
+  });
+
+  it("blocks live broker readiness without a safety identifier", () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_missing_safety",
+      threadId: "thread_build_blackstage",
+      networkMode: "configured_live"
+    });
+    const readiness = inspectRealtimeVoiceBrokerReadiness(config);
+
+    assert.equal(readiness.readyForLiveSession, false);
+    assert.ok(
+      readiness.warnings.some((warning) => warning.includes("safety identifier"))
+    );
+    assert.throws(
+      () =>
+        createRealtimeVoiceBrokerPlan(config, {
+          requestedAt: "2026-05-10T23:20:00.000Z"
+        }),
+      /safety identifier/
+    );
   });
 });
