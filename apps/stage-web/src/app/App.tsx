@@ -67,7 +67,11 @@ export function App() {
   const [researchEvents, setResearchEvents] = useState<ResearchEvent[]>(
     () => loadedSession?.researchEvents ?? []
   );
+  const [stageEvents, setStageEvents] = useState<StageEvent[]>(
+    () => loadedSession?.stageEvents ?? []
+  );
   const [isRunning, setIsRunning] = useState(false);
+  const [isReplaying, setIsReplaying] = useState(false);
   const [pausedEvents, setPausedEvents] = useState<TimedStageEvent[]>([]);
   const [approvalExplanationVisible, setApprovalExplanationVisible] = useState(false);
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
@@ -84,6 +88,7 @@ export function App() {
   const emitStageEvent = useCallback(
     (stageEvent: StageEvent) => {
       setThread((currentThread) => applyStageEventToThread(currentThread, stageEvent));
+      setStageEvents((currentEvents) => [...currentEvents, stageEvent]);
 
       const researchEvent = researchEventFromStageEvent(sessionId, stageEvent);
 
@@ -172,6 +177,8 @@ export function App() {
       setThread(run.thread);
       setActiveScenario(run.scenario);
       setResearchEvents([]);
+      setStageEvents([]);
+      setIsReplaying(false);
       setApprovalExplanationVisible(false);
       scheduleTimedEvents(run.steps);
     },
@@ -337,9 +344,10 @@ export function App() {
         sessionId,
         threadId: thread.id,
         exportedAt,
-        eventCount: researchEvents.length
+        eventCount: stageEvents.length + 1
       }
     };
+    const nextStageEvents = [...stageEvents, exportEvent];
     const exportResearchEvent = researchEventFromStageEvent(sessionId, exportEvent);
     const nextResearchEvents = exportResearchEvent
       ? [...researchEvents, exportResearchEvent]
@@ -348,6 +356,7 @@ export function App() {
       sessionId,
       activeScenarioId: activeScenario?.id,
       currentThread: thread,
+      stageEvents: nextStageEvents,
       researchEvents: nextResearchEvents,
       exportedAt
     };
@@ -361,8 +370,9 @@ export function App() {
     anchor.download = `blackstage-stage-shell-${exportedAt.slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(objectUrl);
+    setStageEvents(nextStageEvents);
     setResearchEvents(nextResearchEvents);
-  }, [activeScenario?.id, researchEvents, sessionId, thread]);
+  }, [activeScenario?.id, researchEvents, sessionId, stageEvents, thread]);
 
   const updateStageObject = useCallback(
     (objectId: string, updater: (object: StageObject) => StageObject) => {
@@ -581,6 +591,34 @@ export function App() {
     [emitStageEvent, thread.id, thread.renderObjects.length]
   );
 
+  const replayStageEvents = useCallback(() => {
+    if (stageEvents.length === 0) {
+      return;
+    }
+
+    const eventsToReplay = [...stageEvents];
+
+    clearTimers();
+    setIsRunning(false);
+    setPausedEvents([]);
+    setApprovalExplanationVisible(false);
+    setIsReplaying(true);
+    setThread(createIdleIntentThread());
+
+    eventsToReplay.forEach((stageEvent, index) => {
+      const timer = window.setTimeout(() => {
+        setThread((currentThread) => applyStageEventToThread(currentThread, stageEvent));
+      }, 120 + index * 110);
+      timerRefs.current.push(timer);
+    });
+
+    const completionTimer = window.setTimeout(() => {
+      setIsReplaying(false);
+      timerRefs.current = [];
+    }, 180 + eventsToReplay.length * 110);
+    timerRefs.current.push(completionTimer);
+  }, [clearTimers, stageEvents]);
+
   const resetSession = useCallback(() => {
     clearTimers();
     clearStageSession();
@@ -590,8 +628,10 @@ export function App() {
     setThread(createIdleIntentThread());
     setActiveScenario(undefined);
     setResearchEvents([]);
+    setStageEvents([]);
     setPausedEvents([]);
     setIsRunning(false);
+    setIsReplaying(false);
     setApprovalExplanationVisible(false);
   }, [clearTimers]);
 
@@ -600,10 +640,11 @@ export function App() {
       sessionId,
       activeScenarioId: activeScenario?.id,
       currentThread: thread,
+      stageEvents,
       researchEvents,
       savedAt: new Date().toISOString()
     });
-  }, [activeScenario?.id, researchEvents, sessionId, thread]);
+  }, [activeScenario?.id, researchEvents, sessionId, stageEvents, thread]);
 
   useEffect(() => clearTimers, [clearTimers]);
 
@@ -612,9 +653,11 @@ export function App() {
       accentColor={stageTheme.accent}
       activeScenario={activeScenario}
       approvalExplanationVisible={approvalExplanationVisible}
+      isReplaying={isReplaying}
       isRunning={isRunning}
       researchEvents={researchEvents}
       scenarios={stageShellScenarios}
+      stageEventCount={stageEvents.length}
       thread={thread}
       onApprove={approveCurrentRequest}
       onAskWhy={askWhy}
@@ -628,6 +671,7 @@ export function App() {
       onFocusObject={focusStageObject}
       onMoveObject={moveStageObject}
       onPinObject={toggleStageObjectPin}
+      onReplayTrace={replayStageEvents}
       onResumeAgent={resumeAgentWork}
       onSaveArtifact={saveArtifactRevision}
       onStopAgent={stopAgentWork}

@@ -177,13 +177,66 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   expect(objectUpdatesWereLogged).toBe(true);
 });
 
+test("Stage Shell v0 replays the local event log without mutating it", async ({ page }) => {
+  test.setTimeout(60_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await expect(page.getByTestId("research-capture")).toContainText("stage events");
+
+  const stageEventCount = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return 0;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: unknown[];
+    };
+
+    return snapshot.stageEvents?.length ?? 0;
+  });
+
+  expect(stageEventCount).toBeGreaterThan(6);
+
+  await page
+    .getByTestId("research-capture")
+    .getByRole("button", { name: "Replay trace" })
+    .click();
+
+  await expect(page.getByTestId("research-capture")).toContainText("replaying");
+  await expect(page.getByTestId("stage-workspace")).toContainText("Stage Shell v0 plan");
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+
+  const postReplayStageEventCount = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return 0;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: unknown[];
+    };
+
+    return snapshot.stageEvents?.length ?? 0;
+  });
+
+  expect(postReplayStageEventCount).toBe(stageEventCount);
+});
+
 test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   test.setTimeout(60_000);
 
   await page.goto("/");
   await page.getByRole("button", { name: "Build BlackStage" }).click();
-  await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
-
   await page.getByRole("button", { name: "Stop" }).click();
 
   await expect(page.getByTestId("agent-activity-feed")).toContainText("Paused by user.");

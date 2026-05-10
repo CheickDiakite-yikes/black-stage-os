@@ -15,6 +15,7 @@ export type StageSessionSnapshot = {
   sessionId: string;
   activeScenarioId?: StageShellScenarioId;
   currentThread?: IntentThread;
+  stageEvents: StageEvent[];
   researchEvents: ResearchEvent[];
   savedAt: string;
 };
@@ -22,6 +23,7 @@ export type StageSessionSnapshot = {
 export function createStageSession(sessionId = createSessionId()): StageSessionSnapshot {
   return {
     sessionId,
+    stageEvents: [],
     researchEvents: [],
     savedAt: new Date().toISOString()
   };

@@ -23,7 +23,9 @@ type StageShellProps = {
   scenarios: StageShellScenario[];
   activeScenario?: StageShellScenario;
   researchEvents: ResearchEvent[];
+  stageEventCount: number;
   isRunning: boolean;
+  isReplaying: boolean;
   approvalExplanationVisible: boolean;
   onSubmitIntent: (intentText: string, scenarioId?: StageShellScenarioId) => void;
   onApprove: () => void;
@@ -45,6 +47,7 @@ type StageShellProps = {
     }
   ) => void;
   onPinObject: (objectId: string) => void;
+  onReplayTrace: () => void;
   onResumeAgent: () => void;
   onSaveArtifact: (artifactId: string, body: string) => void;
   onStopAgent: () => void;
@@ -57,7 +60,9 @@ export function StageShell({
   scenarios,
   activeScenario,
   researchEvents,
+  stageEventCount,
   isRunning,
+  isReplaying,
   approvalExplanationVisible,
   onSubmitIntent,
   onApprove,
@@ -72,6 +77,7 @@ export function StageShell({
   onFocusObject,
   onMoveObject,
   onPinObject,
+  onReplayTrace,
   onResumeAgent,
   onSaveArtifact,
   onStopAgent,
@@ -377,7 +383,14 @@ export function StageShell({
         </div>
       </form>
       <p className="stage-memory-status">local memory · private</p>
-      <ResearchCapture events={researchEvents} onExport={onExport} onReset={onReset} />
+      <ResearchCapture
+        events={researchEvents}
+        isReplaying={isReplaying}
+        stageEventCount={stageEventCount}
+        onExport={onExport}
+        onReplay={onReplayTrace}
+        onReset={onReset}
+      />
       <p className="sr-only" id="stage-status">
         {thread.currentObjective}
       </p>
