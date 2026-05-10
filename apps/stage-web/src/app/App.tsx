@@ -54,6 +54,10 @@ const commandFillerWords = new Set([
 
 const TEXT_CONTEXT_LIMIT = 720;
 
+type BlackstageTestWindow = Window & {
+  __blackstageTestDelayMultiplier?: number;
+};
+
 export function App() {
   const [sessionId, setSessionId] = useState(
     () => loadedSession?.sessionId ?? createStageSession().sessionId
@@ -100,21 +104,34 @@ export function App() {
   );
 
   const scheduleTimedEvents = useCallback(
-    (events: TimedStageEvent[]) => {
+    (
+      events: TimedStageEvent[],
+      options: {
+        scaleDelays?: boolean;
+      } = {}
+    ) => {
+      const shouldScaleDelays = options.scaleDelays ?? true;
+      const scaledEvents = shouldScaleDelays
+        ? events.map((event) => ({
+            ...event,
+            delayMs: scaleStageEventDelay(event.delayMs)
+          }))
+        : events;
+
       clearTimers();
       activeRunStartedAtRef.current = performance.now();
-      activeTimedEventsRef.current = events;
+      activeTimedEventsRef.current = scaledEvents;
       setPausedEvents([]);
       setIsRunning(true);
 
-      events.forEach((timedEvent) => {
+      scaledEvents.forEach((timedEvent) => {
         const timer = window.setTimeout(() => {
           emitStageEvent(timedEvent.event);
         }, timedEvent.delayMs);
         timerRefs.current.push(timer);
       });
 
-      const finalDelay = Math.max(...events.map((event) => event.delayMs), 0) + 180;
+      const finalDelay = Math.max(...scaledEvents.map((event) => event.delayMs), 0) + 180;
       const completionTimer = window.setTimeout(() => {
         activeRunStartedAtRef.current = undefined;
         activeTimedEventsRef.current = [];
@@ -333,7 +350,9 @@ export function App() {
       type: "agent.progress",
       payload: resumedEvent
     });
-    scheduleTimedEvents(pausedEvents);
+    scheduleTimedEvents(pausedEvents, {
+      scaleDelays: false
+    });
   }, [activeScenario, emitStageEvent, pausedEvents, scheduleTimedEvents, thread.id]);
 
   const exportSession = useCallback(() => {
@@ -892,4 +911,14 @@ function normalizeCommandText(text: string): string {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function scaleStageEventDelay(delayMs: number): number {
+  const multiplier = (window as BlackstageTestWindow).__blackstageTestDelayMultiplier;
+
+  if (!multiplier || multiplier <= 0 || !Number.isFinite(multiplier)) {
+    return delayMs;
+  }
+
+  return Math.round(delayMs * multiplier);
 }

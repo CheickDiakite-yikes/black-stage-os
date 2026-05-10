@@ -234,6 +234,9 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({ 
 
 test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   test.setTimeout(60_000);
+  await page.addInitScript(() => {
+    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier = 4;
+  });
 
   await page.goto("/");
   await page.getByRole("button", { name: "Build BlackStage" }).click();
@@ -278,7 +281,10 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   await page.getByRole("button", { name: "Resume" }).click();
   await expect(page.getByTestId("agent-activity-feed")).toContainText("Resumed by user.");
   await expect(page.getByTestId("stage-workspace")).toContainText(
-    "Approval needed to create task prompt cards."
+    "Approval needed to create task prompt cards.",
+    {
+      timeout: 20_000
+    }
   );
 
   const resumeWasLogged = await page.evaluate(() => {

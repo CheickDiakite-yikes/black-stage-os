@@ -12,6 +12,7 @@ export type ResearchEventType =
   | "artifact_created"
   | "artifact_updated"
   | "artifact_exported"
+  | "assistant_speech"
   | "user_intervention"
   | "session_exported"
   | "wow_signal"

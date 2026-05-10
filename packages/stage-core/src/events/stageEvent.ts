@@ -63,6 +63,14 @@ export type ArtifactExportedPayload = {
   title: string;
 };
 
+export type AssistantSpeechPayload = {
+  speechId: string;
+  threadId: string;
+  text: string;
+  spokenAt: string;
+  source: "stage_status";
+};
+
 export type StageEvent =
   | { type: "intent.submitted"; payload: IntentPayload }
   | { type: "context.attached"; payload: ContextAttachmentPayload }
@@ -76,5 +84,6 @@ export type StageEvent =
   | { type: "artifact.created"; payload: Artifact }
   | { type: "artifact.updated"; payload: Artifact }
   | { type: "artifact.exported"; payload: ArtifactExportedPayload }
+  | { type: "assistant.speech"; payload: AssistantSpeechPayload }
   | { type: "user.intervention"; payload: UserInterventionPayload }
   | { type: "session.exported"; payload: SessionExportedPayload };

@@ -39,6 +39,19 @@ Use the simplest stack that lets Codex move quickly:
 - Mock/simulated agent runtime before real tool integrations.
 - Later desktop wrapper only after the stage experience is proven.
 
+## Agentic harness direction
+
+Stage Shell v0 should remain simulation-first, but the path from simulation to real background labor is now captured in `docs/21_agentic_harness_architecture.md`.
+
+The intended split is:
+
+- Stage Shell stays the living control surface.
+- `voice-core` grows a Realtime voice adapter.
+- `agent-runtime` grows a Symphony-inspired scheduler and adapter contracts.
+- Codex handles coding execution in isolated workspaces.
+- OpenAI Agents SDK handles product/research agents that need handoffs, guardrails, human review, tracing, or voice workflows.
+- All live work streams auditable stage events back into the render field.
+
 ## Monorepo structure
 
 ```text

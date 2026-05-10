@@ -134,6 +134,18 @@ export function researchEventFromStageEvent(
         },
         stageEvent.payload.threadId
       );
+    case "assistant.speech":
+      return createResearchEvent(
+        sessionId,
+        "assistant_speech",
+        {
+          speech_id: stageEvent.payload.speechId,
+          source: stageEvent.payload.source,
+          speech_text_redacted: redactIntentText(stageEvent.payload.text),
+          speech_length: stageEvent.payload.text.length
+        },
+        stageEvent.payload.threadId
+      );
     case "user.intervention":
       return createResearchEvent(
         sessionId,
