@@ -95,6 +95,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - session config type
    - voice event mapping
    - no API key handling yet
+   - Status: implemented as a local-only contract with `gpt-realtime-2` defaults, simulation mode, server-broker policy, and Node tests.
 
 3. Add Stage Shell harness fixtures:
    - one simulated background Codex run

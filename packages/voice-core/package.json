@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"No voice-core tests configured yet.\"",
+    "test": "pnpm build && node --test test/realtimeVoiceSession.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }
