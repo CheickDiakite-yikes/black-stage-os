@@ -139,6 +139,14 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - JSON events and ephemeral session flags
    - Status: implemented as a local runner boundary with tests; no real Codex subprocess is launched by default.
 
+7. Add Agents SDK manager-plan contracts:
+   - dry-run manager-agent plan for research/artifact/agent tasks
+   - specialists exposed as tools
+   - handoffs disabled by default
+   - memory inspection approval-gated
+   - coding work refused so Codex remains the execution worker
+   - Status: implemented as local-only contracts and Node tests; no Agents SDK API call runs yet.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.

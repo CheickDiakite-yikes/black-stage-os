@@ -51,29 +51,29 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Gesture/direct manipulation | Focus, pin, collapse, nudge, drag handle | Partial |
 | Non-chatbot aesthetics | Screenshot, layout, object field, no chat bubbles/sidebar-dominant shell | Covered for v0 |
 | Instrumentation | `researchLogger`, redaction, research trace, run logs under `docs/research/runs/` | Covered locally |
-| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
+| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, dry-run Agents SDK manager plan, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
 | Live Codex worker | Dry-run envelope and disabled-by-default local `codex exec` command plan exist; no real Codex subprocess/App Server execution yet | Contract only |
-| Live Agents SDK worker | No Agents SDK adapter yet | Missing |
+| Live Agents SDK worker | Dry-run manager-agent plan exists with specialists as tools and approval-gated memory inspection; no live Agents SDK execution yet | Contract only |
 | Live Realtime session | No server broker or live API session yet | Missing |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
 
 ## Evidence From Current Gate
 
-Most recent full validation after the local Codex runner boundary slice:
+Most recent full validation after the Agents SDK manager-plan slice:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 4 voice-core subtests and 10 agent-runtime subtests.
+- `pnpm test`: passed with 4 voice-core subtests and 13 agent-runtime subtests.
 - `pnpm build`: passed.
 - `pnpm test:e2e`: passed with 8 browser tests.
-- `pnpm scan:secrets`: passed after the local Codex runner boundary slice.
+- `pnpm scan:secrets`: passed after the Agents SDK manager-plan slice.
 
 ## Gaps That Block Goal Completion
 
 The goal is not complete yet. The largest remaining gaps are:
 
 1. Live Realtime voice is not connected. The contract exists and local browser-native assistant speech works, but there is no server broker or live Realtime session.
-2. Live agentic work is not connected. Codex and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
+2. Live agentic work is not connected. Codex, Agents SDK, and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
 5. Multimodal context is shallow. Attachments become local document objects, but image understanding and richer context parsing are not implemented.

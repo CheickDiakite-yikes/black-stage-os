@@ -5,6 +5,10 @@ import {
   projectHarnessSnapshotToStageEvents
 } from "../dist/harness/harnessStageProjection.js";
 import {
+  createAgentsSdkRunPlan,
+  createDryRunAgentsSdkAdapter
+} from "../dist/harness/agentsSdkAdapter.js";
+import {
   createCodexWorkerEnvelope,
   createDryRunCodexWorkerAdapter,
   isApprovedHarnessWorkspace
@@ -351,6 +355,82 @@ describe("Local Codex runner", () => {
           event.payload?.exit_code === 0 &&
           event.payload?.cwd === ".blackstage/workspaces/task_enabled_runner"
       )
+    );
+  });
+});
+
+describe("Agents SDK adapter", () => {
+  it("prepares a dry-run manager-agent plan for non-coding work", async () => {
+    const scheduler = new InMemoryHarnessScheduler({
+      adapters: [createDryRunAgentsSdkAdapter()],
+      now
+    });
+
+    scheduler.enqueueTask({
+      id: "task_research_agent",
+      threadId: "thread_build_blackstage",
+      title: "Synthesize research brief",
+      objective: "Turn approved notes into a board-ready artifact.",
+      kind: "research"
+    });
+    const run = await scheduler.runNext();
+    const snapshot = scheduler.getSnapshot();
+
+    assert.equal(run?.adapterId, "agents_sdk_adapter_dry_run");
+    assert.equal(run?.status, "completed");
+    assert.ok(
+      snapshot.events.some(
+        (event) =>
+          event.type === "task.progress" &&
+          event.payload?.provider === "openai_agents_sdk" &&
+          event.payload?.orchestration === "manager_agent_with_tools"
+      )
+    );
+  });
+
+  it("keeps memory tools approval-gated and handoffs disabled by default", () => {
+    const plan = createAgentsSdkRunPlan({
+      id: "task_agent_plan",
+      threadId: "thread_build_blackstage",
+      title: "Inspect memory boundary",
+      objective: "Inspect local memory policy without writing memory.",
+      kind: "agent",
+      status: "queued",
+      priority: 0,
+      approvalRequired: false,
+      blockedBy: [],
+      createdAt: now(),
+      updatedAt: now()
+    });
+
+    assert.equal(plan.handoffsAllowed, false);
+    assert.equal(plan.humanReviewRequired, true);
+    assert.equal(plan.tracing.redaction, "stage_event_summaries_only");
+    assert.ok(
+      plan.tools.some(
+        (tool) => tool.name === "memory_inspector" && tool.requiresStageApproval
+      )
+    );
+    assert.match(plan.managerInstructions, /Treat specialists as tools/);
+  });
+
+  it("refuses coding work so Codex remains the execution worker", () => {
+    assert.throws(
+      () =>
+        createAgentsSdkRunPlan({
+          id: "task_codex_wrong_adapter",
+          threadId: "thread_build_blackstage",
+          title: "Implement code through wrong adapter",
+          objective: "This belongs to the Codex worker.",
+          kind: "codex",
+          status: "queued",
+          priority: 0,
+          approvalRequired: false,
+          blockedBy: [],
+          createdAt: now(),
+          updatedAt: now()
+        }),
+      /cannot run codex/
     );
   });
 });
