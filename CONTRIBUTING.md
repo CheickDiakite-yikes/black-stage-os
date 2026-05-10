@@ -25,6 +25,7 @@ Before opening a pull request, run:
 pnpm build
 pnpm typecheck
 pnpm lint
+pnpm scan:secrets
 pnpm test
 ```
 
@@ -75,6 +76,12 @@ Design changes should preserve the reference direction:
 ## Security And Privacy
 
 Never commit secrets, credentials, tokens, private user data, or personal files. Avoid writing sensitive content into research logs. If your contribution touches memory, external tools, network calls, or approvals, call that out clearly in the PR.
+
+The repo includes a local high-confidence secret scanner:
+
+```bash
+pnpm scan:secrets
+```
 
 ## Code Of Conduct
 

@@ -8,6 +8,12 @@ const browserGlobals = {
   console: "readonly"
 };
 
+const nodeGlobals = {
+  Buffer: "readonly",
+  console: "readonly",
+  process: "readonly"
+};
+
 export default [
   {
     ignores: [
@@ -19,6 +25,12 @@ export default [
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ["**/*.{js,mjs}"],
+    languageOptions: {
+      globals: nodeGlobals
+    }
+  },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {

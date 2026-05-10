@@ -17,6 +17,7 @@
     "dev": "pnpm --filter @blackstage/stage-web dev",
     "build": "pnpm -r --sort build",
     "lint": "eslint .",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --sort typecheck",
     "format": "prettier --write ."

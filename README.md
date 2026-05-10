@@ -78,6 +78,7 @@ pnpm install      # install workspace dependencies
 pnpm dev          # start apps/stage-web
 pnpm build        # build every package and the web app
 pnpm lint         # lint the workspace
+pnpm scan:secrets # scan tracked files for high-confidence secret patterns
 pnpm test         # run package test commands
 pnpm typecheck    # typecheck every package
 pnpm format       # format with Prettier
@@ -166,6 +167,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contribution guide.
 Blackstage is designed around user agency, privacy boundaries, and approval gates. Do not add integrations that send data outside the local/browser prototype without an explicit policy, visible user control, and approval flow.
 
 Do not commit secrets. The repo ignores common secret file patterns, but contributors are still responsible for checking their changes before opening a pull request.
+
+Run the local secret check before pushing:
+
+```bash
+pnpm scan:secrets
+```
 
 Report security concerns privately using the process in [SECURITY.md](./SECURITY.md).
 
