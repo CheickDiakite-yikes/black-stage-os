@@ -2,12 +2,19 @@ import type { IsoTimestamp } from "./shared";
 
 export type ResearchEventType =
   | "intent_submitted"
+  | "context_attached"
+  | "thread_created"
   | "render_object_created"
+  | "render_object_updated"
   | "agent_event"
   | "approval_requested"
   | "approval_resolved"
   | "artifact_created"
+  | "artifact_updated"
+  | "artifact_exported"
   | "user_intervention"
+  | "session_exported"
+  | "wow_signal"
   | "codex_task_started"
   | "codex_task_completed"
   | "research_note_created";

@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json && vite build",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"No stage-web tests configured yet.\"",
+    "test:e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

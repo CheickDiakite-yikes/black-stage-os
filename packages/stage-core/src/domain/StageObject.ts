@@ -6,7 +6,12 @@ export type StageObjectType =
   | "agent_feed"
   | "artifact_card"
   | "approval_card"
+  | "codex_task_card"
   | "risk_matrix"
+  | "map_portal"
+  | "memory_card"
+  | "model_card"
+  | "simulation_card"
   | "timeline"
   | "table"
   | "chart"
@@ -34,6 +39,7 @@ export type StageObject = {
     height: number;
   };
   state: StageObjectState;
+  pinned?: boolean;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
 };

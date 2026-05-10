@@ -2,7 +2,14 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 const browserGlobals = {
+  Blob: "readonly",
+  URL: "readonly",
+  clearTimeout: "readonly",
   document: "readonly",
+  globalThis: "readonly",
+  localStorage: "readonly",
+  navigator: "readonly",
+  setTimeout: "readonly",
   window: "readonly",
   HTMLElement: "readonly",
   console: "readonly"
