@@ -14,6 +14,8 @@ Blackstage should treat the Stage Shell as the visible control surface and run a
 
 This is not a replacement for Stage Shell v0. It is the path from simulation to real background labor.
 
+After the 2026-05-10 provider refresh, the stance is: yes, Blackstage should leverage open-source Codex, Symphony, and `gpt-realtime-2`, but only behind Blackstage-owned stage events, approval gates, and replayable traces. Codex/Symphony can power the background labor loop; they should not become the user-facing operating metaphor.
+
 ## Source-Verified Assumptions
 
 - `gpt-realtime-2` is listed as a reasoning model for realtime voice interactions, supports speech-to-speech interaction, configurable reasoning effort, stronger tool use, text/audio/image input, text/audio output, and the `v1/realtime` endpoint. Source: <https://developers.openai.com/api/docs/models/gpt-realtime-2>
@@ -21,6 +23,8 @@ This is not a replacement for Stage Shell v0. It is the path from simulation to 
 - The OpenAI Agents SDK JavaScript/TypeScript repo describes agents, sandbox agents, tools, guardrails, human-in-the-loop, sessions, tracing, and realtime agents. Source: <https://github.com/openai/openai-agents-js>
 - Codex CLI is OpenAI's local coding agent, is open source, and can inspect a repository, edit files, and run commands in the selected directory. Source: <https://developers.openai.com/codex/cli>
 - Symphony is an open-source spec/reference for Codex orchestration where task trackers become a control plane, active tasks get agents, work happens in isolated workspaces, and humans review results. Source: <https://openai.com/index/open-source-codex-orchestration-symphony/>
+- OpenAI's current Realtime WebRTC guidance recommends WebRTC for browser/mobile client connections and a developer-controlled server for session creation, with the trusted backend holding the standard API key and setting safety identifiers. Source: <https://developers.openai.com/api/docs/guides/realtime-webrtc>
+- OpenAI's Agents SDK orchestration guidance distinguishes handoffs from manager-style agents-as-tools; Blackstage should prefer manager-style ownership for the visible stage, using specialists as bounded capabilities until a branch truly needs delegated ownership. Source: <https://developers.openai.com/api/docs/guides/agents/orchestration>
 
 ## Target Layers
 
@@ -38,6 +42,8 @@ The Stage Shell remains the black living render field. It owns intent capture, v
 - `user.intervention`
 
 Browser clients must not hold long-lived API keys. A later server broker should mint short-lived realtime sessions and enforce voice/tool policy.
+
+Stage Shell may use browser-native speech synthesis as a local prototype affordance before the Realtime adapter is live. That local speech path is product behavior, not a substitute for the Realtime voice provider.
 
 ### 3. Intent Compiler
 
@@ -64,9 +70,18 @@ The first model-backed agent should convert voice/text/multimodal context into:
 
 Coding tasks should run through a Codex adapter rather than bespoke shell scripts. The adapter should map Blackstage task briefs into Codex prompts, collect proof of work, run validations, and return artifacts or pull-request-ready diffs.
 
+The adapter boundary should be:
+
+- input: approved `HarnessTask`, task workspace, stage thread context, and validation command list;
+- execution: Codex CLI/App Server in a bounded workspace;
+- output: normalized `HarnessEvent` stream, validation evidence, artifact manifests, and optional PR-ready diff metadata;
+- refusal/blocking: any workspace escape, unapproved network call, unapproved push, or missing validation proof.
+
 ### 6. Agents SDK Adapter
 
 Non-coding workflows should use the Agents SDK when they need handoffs, guardrails, tracing, tools, or human review. Research synthesis, acquisition analysis, memory inspection, and artifact generation fit here better than in the Codex worker.
+
+The first live pattern should keep a Blackstage manager agent in control and expose specialists as tools. Handoffs are reserved for cases where a specialist should truly own the next branch of work.
 
 ### 7. Approval And Audit Spine
 

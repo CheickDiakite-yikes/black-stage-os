@@ -79,6 +79,8 @@ export function App() {
   const [isReplaying, setIsReplaying] = useState(false);
   const [pausedEvents, setPausedEvents] = useState<TimedStageEvent[]>([]);
   const [approvalExplanationVisible, setApprovalExplanationVisible] = useState(false);
+  const [stageVoiceEnabled, setStageVoiceEnabled] = useState(false);
+  const [assistantSpeechText, setAssistantSpeechText] = useState<string | undefined>();
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
   const timerRefs = useRef<number[]>([]);
@@ -103,6 +105,49 @@ export function App() {
     },
     [sessionId]
   );
+
+  const emitAssistantSpeech = useCallback(
+    (
+      text: string,
+      options: {
+        forceSpeak?: boolean;
+        threadId?: string;
+      } = {}
+    ) => {
+      const spokenAt = new Date().toISOString();
+
+      setAssistantSpeechText(text);
+      emitStageEvent({
+        type: "assistant.speech",
+        payload: {
+          speechId: `speech_${Date.now().toString(36)}`,
+          threadId: options.threadId ?? thread.id,
+          text,
+          spokenAt,
+          source: "stage_status"
+        }
+      });
+
+      if (stageVoiceEnabled || options.forceSpeak) {
+        speakStageReply(text);
+      }
+    },
+    [emitStageEvent, stageVoiceEnabled, thread.id]
+  );
+
+  const toggleStageVoice = useCallback(() => {
+    if (stageVoiceEnabled) {
+      cancelStageSpeech();
+      setStageVoiceEnabled(false);
+      setAssistantSpeechText("Stage voice muted.");
+      return;
+    }
+
+    setStageVoiceEnabled(true);
+    emitAssistantSpeech("Stage voice ready. I will speak only the key turns.", {
+      forceSpeak: true
+    });
+  }, [emitAssistantSpeech, stageVoiceEnabled]);
 
   const scheduleTimedEvents = useCallback(
     (
@@ -199,8 +244,14 @@ export function App() {
       setIsReplaying(false);
       setApprovalExplanationVisible(false);
       scheduleTimedEvents(run.steps);
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech("Intent received. I am shaping the stage.", {
+          threadId: run.thread.id
+        });
+      }
     },
-    [applyStageCommand, scheduleTimedEvents, sessionId]
+    [applyStageCommand, emitAssistantSpeech, scheduleTimedEvents, sessionId, stageVoiceEnabled]
   );
 
   const approveCurrentRequest = useCallback(() => {
@@ -216,7 +267,13 @@ export function App() {
 
     setApprovalExplanationVisible(false);
     scheduleTimedEvents(continuation);
-  }, [activeScenario, emitStageEvent, scheduleTimedEvents]);
+
+    if (stageVoiceEnabled) {
+      emitAssistantSpeech("Approved. I am creating the next objects and proof.", {
+        threadId: activeScenario.threadId
+      });
+    }
+  }, [activeScenario, emitAssistantSpeech, emitStageEvent, scheduleTimedEvents, stageVoiceEnabled]);
 
   const rejectCurrentRequest = useCallback(() => {
     const approval = thread.approvals.find((candidate) => candidate.status === "pending");
@@ -235,7 +292,13 @@ export function App() {
         userRequestedExplanation: false
       }
     });
-  }, [emitStageEvent, thread.approvals]);
+
+    if (stageVoiceEnabled) {
+      emitAssistantSpeech("Rejected. I will hold that action.", {
+        threadId: approval.threadId
+      });
+    }
+  }, [emitAssistantSpeech, emitStageEvent, stageVoiceEnabled, thread.approvals]);
 
   const askWhy = useCallback(() => {
     const approval = thread.approvals.find((candidate) => candidate.status === "pending");
@@ -369,7 +432,13 @@ export function App() {
         "Live harness recorder"
       )
     );
-  }, [scheduleTimedEvents, thread.id]);
+
+    if (stageVoiceEnabled) {
+      emitAssistantSpeech("Starting the local harness. No external systems are touched.", {
+        threadId: thread.id
+      });
+    }
+  }, [emitAssistantSpeech, scheduleTimedEvents, stageVoiceEnabled, thread.id]);
 
   const exportSession = useCallback(() => {
     const exportedAt = new Date().toISOString();
@@ -668,6 +737,8 @@ export function App() {
     setIsRunning(false);
     setIsReplaying(false);
     setApprovalExplanationVisible(false);
+    setAssistantSpeechText(undefined);
+    cancelStageSpeech();
   }, [clearTimers]);
 
   useEffect(() => {
@@ -688,10 +759,12 @@ export function App() {
       accentColor={stageTheme.accent}
       activeScenario={activeScenario}
       approvalExplanationVisible={approvalExplanationVisible}
+      assistantSpeechText={assistantSpeechText}
       isReplaying={isReplaying}
       isRunning={isRunning}
       researchEvents={researchEvents}
       scenarios={stageShellScenarios}
+      stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}
       thread={thread}
       onApprove={approveCurrentRequest}
@@ -712,6 +785,7 @@ export function App() {
       onStartHarness={startLocalHarnessRun}
       onStopAgent={stopAgentWork}
       onSubmitIntent={runIntent}
+      onToggleStageVoice={toggleStageVoice}
       resumableEventCount={pausedEvents.length}
     />
   );
@@ -920,6 +994,30 @@ function isTextContext(file: File): boolean {
     extension === "csv" ||
     extension === "json"
   );
+}
+
+function speakStageReply(text: string): void {
+  if (
+    typeof window === "undefined" ||
+    !window.speechSynthesis ||
+    typeof window.SpeechSynthesisUtterance === "undefined"
+  ) {
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  const utterance = new window.SpeechSynthesisUtterance(text);
+
+  utterance.rate = 0.92;
+  utterance.pitch = 0.86;
+  utterance.volume = 0.82;
+  window.speechSynthesis.speak(utterance);
+}
+
+function cancelStageSpeech(): void {
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 function normalizeCommandText(text: string): string {

@@ -22,8 +22,10 @@ type StageShellProps = {
   accentColor: string;
   scenarios: StageShellScenario[];
   activeScenario?: StageShellScenario;
+  assistantSpeechText?: string;
   researchEvents: ResearchEvent[];
   stageEventCount: number;
+  stageVoiceEnabled: boolean;
   isRunning: boolean;
   isReplaying: boolean;
   approvalExplanationVisible: boolean;
@@ -53,6 +55,7 @@ type StageShellProps = {
   onStartHarness: () => void;
   onStopAgent: () => void;
   resumableEventCount: number;
+  onToggleStageVoice: () => void;
 };
 
 export function StageShell({
@@ -60,8 +63,10 @@ export function StageShell({
   accentColor,
   scenarios,
   activeScenario,
+  assistantSpeechText,
   researchEvents,
   stageEventCount,
+  stageVoiceEnabled,
   isRunning,
   isReplaying,
   approvalExplanationVisible,
@@ -83,7 +88,8 @@ export function StageShell({
   onSaveArtifact,
   onStartHarness,
   onStopAgent,
-  resumableEventCount
+  resumableEventCount,
+  onToggleStageVoice
 }: StageShellProps) {
   const [intentText, setIntentText] = useState("");
   const [voiceCapture, setVoiceCapture] = useState<VoiceCaptureState>(() => ({
@@ -206,11 +212,16 @@ export function StageShell({
       : voiceCapture.status === "unavailable"
         ? "Voice standby"
         : "Speak";
+  const assistantSpeechStatus =
+    assistantSpeechText ??
+    (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
 
   return (
     <main
       className={`stage-shell ${thread.status === "paused" ? "stage-idle" : "stage-active"} ${
         voiceCapture.status === "listening" ? "stage-listening" : ""
+      } ${
+        stageVoiceEnabled ? "stage-voice-enabled" : ""
       }`}
       style={stageStyle}
     >
@@ -380,10 +391,21 @@ export function StageShell({
         >
           {voiceButtonLabel}
         </button>
+        <button
+          className="voice-output-toggle"
+          type="button"
+          aria-pressed={stageVoiceEnabled}
+          onClick={onToggleStageVoice}
+        >
+          Stage voice
+        </button>
         <div className="voice-transcript" aria-live="polite" data-testid="voice-transcript">
           {voiceCapture.status === "listening"
             ? interimTranscript || "listening for intent"
             : finalTranscript || voiceError || "voice-native when available"}
+        </div>
+        <div className="stage-voice-reply" aria-live="polite" data-testid="assistant-speech">
+          {assistantSpeechStatus}
         </div>
       </form>
       <p className="stage-memory-status">local memory · private</p>

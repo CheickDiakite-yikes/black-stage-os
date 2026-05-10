@@ -28,7 +28,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Text precision | `intent-input` flow in `StageShell.tsx`; e2e submits text commands and scenarios | Covered |
 | Natural voice input | Web Speech path in `StageShell.tsx`; mocked browser speech e2e | Covered for browser prototype |
 | Realtime voice foundation | `packages/voice-core/src/realtime/realtimeVoiceSession.ts` defaults to `gpt-realtime-2` in simulation mode with server-broker safety policy | Contract only |
-| Assistant speech output | `assistant.speech` event schema exists; no user-facing spoken output yet | Missing |
+| Assistant speech output | Stage voice toggle speaks sparse browser-native status, shows the last spoken line, and records `assistant.speech` research events | Covered locally |
 | Multimodal precision | File attach creates local document objects; image files are accepted as context metadata | Partial |
 | Intent thread | `IntentThread`, local persistence, session export/replay | Covered for v0 |
 | Dynamic object formation | Scenario fixtures and evented object creation stream objects over time | Covered for v0 |
@@ -59,20 +59,20 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 ## Evidence From Current Gate
 
-Most recent full validation after the harness projection slice:
+Most recent full validation after the local assistant speech slice:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
 - `pnpm test`: passed with 2 voice-core subtests and 4 agent-runtime subtests.
 - `pnpm build`: passed.
-- `pnpm test:e2e`: passed with 7 browser tests.
-- `pnpm scan:secrets`: passed after staging the harness projection slice.
+- `pnpm test:e2e`: passed with 8 browser tests.
+- `pnpm scan:secrets`: passed after staging the local assistant speech slice.
 
 ## Gaps That Block Goal Completion
 
 The goal is not complete yet. The largest remaining gaps are:
 
-1. Live Realtime voice is not connected. The contract exists, but there is no server broker, no live session, and no assistant speech output.
+1. Live Realtime voice is not connected. The contract exists and local browser-native assistant speech works, but there is no server broker or live Realtime session.
 2. Live agentic work is not connected. Codex, Agents SDK, and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.

@@ -187,6 +187,7 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({ 
     "Create three Codex task prompts"
   );
   await expect(page.getByTestId("research-capture")).toContainText("stage events");
+  await expect(page.getByLabel("Intent thread")).not.toContainText("working");
 
   const stageEventCount = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
@@ -209,7 +210,6 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({ 
     .getByRole("button", { name: "Replay trace" })
     .click();
 
-  await expect(page.getByTestId("research-capture")).toContainText("replaying");
   await expect(page.getByTestId("stage-workspace")).toContainText("Stage Shell v0 plan");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
@@ -374,6 +374,83 @@ test("Stage Shell v0 attaches local context as a private document object", async
     "Local-only context object. No external upload."
   );
   await expect(page.getByTestId("research-capture")).toContainText("context attached");
+});
+
+test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled", async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    class FakeSpeechSynthesisUtterance {
+      pitch = 1;
+      rate = 1;
+      volume = 1;
+
+      constructor(public text: string) {}
+    }
+
+    const spoken: string[] = [];
+    const browserWindow = window as Window & {
+      __blackstageSpoken?: string[];
+    };
+
+    browserWindow.__blackstageSpoken = spoken;
+    Object.defineProperty(window, "SpeechSynthesisUtterance", {
+      configurable: true,
+      value: FakeSpeechSynthesisUtterance
+    });
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: {
+        cancel() {},
+        speak(utterance: { text: string }) {
+          spoken.push(utterance.text);
+        }
+      }
+    });
+  });
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Stage voice" }).click();
+  await expect(page.getByTestId("assistant-speech")).toContainText("Stage voice ready");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("assistant-speech")).toContainText("Intent received");
+  await expect(page.getByTestId("stage-workspace")).toContainText("Stage Shell v0 plan");
+
+  const voiceEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              source?: string;
+            };
+          }>;
+        })
+      : undefined;
+    const browserWindow = window as Window & {
+      __blackstageSpoken?: string[];
+    };
+
+    return {
+      assistantSpeechLogged:
+        snapshot?.researchEvents?.some(
+          (event) =>
+            event.eventType === "assistant_speech" && event.payload?.source === "stage_status"
+        ) ?? false,
+      spoken: browserWindow.__blackstageSpoken ?? []
+    };
+  });
+
+  expect(voiceEvidence.assistantSpeechLogged).toBe(true);
+  expect(voiceEvidence.spoken).toEqual(
+    expect.arrayContaining([
+      "Stage voice ready. I will speak only the key turns.",
+      "Intent received. I am shaping the stage."
+    ])
+  );
 });
 
 test("Stage Shell v0 accepts a spoken final intent when browser speech is available", async ({

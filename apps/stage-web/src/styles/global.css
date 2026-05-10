@@ -450,6 +450,7 @@ button:disabled {
 .intent-submit,
 .context-attach,
 .voice-affordance,
+.voice-output-toggle,
 .agent-stop,
 .approval-actions button,
 .artifact-actions button,
@@ -470,6 +471,8 @@ button:disabled {
 
 .scenario-rail button:hover,
 .context-attach:hover,
+.voice-affordance:hover,
+.voice-output-toggle:hover,
 .agent-stop:hover,
 .agent-stop:focus-visible,
 .approval-actions button:hover,
@@ -1157,8 +1160,8 @@ button:disabled {
   place-items: center;
   z-index: 3;
   width: min(44rem, calc(100vw - 2rem));
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  grid-template-rows: auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  grid-template-rows: auto auto auto;
   gap: 0.5rem;
   opacity: 0.44;
   transform: translateX(50%);
@@ -1200,6 +1203,10 @@ button:disabled {
   opacity: 0.54;
 }
 
+.voice-output-toggle {
+  opacity: 0.68;
+}
+
 .context-attach {
   display: inline-flex;
   min-height: 2.2rem;
@@ -1214,13 +1221,26 @@ button:disabled {
   opacity: 1;
 }
 
-.voice-transcript {
+.voice-output-toggle[aria-pressed="true"] {
+  border-color: rgba(216, 189, 133, 0.58);
+  background: rgba(216, 189, 133, 0.18);
+  color: rgba(255, 250, 240, 0.98);
+  opacity: 1;
+}
+
+.voice-transcript,
+.stage-voice-reply {
   grid-column: 1 / -1;
   min-height: 1rem;
   color: rgba(239, 228, 210, 0.58);
   font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-align: center;
+}
+
+.stage-voice-reply {
+  color: rgba(216, 189, 133, 0.7);
+  font-size: 0.64rem;
 }
 
 .stage-memory-status {
@@ -1540,6 +1560,7 @@ button:disabled {
   }
 
   .intent-capture input {
+    grid-column: 1 / -1;
     font-size: 0.86rem;
     text-align: center;
   }
@@ -1547,14 +1568,19 @@ button:disabled {
   .intent-capture {
     bottom: 3.8rem;
     width: min(29rem, calc(100vw - 2rem));
-    grid-template-columns: 1fr auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .voice-affordance {
-    grid-column: 2;
+  .context-attach,
+  .intent-submit,
+  .voice-affordance,
+  .voice-output-toggle {
+    width: 100%;
+    padding-inline: 0.4rem;
   }
 
-  .voice-transcript {
+  .voice-transcript,
+  .stage-voice-reply {
     grid-column: 1 / -1;
   }
 
