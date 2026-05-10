@@ -50,6 +50,7 @@ type StageShellProps = {
   onReplayTrace: () => void;
   onResumeAgent: () => void;
   onSaveArtifact: (artifactId: string, body: string) => void;
+  onStartHarness: () => void;
   onStopAgent: () => void;
   resumableEventCount: number;
 };
@@ -80,6 +81,7 @@ export function StageShell({
   onReplayTrace,
   onResumeAgent,
   onSaveArtifact,
+  onStartHarness,
   onStopAgent,
   resumableEventCount
 }: StageShellProps) {
@@ -308,10 +310,12 @@ export function StageShell({
         </div>
         <AgentActivityFeed
           canResume={resumableEventCount > 0}
+          canStartHarness={!isRunning && thread.originalIntent.length > 0}
           events={thread.agentEvents}
           isRunning={isRunning}
           threadStatus={thread.status}
           onResume={onResumeAgent}
+          onStartHarness={onStartHarness}
           onStop={onStopAgent}
         />
         <ApprovalCard

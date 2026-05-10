@@ -13,24 +13,29 @@ import type {
 export function createBuildBlackstageHarnessStageEvents(
   threadId: string,
   emittedAt = new Date().toISOString(),
-  delayOffsetMs = 1_240
+  delayOffsetMs = 1_240,
+  idPrefix = "build_blackstage_harness",
+  recorderTitle = "Background harness recorder"
 ): TimedStageEvent[] {
   return projectHarnessSnapshotToStageEvents(
-    createBuildBlackstageHarnessSnapshot(threadId, emittedAt),
+    createBuildBlackstageHarnessSnapshot(threadId, emittedAt, idPrefix),
     threadId,
     emittedAt,
-    delayOffsetMs
+    delayOffsetMs,
+    idPrefix,
+    recorderTitle
   );
 }
 
 export function createBuildBlackstageHarnessSnapshot(
   threadId: string,
-  timestamp = new Date().toISOString()
+  timestamp = new Date().toISOString(),
+  idPrefix = "build_blackstage_harness"
 ): HarnessSchedulerSnapshot {
   const tasks: HarnessTask[] = [
-    createHarnessTask("harness_codex_run", threadId, "Background Codex run", "codex", "completed", timestamp),
+    createHarnessTask(`${idPrefix}_codex_run`, threadId, "Background Codex run", "codex", "completed", timestamp),
     createHarnessTask(
-      "harness_approval_gate",
+      `${idPrefix}_approval_gate`,
       threadId,
       "Approval-gated workspace write",
       "codex",
@@ -39,7 +44,7 @@ export function createBuildBlackstageHarnessSnapshot(
       true
     ),
     createHarnessTask(
-      "harness_artifact_packet",
+      `${idPrefix}_artifact_packet`,
       threadId,
       "Completed harness artifact",
       "artifact",
@@ -47,7 +52,7 @@ export function createBuildBlackstageHarnessSnapshot(
       timestamp
     ),
     createHarnessTask(
-      "harness_replay_failure",
+      `${idPrefix}_replay_failure`,
       threadId,
       "Replayable failure packet",
       "research",
@@ -57,8 +62,8 @@ export function createBuildBlackstageHarnessSnapshot(
   ];
   const runs: HarnessRun[] = [
     {
-      id: "run_harness_codex",
-      taskId: "harness_codex_run",
+      id: `${idPrefix}_run_codex`,
+      taskId: `${idPrefix}_codex_run`,
       adapterId: "codex_adapter_simulated",
       status: "completed",
       startedAt: timestamp,
@@ -66,8 +71,8 @@ export function createBuildBlackstageHarnessSnapshot(
       summary: "Simulated Codex worker produced a validation-ready patch packet."
     },
     {
-      id: "run_harness_artifact",
-      taskId: "harness_artifact_packet",
+      id: `${idPrefix}_run_artifact`,
+      taskId: `${idPrefix}_artifact_packet`,
       adapterId: "artifact_adapter_simulated",
       status: "completed",
       startedAt: timestamp,
@@ -75,8 +80,8 @@ export function createBuildBlackstageHarnessSnapshot(
       summary: "Harness artifact packet completed locally."
     },
     {
-      id: "run_harness_failure",
-      taskId: "harness_replay_failure",
+      id: `${idPrefix}_run_failure`,
+      taskId: `${idPrefix}_replay_failure`,
       adapterId: "research_adapter_simulated",
       status: "failed",
       startedAt: timestamp,
@@ -85,11 +90,11 @@ export function createBuildBlackstageHarnessSnapshot(
     }
   ];
   const events: HarnessEvent[] = [
-    createHarnessEvent("event_harness_codex_started", "harness_codex_run", "run_harness_codex", "task.started", "Background Codex run started.", timestamp),
-    createHarnessEvent("event_harness_codex_completed", "harness_codex_run", "run_harness_codex", "task.completed", "Background Codex run completed.", timestamp),
-    createHarnessEvent("event_harness_approval_blocked", "harness_approval_gate", undefined, "approval.required", "Approval gate blocked workspace write.", timestamp),
-    createHarnessEvent("event_harness_artifact_completed", "harness_artifact_packet", "run_harness_artifact", "task.completed", "Completed artifact packet ready.", timestamp),
-    createHarnessEvent("event_harness_failure", "harness_replay_failure", "run_harness_failure", "task.failed", "Replayable failure captured.", timestamp)
+    createHarnessEvent(`${idPrefix}_event_codex_started`, `${idPrefix}_codex_run`, `${idPrefix}_run_codex`, "task.started", "Background Codex run started.", timestamp),
+    createHarnessEvent(`${idPrefix}_event_codex_completed`, `${idPrefix}_codex_run`, `${idPrefix}_run_codex`, "task.completed", "Background Codex run completed.", timestamp),
+    createHarnessEvent(`${idPrefix}_event_approval_blocked`, `${idPrefix}_approval_gate`, undefined, "approval.required", "Approval gate blocked workspace write.", timestamp),
+    createHarnessEvent(`${idPrefix}_event_artifact_completed`, `${idPrefix}_artifact_packet`, `${idPrefix}_run_artifact`, "task.completed", "Completed artifact packet ready.", timestamp),
+    createHarnessEvent(`${idPrefix}_event_failure`, `${idPrefix}_replay_failure`, `${idPrefix}_run_failure`, "task.failed", "Replayable failure captured.", timestamp)
   ];
 
   return {
@@ -103,10 +108,12 @@ export function projectHarnessSnapshotToStageEvents(
   snapshot: HarnessSchedulerSnapshot,
   threadId: string,
   emittedAt = new Date().toISOString(),
-  delayOffsetMs = 0
+  delayOffsetMs = 0,
+  idPrefix = "build_blackstage_harness",
+  recorderTitle = "Background harness recorder"
 ): TimedStageEvent[] {
-  const timelineObject = createHarnessTimelineObject(snapshot, threadId, emittedAt);
-  const proofObject = createHarnessProofObject(snapshot, threadId, emittedAt);
+  const timelineObject = createHarnessTimelineObject(snapshot, threadId, emittedAt, idPrefix, recorderTitle);
+  const proofObject = createHarnessProofObject(snapshot, threadId, emittedAt, idPrefix);
   const agentEvents = snapshot.events.map((event, index) =>
     createAgentEventFromHarnessEvent(event, threadId, emittedAt, index)
   );
@@ -143,13 +150,15 @@ export function projectHarnessSnapshotToStageEvents(
 function createHarnessTimelineObject(
   snapshot: HarnessSchedulerSnapshot,
   threadId: string,
-  timestamp: string
+  timestamp: string,
+  idPrefix: string,
+  title: string
 ): StageObject {
   return {
-    id: "build_blackstage_harness_timeline",
+    id: `${idPrefix}_timeline`,
     threadId,
     type: "timeline",
-    title: "Background harness recorder",
+    title,
     summary: "A local scheduler trace shows background Codex work, approval blocking, artifact completion, and replayable failure.",
     payload: {
       steps: [
@@ -176,10 +185,11 @@ function createHarnessTimelineObject(
 function createHarnessProofObject(
   snapshot: HarnessSchedulerSnapshot,
   threadId: string,
-  timestamp: string
+  timestamp: string,
+  idPrefix: string
 ): StageObject {
   return {
-    id: "build_blackstage_harness_proof",
+    id: `${idPrefix}_proof`,
     threadId,
     type: "research_note",
     title: "Harness proof packet",

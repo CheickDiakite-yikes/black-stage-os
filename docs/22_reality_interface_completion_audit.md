@@ -91,3 +91,5 @@ Build the local harness-to-stage live demo path:
 - Add e2e coverage proving the harness can be started, blocked by approval, replayed, and inspected.
 
 This moves the prototype closer to real directed intelligence without prematurely adding live API keys, external tools, or background side effects.
+
+Status: Implemented as the `Run harness` visible-labor control. The run is still simulated and local-only; live Codex, Agents SDK, and Realtime wiring remain incomplete.

@@ -10,6 +10,7 @@ import {
   type TimedStageEvent
 } from "@blackstage/stage-core";
 import {
+  createBuildBlackstageHarnessStageEvents,
   createSimulatedApprovalContinuation,
   createSimulatedStageRun
 } from "@blackstage/agent-runtime";
@@ -355,6 +356,21 @@ export function App() {
     });
   }, [activeScenario, emitStageEvent, pausedEvents, scheduleTimedEvents, thread.id]);
 
+  const startLocalHarnessRun = useCallback(() => {
+    const startedAt = new Date().toISOString();
+    const runId = Date.now().toString(36);
+
+    scheduleTimedEvents(
+      createBuildBlackstageHarnessStageEvents(
+        thread.id,
+        startedAt,
+        120,
+        `live_harness_${runId}`,
+        "Live harness recorder"
+      )
+    );
+  }, [scheduleTimedEvents, thread.id]);
+
   const exportSession = useCallback(() => {
     const exportedAt = new Date().toISOString();
     const exportEvent: StageEvent = {
@@ -693,6 +709,7 @@ export function App() {
       onReplayTrace={replayStageEvents}
       onResumeAgent={resumeAgentWork}
       onSaveArtifact={saveArtifactRevision}
+      onStartHarness={startLocalHarnessRun}
       onStopAgent={stopAgentWork}
       onSubmitIntent={runIntent}
       resumableEventCount={pausedEvents.length}

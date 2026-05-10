@@ -341,6 +341,9 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
   await expect(page.getByTestId("agent-activity-feed")).toContainText(
     "Replayable failure captured"
   );
+
+  await page.getByRole("button", { name: "Run harness" }).click();
+  await expect(page.getByTestId("stage-workspace")).toContainText("Live harness recorder");
 });
 
 test("Stage Shell v0 attaches local context as a private document object", async ({ page }) => {
