@@ -1,0 +1,101 @@
+# First Long-Running Goal: Stage Shell v0 After Prompt 1
+
+Paste this into Codex CLI after installing the goal-mode add-on, running `/status`, and reviewing the pre-goal `/plan`.
+
+```text
+/goal Continue from the current Prompt 1 bootstrapped BlackStage repo state and implement Stage Shell v0 without stopping until the verifiable end state is reached.
+
+Context:
+Prompt 1 (`codex/prompts/01_bootstrap_repo.md`) was already started or completed. Do not rerun bootstrap from scratch. Inspect the current repo state first. Preserve the existing package manager, app structure, framework choices, and conventions unless a concrete blocker requires a minimal deviation. If the repo is only partially bootstrapped, complete only the smallest missing pieces required to ship Stage Shell v0.
+
+Read first:
+- AGENTS.md
+- START_HERE.md
+- docs/01_product_manifesto.md
+- docs/03_ux_interaction_model.md
+- docs/04_visual_design_system.md
+- docs/05_system_architecture.md
+- docs/06_mvp_stage_shell_spec.md
+- docs/11_security_privacy_and_approvals.md
+- docs/12_quality_bar_and_demo_readiness.md
+- docs/14_research_protocol.md
+- docs/15_metrics_and_instrumentation.md
+- docs/20_codex_goal_mode_runbook.md
+
+Objective:
+Build a working Stage Shell v0 prototype on top of the existing repo: a black living render field where the user can enter intent, see the surface organize itself into render objects, watch simulated agent activity, approve simulated risky actions, and receive usable artifacts.
+
+Experience thesis:
+The prototype must prove this loop:
+intent → living render field → visible agent work → approval ritual → artifact
+
+The prototype fails if it merely feels like a dark chatbot.
+
+Scope:
+- Use the current repo stack and structure created by Prompt 1.
+- Build or complete the app shell, core domain model, demo state machine, and UI components.
+- Include at least three demo scenarios:
+  1. "Analyze an acquisition target"
+  2. "Plan a seed round"
+  3. "Build BlackStage"
+- Include simulated agent activity events for reading, searching, comparing, drafting, and waiting for approval.
+- Include approval cards for simulated actions such as sending an email, booking something, purchasing something, or sharing a file.
+- Include artifact previews such as memo, model, plan, or research brief.
+- Add event instrumentation for intent_submitted, render_object_created, agent_event_emitted, approval_requested, approval_decisioned, artifact_created, and session_exported.
+- Add a session export or research log mechanism.
+- Save at least one screenshot or visual artifact under artifacts/screenshots/.
+- Create a research log and scorecard under docs/research/runs/.
+
+Do not implement:
+- real external computer/browser control;
+- real email sending;
+- real payments or purchases;
+- real file deletion;
+- OAuth/auth flows;
+- production deployment;
+- hidden background actions;
+- storage of sensitive user data;
+- unnecessary repo rewrites;
+- a framework switch unless the current scaffold is genuinely unusable.
+
+Validation loop:
+- After each meaningful checkpoint, run the relevant validation command.
+- Prefer typecheck, lint, tests, and build.
+- If a command does not exist yet, add the smallest useful version of it.
+- Add a smoke test that launches the app and verifies the core Stage Shell elements exist.
+- Keep changes focused and reviewable.
+- Record validation outcomes in the research log.
+
+Research logging:
+Create docs/research/runs/<YYYY-MM-DD>-stage-shell-v0.md with:
+- the exact goal text;
+- repo state after Prompt 1;
+- checkpoints completed;
+- validation commands and outcomes;
+- design decisions;
+- failures and recoveries;
+- things Codex did well;
+- things Codex struggled with;
+- product insights about the agentic interface.
+
+Create docs/research/runs/<YYYY-MM-DD>-stage-shell-v0-scorecard.md with the 1-to-5 rubric from docs/20_codex_goal_mode_runbook.md.
+
+Stopping condition:
+Stop only when:
+- the app runs locally;
+- build passes;
+- typecheck passes if configured;
+- lint passes if configured;
+- tests pass;
+- smoke test verifies the primary interface;
+- screenshot exists;
+- research log exists;
+- scorecard exists;
+- no prohibited scope was implemented;
+- the demo clearly feels like a living render field, not a normal chatbot.
+
+If blocked:
+- Record the blocker in the research log.
+- Make the smallest safe fallback that preserves the interface thesis.
+- Pause only if the blocker requires product, legal, security, credential, or destructive-action guidance.
+```

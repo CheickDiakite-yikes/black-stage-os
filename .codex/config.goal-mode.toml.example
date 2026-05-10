@@ -1,0 +1,8 @@
+# Example Codex config snippet for goal mode.
+# Copy the relevant lines into ~/.codex/config.toml or your repo-specific Codex config.
+
+[features]
+goals = true
+
+# Keep approval/sandbox settings conservative for the first long-running run.
+# Do not allow unrestricted system access or real-world consequence-bearing actions.
