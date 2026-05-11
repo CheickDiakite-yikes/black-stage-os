@@ -1431,13 +1431,16 @@ button:disabled {
   justify-content: center;
   gap: 0.45rem;
   font-size: 0.62rem;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .harness-runner-status {
   flex-wrap: wrap;
-  line-height: 1.35;
-  white-space: normal;
+}
+
+.realtime-broker-status {
+  flex-wrap: wrap;
 }
 
 .realtime-broker-status span,
@@ -1451,6 +1454,7 @@ button:disabled {
   font-weight: 600;
 }
 
+.realtime-broker-status em,
 .harness-runner-status em {
   flex-basis: 100%;
   color: rgba(239, 228, 210, 0.46);

@@ -47,6 +47,10 @@ import {
   startStageWebRealtimeBridge
 } from "../voice/realtimeWebrtcBridge";
 import {
+  checkStageWebRealtimeMicPreflight,
+  createDefaultStageWebRealtimeMicPreflight
+} from "../voice/realtimeMicPreflight";
+import {
   checkStageWebHarnessRunnerProofs,
   checkStageWebHarnessRunnerSnapshot,
   checkStageWebHarnessRunnerReadiness,
@@ -169,6 +173,10 @@ export function App() {
   const [realtimeBridge, setRealtimeBridge] = useState(
     createDefaultStageWebRealtimeBridgeState
   );
+  const [realtimeMicPreflight, setRealtimeMicPreflight] = useState(
+    createDefaultStageWebRealtimeMicPreflight
+  );
+  const [realtimeMicGestureObserved, setRealtimeMicGestureObserved] = useState(false);
   const [harnessRunnerReadiness, setHarnessRunnerReadiness] = useState(
     createDefaultStageWebHarnessReadiness
   );
@@ -256,6 +264,8 @@ export function App() {
     const hasPendingRealtimeApproval = thread.approvals.some(
       isRealtimeLiveApprovalPending
     );
+
+    setRealtimeMicGestureObserved(true);
 
     if (
       hasPendingRealtimeApproval ||
@@ -1727,6 +1737,33 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const realtimeApprovalArmed =
+      realtimeBrokerReadiness.status === "reachable" &&
+      realtimeBrokerReadiness.liveModeEnabled === true &&
+      realtimeBrokerReadiness.liveApprovalConfigured === true &&
+      Boolean(readStageWebRealtimeApprovalPhrase());
+
+    void checkStageWebRealtimeMicPreflight({
+      explicitUserGesture: realtimeMicGestureObserved,
+      realtimeApprovalArmed
+    }).then((preflight) => {
+      if (!cancelled) {
+        setRealtimeMicPreflight(preflight);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    realtimeBrokerReadiness.liveApprovalConfigured,
+    realtimeBrokerReadiness.liveModeEnabled,
+    realtimeBrokerReadiness.status,
+    realtimeMicGestureObserved
+  ]);
+
+  useEffect(() => {
     const routeUrl = resolveStageWebHarnessRunnerRouteUrl();
     let cancelled = false;
 
@@ -1820,6 +1857,7 @@ export function App() {
       realtimeArmVisible={realtimeArmVisible}
       realtimeBrokerReadiness={realtimeBrokerReadiness}
       realtimeBrokerProofs={realtimeBrokerProofs}
+      realtimeMicPreflight={realtimeMicPreflight}
       scenarios={stageShellScenarios}
       stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}

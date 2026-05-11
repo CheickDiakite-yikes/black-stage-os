@@ -18,11 +18,13 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       __blackstageRealtimeApprovalPhrase?: string;
       __blackstageRealtimeBrokerUrl?: string;
       __blackstageRealtimeWebrtcEnabled?: string;
+      __blackstageGetUserMediaCalls?: number;
     };
 
     browserWindow.__blackstageRealtimeApprovalPhrase = "approve-local-realtime";
     browserWindow.__blackstageRealtimeBrokerUrl = "http://127.0.0.1:8798";
     browserWindow.__blackstageRealtimeWebrtcEnabled = "1";
+    browserWindow.__blackstageGetUserMediaCalls = 0;
     window.localStorage.setItem(
       "blackstage.realtime.approvalPhrase",
       "approve-local-realtime"
@@ -58,6 +60,27 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     Object.defineProperty(window, "RTCPeerConnection", {
       configurable: true,
       value: FakeRTCPeerConnection
+    });
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia() {
+          browserWindow.__blackstageGetUserMediaCalls =
+            (browserWindow.__blackstageGetUserMediaCalls ?? 0) + 1;
+
+          return Promise.reject(new Error("getUserMedia should not run in preflight"));
+        }
+      }
+    });
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: {
+        async query(descriptor: { name: string }) {
+          return {
+            state: descriptor.name === "microphone" ? "prompt" : "denied"
+          };
+        }
+      }
     });
   });
 
@@ -135,6 +158,8 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     "live broker · SDP off"
   );
   await expect(page.getByTestId("realtime-broker-status")).toContainText("1 proof");
+  await expect(page.getByTestId("realtime-mic-preflight")).toContainText("mic gesture");
+  await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");
   await expect(page.getByTestId("realtime-arm-button")).toBeEnabled();
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(0);
@@ -183,6 +208,16 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
 
   expect(bridgeEvidence.bridgeConnected).toBe(true);
   expect(bridgeEvidence.approvalRequested).toBe(true);
+  await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          (window as Window & { __blackstageGetUserMediaCalls?: number })
+            .__blackstageGetUserMediaCalls ?? 0
+      )
+    )
+    .toBe(0);
   expect(brokerRequests).toEqual(
     expect.arrayContaining([
       expect.objectContaining({

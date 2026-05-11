@@ -9,6 +9,7 @@ import {
   createTranscriptState,
   type RealtimeBrokerClientReadiness,
   type TranscriptState,
+  type VoiceCapturePreflight,
   type VoiceCaptureState
 } from "@blackstage/voice-core";
 import type { CSSProperties } from "react";
@@ -41,6 +42,7 @@ type StageShellProps = {
   realtimeArmVisible: boolean;
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   realtimeBrokerProofs: StageWebRealtimeBrokerProofs;
+  realtimeMicPreflight: VoiceCapturePreflight;
   stageEventCount: number;
   stageVoiceEnabled: boolean;
   isRunning: boolean;
@@ -99,6 +101,7 @@ export function StageShell({
   realtimeArmVisible,
   realtimeBrokerReadiness,
   realtimeBrokerProofs,
+  realtimeMicPreflight,
   stageEventCount,
   stageVoiceEnabled,
   isRunning,
@@ -279,6 +282,7 @@ export function StageShell({
     realtimeArmAvailable,
     realtimeArmPending
   );
+  const realtimeMicPreflightStatus = formatRealtimeMicPreflight(realtimeMicPreflight);
 
   return (
     <main
@@ -511,6 +515,9 @@ export function StageShell({
         >
           <span>Realtime edge</span>
           <strong>{realtimeBrokerStatus}</strong>
+          {realtimeArmVisible ? (
+            <em data-testid="realtime-mic-preflight">{realtimeMicPreflightStatus}</em>
+          ) : null}
         </div>
         <div
           className={`harness-runner-status harness-runner-status-${harnessRunnerReadiness.status}`}
@@ -607,6 +614,25 @@ function formatRealtimeProofSuffix(proofs: StageWebRealtimeBrokerProofs): string
   const proofLabel = proofCount === 1 ? "proof" : "proofs";
 
   return ` · ${proofCount} ${proofLabel}`;
+}
+
+function formatRealtimeMicPreflight(preflight: VoiceCapturePreflight): string {
+  const suffix = "no stream";
+
+  switch (preflight.status) {
+    case "ready":
+      return `mic ready · ${suffix}`;
+    case "needs_permission":
+      return preflight.permissionState === "granted"
+        ? `approval locked · ${suffix}`
+        : `mic permission · ${suffix}`;
+    case "needs_user_gesture":
+      return `mic gesture · ${suffix}`;
+    case "blocked":
+      return `mic blocked · ${suffix}`;
+    case "unavailable":
+      return `mic unavailable · ${suffix}`;
+  }
 }
 
 function formatHarnessRunnerReadiness(
