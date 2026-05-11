@@ -1,9 +1,14 @@
 /* global fetch, Response */
 
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import {
+  BLACKSTAGE_REALTIME_PROOFS_ROUTE,
   BLACKSTAGE_REALTIME_BROKER_ROUTE,
+  DEFAULT_REALTIME_SMOKE_PROOF_ROOT,
   OPENAI_REALTIME_CALLS_URL,
   STAGE_BROKER_APPROVAL_HEADER,
   STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR,
@@ -103,6 +108,82 @@ describe("Stage broker server", () => {
     assert.equal(body.liveApprovalRequired, true);
     assert.equal(body.liveApprovalConfigured, true);
     assert.equal(body.browserReceivesStandardApiKey, false);
+  });
+
+  it("exposes redacted realtime smoke proof summaries read-only", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "blackstage-broker-proof-"));
+
+    try {
+      await mkdir(join(repoRoot, DEFAULT_REALTIME_SMOKE_PROOF_ROOT), {
+        recursive: true
+      });
+      await writeFile(
+        join(repoRoot, DEFAULT_REALTIME_SMOKE_PROOF_ROOT, "latest.json"),
+        JSON.stringify(
+          {
+            proofVersion: 1,
+            kind: "blackstage.realtime.live_smoke",
+            status: "skipped",
+            createdAt: "2026-05-11T10:00:00.000Z",
+            liveSmokeArmed: false,
+            openAiNetworkCallAttempted: false,
+            browserReceivesStandardApiKey: false,
+            browserSendsAudio: false,
+            requiredEnv: {
+              OPENAI_API_KEY: "set"
+            },
+            missingEnv: ["BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"],
+            errorMessage: "proof reader should not expose this detail"
+          },
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const server = await listen(
+        createStageBrokerServer({
+          runtimeConfig: createStageBrokerRuntimeConfig({
+            BLACKSTAGE_REPO_ROOT: repoRoot
+          })
+        })
+      );
+      const response = await fetch(
+        `${baseUrl(server)}${BLACKSTAGE_REALTIME_PROOFS_ROUTE}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            origin: "http://127.0.0.1:4187"
+          }
+        }
+      );
+      const body = await response.json();
+
+      assert.equal(response.status, 200);
+      assert.equal(
+        response.headers.get("access-control-allow-origin"),
+        "http://127.0.0.1:4187"
+      );
+      assert.equal(body.ok, true);
+      assert.equal(body.route, BLACKSTAGE_REALTIME_PROOFS_ROUTE);
+      assert.equal(body.proofs.length, 1);
+      assert.equal(body.proofs[0].status, "skipped");
+      assert.equal(body.proofs[0].proofPath, ".blackstage/realtime-smoke/latest.json");
+      assert.equal(body.proofs[0].openAiNetworkCallAttempted, false);
+      assert.equal(body.proofs[0].browserReceivesStandardApiKey, false);
+      assert.equal(body.proofs[0].browserSendsAudio, false);
+      assert.deepEqual(body.proofs[0].missingEnv, [
+        "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"
+      ]);
+      assert.equal("requiredEnv" in body.proofs[0], false);
+      assert.equal("errorMessage" in body.proofs[0], false);
+    } finally {
+      await rm(repoRoot, {
+        recursive: true,
+        force: true
+      });
+    }
   });
 
   it("mounts the realtime broker route disabled by default", async () => {

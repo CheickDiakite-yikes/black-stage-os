@@ -14,8 +14,13 @@ import type { RealtimeBrokerReadinessBody } from "../../../packages/voice-core/d
 import { BLACKSTAGE_REALTIME_BROKER_ROUTE } from "../../../packages/voice-core/dist/realtime/realtimeVoiceServerBroker.js";
 import { createRealtimeVoiceSessionConfig } from "../../../packages/voice-core/dist/realtime/realtimeVoiceSession.js";
 import { createOpenAiRealtimeExchange } from "./openAiRealtimeExchange.js";
+import {
+  DEFAULT_REALTIME_SMOKE_PROOF_ROOT,
+  readRealtimeSmokeProofIndex
+} from "./realtimeSmokeProofs.js";
 
 export { BLACKSTAGE_REALTIME_BROKER_ROUTE } from "../../../packages/voice-core/dist/realtime/realtimeVoiceServerBroker.js";
+export { DEFAULT_REALTIME_SMOKE_PROOF_ROOT } from "./realtimeSmokeProofs.js";
 
 export const DEFAULT_STAGE_BROKER_HOST = "127.0.0.1";
 export const DEFAULT_STAGE_BROKER_PORT = 8798;
@@ -29,11 +34,17 @@ export const STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR =
   "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN";
 export const STAGE_BROKER_APPROVAL_HEADER = "x-blackstage-realtime-approval";
 export const STAGE_BROKER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_BROKER_ALLOWED_ORIGINS";
+export const BLACKSTAGE_REALTIME_PROOFS_ROUTE = "/api/blackstage/realtime/proofs";
+export const STAGE_BROKER_REALTIME_PROOF_ROOT_ENV_VAR =
+  "BLACKSTAGE_REALTIME_SMOKE_PROOF_ROOT";
 
 export type StageBrokerRuntimeConfig = {
   host: string;
   port: number;
   routePath: string;
+  proofsRoutePath: string;
+  repoRoot: string;
+  proofRoot: string;
   allowedOrigins: string[];
   runApprovalToken?: string;
   environment: RealtimeBrokerRouteEnvironment;
@@ -51,6 +62,12 @@ export function createStageBrokerRuntimeConfig(
     host: env.BLACKSTAGE_BROKER_HOST ?? DEFAULT_STAGE_BROKER_HOST,
     port: Number(env.BLACKSTAGE_BROKER_PORT ?? DEFAULT_STAGE_BROKER_PORT),
     routePath: env.BLACKSTAGE_REALTIME_BROKER_ROUTE ?? BLACKSTAGE_REALTIME_BROKER_ROUTE,
+    proofsRoutePath:
+      env.BLACKSTAGE_REALTIME_PROOFS_ROUTE ?? BLACKSTAGE_REALTIME_PROOFS_ROUTE,
+    repoRoot: env.BLACKSTAGE_REPO_ROOT ?? process.cwd(),
+    proofRoot:
+      env[STAGE_BROKER_REALTIME_PROOF_ROOT_ENV_VAR] ??
+      DEFAULT_REALTIME_SMOKE_PROOF_ROOT,
     allowedOrigins: parseAllowedOrigins(env[STAGE_BROKER_ALLOWED_ORIGINS_ENV_VAR]),
     runApprovalToken: env[STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR],
     environment: {
@@ -137,6 +154,46 @@ async function handleStageBrokerRequest(
     });
     response.end(
       JSON.stringify(createReadinessResponse(runtimeConfig, new Date().toISOString()))
+    );
+    return;
+  }
+
+  if (
+    routeUrl.pathname === runtimeConfig.proofsRoutePath &&
+    request.method?.toUpperCase() === "GET"
+  ) {
+    let proofs;
+
+    try {
+      proofs = await readRealtimeSmokeProofIndex({
+        repoRoot: runtimeConfig.repoRoot,
+        proofRoot: runtimeConfig.proofRoot
+      });
+    } catch {
+      response.writeHead(500, {
+        "content-type": "application/json",
+        ...corsHeaders
+      });
+      response.end(
+        JSON.stringify({
+          ok: false,
+          errors: ["Realtime smoke proof index is unavailable."]
+        })
+      );
+      return;
+    }
+
+    response.writeHead(200, {
+      "content-type": "application/json",
+      ...corsHeaders
+    });
+    response.end(
+      JSON.stringify({
+        ok: true,
+        route: runtimeConfig.proofsRoutePath,
+        proofRoot: runtimeConfig.proofRoot,
+        proofs
+      })
     );
     return;
   }

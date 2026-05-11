@@ -59,6 +59,14 @@ pnpm smoke:realtime
 
 The proof writer records only redacted metadata: pass/fail/skip status, set/unset env readiness, byte counts, a short answer digest, and safety booleans. It rejects proof paths outside `.blackstage/` and does not write raw SDP, API keys, approval phrases, or browser trace artifacts.
 
+The local broker also exposes read-only summaries at:
+
+```text
+GET /api/blackstage/realtime/proofs
+```
+
+The route returns sanitized proof summaries only. It omits `requiredEnv`, error detail, raw SDP, approval phrases, and provider credentials.
+
 ## Do Not Commit
 
 Do not commit API keys, approval phrases, raw SDP answers, trace zips, browser artifacts, `.blackstage/` proof files, or local `.env` files.
