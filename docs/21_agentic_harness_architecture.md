@@ -178,6 +178,12 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - `.blackstage/` ignored by git
     - Status: implemented with temp-directory tests; no live Codex subprocess ran during validation.
 
+11. Write run proof packets:
+    - local `blackstage-run.json` proof packet after a prepared task runs
+    - captures run id, task id, adapter, status, summary, event count, and policy
+    - keeps external-action status explicit
+    - Status: implemented with temp-directory tests; no live Codex subprocess ran during validation.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.

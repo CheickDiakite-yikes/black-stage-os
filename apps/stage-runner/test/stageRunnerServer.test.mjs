@@ -220,7 +220,7 @@ describe("Stage runner server", () => {
     assert.match(body.errors[0], /requires threadId/);
   });
 
-  it("prepares approved Codex task workspaces with a local manifest when enabled", async () => {
+  it("prepares approved Codex task workspaces with manifest and run proof when enabled", async () => {
     const repoRoot = await createTempRepoRoot();
     const server = await listen(
       createStageRunnerServer({
@@ -260,6 +260,28 @@ describe("Stage runner server", () => {
     assert.equal(manifest.policy.browserMutationAllowed, false);
     assert.equal(manifest.policy.humanReviewRequired, true);
     assert.equal(manifest.validationStatus, "pending");
+
+    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
+      method: "POST"
+    });
+    const runBody = await runResponse.json();
+    const proofPath = join(
+      repoRoot,
+      ".blackstage/workspaces/task_prepare_workspace/blackstage-run.json"
+    );
+    const proof = JSON.parse(await readFile(proofPath, "utf8"));
+
+    assert.equal(runResponse.status, 200);
+    assert.equal(runBody.run.status, "completed");
+    assert.equal(
+      runBody.runProof.proofPath,
+      ".blackstage/workspaces/task_prepare_workspace/blackstage-run.json"
+    );
+    assert.equal(proof.taskId, "task_prepare_workspace");
+    assert.equal(proof.status, "completed");
+    assert.equal(proof.policy.externalActionTaken, false);
+    assert.equal(proof.policy.humanReviewRequired, true);
+    assert.ok(proof.eventCount >= 3);
   });
 
   it("rejects workspace preparation outside the approved Blackstage boundary", async () => {

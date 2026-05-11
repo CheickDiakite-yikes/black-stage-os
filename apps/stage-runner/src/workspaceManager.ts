@@ -4,12 +4,15 @@ import {
   isApprovedHarnessWorkspace
 } from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
 import type {
+  HarnessRun,
+  HarnessSchedulerSnapshot,
   HarnessTaskInput,
   HarnessWorkspace
 } from "../../../packages/agent-runtime/dist/harness/harnessTypes.js";
 
 export const DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT = ".blackstage/workspaces";
 export const STAGE_RUNNER_WORKSPACE_MANIFEST = "blackstage-task.json";
+export const STAGE_RUNNER_RUN_PROOF = "blackstage-run.json";
 
 export type StageRunnerWorkspaceManifest = {
   manifestVersion: 1;
@@ -32,6 +35,24 @@ export type StageRunnerWorkspacePreparation = {
   taskInput: HarnessTaskInput;
   manifest?: StageRunnerWorkspaceManifest;
   manifestPath?: string;
+};
+
+export type StageRunnerRunProof = {
+  proofVersion: 1;
+  runId: string;
+  taskId: string;
+  adapterId: string;
+  status: HarnessRun["status"];
+  summary?: string;
+  startedAt: string;
+  completedAt?: string;
+  eventCount: number;
+  writtenAt: string;
+  policy: {
+    humanReviewRequired: true;
+    browserMutationAllowed: false;
+    externalActionTaken: false;
+  };
 };
 
 export type StageRunnerWorkspaceManagerOptions = {
@@ -94,6 +115,59 @@ export async function prepareStageRunnerTaskWorkspace(
     taskInput,
     manifest,
     manifestPath: `${workspacePath}/${STAGE_RUNNER_WORKSPACE_MANIFEST}`
+  };
+}
+
+export async function writeStageRunnerRunProof(
+  run: HarnessRun,
+  snapshot: HarnessSchedulerSnapshot,
+  options: StageRunnerWorkspaceManagerOptions = {}
+): Promise<{
+  proof: StageRunnerRunProof;
+  proofPath: string;
+} | undefined> {
+  const task = snapshot.tasks.find((candidate) => candidate.id === run.taskId);
+
+  if (!task?.workspace) {
+    return undefined;
+  }
+
+  assertApprovedWorkspace(task.workspace);
+  assertWorkspaceWithinRoot(task.workspace, options);
+
+  const workspacePath = task.workspace.path;
+  const absoluteWorkspacePath = resolve(options.repoRoot ?? process.cwd(), workspacePath);
+  const writtenAt = options.now?.() ?? new Date().toISOString();
+  const proof: StageRunnerRunProof = {
+    proofVersion: 1,
+    runId: run.id,
+    taskId: run.taskId,
+    adapterId: run.adapterId,
+    status: run.status,
+    summary: run.summary,
+    startedAt: run.startedAt,
+    completedAt: run.completedAt,
+    eventCount: snapshot.events.filter((event) => event.taskId === run.taskId).length,
+    writtenAt,
+    policy: {
+      humanReviewRequired: true,
+      browserMutationAllowed: false,
+      externalActionTaken: false
+    }
+  };
+
+  await mkdir(absoluteWorkspacePath, {
+    recursive: true
+  });
+  await writeFile(
+    join(absoluteWorkspacePath, STAGE_RUNNER_RUN_PROOF),
+    `${JSON.stringify(proof, null, 2)}\n`,
+    "utf8"
+  );
+
+  return {
+    proof,
+    proofPath: `${workspacePath}/${STAGE_RUNNER_RUN_PROOF}`
   };
 }
 

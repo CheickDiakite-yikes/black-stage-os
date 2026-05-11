@@ -30,7 +30,8 @@ import type {
 import { createNodeCodexCommandExecutor } from "./codexCliExecutor.js";
 import {
   DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT,
-  prepareStageRunnerTaskWorkspace
+  prepareStageRunnerTaskWorkspace,
+  writeStageRunnerRunProof
 } from "./workspaceManager.js";
 
 export { BLACKSTAGE_HARNESS_RUNNER_ROUTE } from "../../../packages/agent-runtime/dist/harness/harnessRunnerClient.js";
@@ -244,13 +245,19 @@ async function handleStageRunnerRequest(
 
   if (routeUrl.pathname === runNextPath && method === "POST") {
     const run = await scheduler.runNext();
+    const snapshotResponse = createSnapshotResponse(scheduler, new Date().toISOString());
+    const runProof =
+      run && runtimeConfig.workspacePreparationEnabled
+        ? await writeProofForRunner(run, snapshotResponse.snapshot, runtimeConfig)
+        : undefined;
 
     writeJson(
       response,
       200,
       {
         run: run ?? null,
-        ...createSnapshotResponse(scheduler, new Date().toISOString())
+        runProof,
+        ...snapshotResponse
       },
       corsHeaders
     );
@@ -266,6 +273,27 @@ async function handleStageRunnerRequest(
     },
     corsHeaders
   );
+}
+
+async function writeProofForRunner(
+  run: NonNullable<Awaited<ReturnType<InMemoryHarnessScheduler["runNext"]>>>,
+  snapshot: HarnessSchedulerSnapshot,
+  runtimeConfig: StageRunnerRuntimeConfig
+): Promise<{
+  proofPath: string;
+} | undefined> {
+  const proof = await writeStageRunnerRunProof(run, snapshot, {
+    repoRoot: runtimeConfig.repoRoot,
+    workspaceRoot: runtimeConfig.workspaceRoot
+  });
+
+  if (!proof) {
+    return undefined;
+  }
+
+  return {
+    proofPath: proof.proofPath
+  };
 }
 
 async function prepareTaskForRunner(
