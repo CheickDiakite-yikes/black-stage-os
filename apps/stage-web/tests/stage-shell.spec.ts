@@ -732,6 +732,79 @@ test("Stage Shell v0 retargets the browser portal locally without browsing", asy
   expect(browserRetargetWasLogged).toBe(true);
 });
 
+test("Stage Shell v0 recenters the map portal locally without map services", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+
+  const mapPortal = page.getByTestId("map-surface");
+
+  await expect(mapPortal).toContainText("Build Stage Shell v0");
+
+  await page.getByTestId("intent-input").fill("set map to Boston healthtech buyers");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(mapPortal).toContainText("Boston healthtech buyers");
+  await expect(mapPortal).toContainText("local target");
+  await expect(mapPortal).toContainText("Requested focus");
+
+  const mapRetargetWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          payload?: {
+            center?: string;
+          };
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          command_action?: string;
+          command_value_redacted?: string;
+        };
+      }>;
+    };
+
+    const commandWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "set_map" &&
+          event.payload.command_value_redacted === "Boston healthtech buyers"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "map_portal" &&
+          event.payload.payload?.center === "Boston healthtech buyers"
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(mapRetargetWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 attaches local context as a private document object", async ({
   page
 }) => {

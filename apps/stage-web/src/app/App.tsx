@@ -80,7 +80,8 @@ type StageCommandAction =
   | "collapse"
   | "expand"
   | "rename"
-  | "set_url";
+  | "set_url"
+  | "set_map";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
@@ -1980,6 +1981,12 @@ function parseStageCommand(
     return browserUrlCommand;
   }
 
+  const mapFocusCommand = parseMapPortalFocusCommand(intentText, objects);
+
+  if (mapFocusCommand) {
+    return mapFocusCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -2056,6 +2063,36 @@ function parseBrowserPortalUrlCommand(
     action: "set_url",
     target,
     value: portalUrl
+  };
+}
+
+function parseMapPortalFocusCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:set|point|route|center)\s+(?:the\s+)?(?:map|object map|market map|investor map)(?:\s+portal)?\s+(?:to|at|on|around)\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:map|show)\s+(.+?)\s+(?:on|in|inside)\s+(?:the\s+)?(?:map|object map|market map|investor map)(?:\s+portal)?\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const target = objects.find((object) => object.type === "map_portal");
+  const nextCenter = sanitizeStageObjectTitle(match[1] ?? "");
+
+  if (!target || !nextCenter) {
+    return undefined;
+  }
+
+  return {
+    action: "set_map",
+    target,
+    value: nextCenter
   };
 }
 
@@ -2218,6 +2255,8 @@ function applyStageCommandToObject(
       };
     case "set_url":
       return applyBrowserPortalUrlCommand(object, command.value);
+    case "set_map":
+      return applyMapPortalFocusCommand(object, command.value);
   }
 }
 
@@ -2239,6 +2278,8 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Renamed ${targetTitle} to ${command.value ?? targetTitle}.`;
     case "set_url":
       return `Set ${targetTitle} to ${command.value ?? "the requested URL"}.`;
+    case "set_map":
+      return `Centered ${targetTitle} on ${command.value ?? "the requested focus"}.`;
   }
 }
 
@@ -2292,6 +2333,37 @@ function normalizeStagePortalUrl(value: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function applyMapPortalFocusCommand(
+  object: StageObject,
+  mapCenter: string | undefined
+): StageObject {
+  if (object.type !== "map_portal" || !mapCenter) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const nodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+
+  return {
+    ...object,
+    state: "expanded",
+    payload: {
+      ...payload,
+      center: mapCenter,
+      status: "local target",
+      nodes: [
+        {
+          label: "Requested focus",
+          angle: 0,
+          distance: 38
+        },
+        ...nodes
+      ].slice(0, 5),
+      guardrail: "Map focus is stored locally; no external map service was called."
+    }
+  };
 }
 
 function isObjectPayload(value: unknown): value is Record<string, unknown> {
