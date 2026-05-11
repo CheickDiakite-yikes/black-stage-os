@@ -88,6 +88,7 @@ type StageCommandAction =
   | "set_map"
   | "set_model"
   | "run_simulation"
+  | "annotate_object"
   | "add_document_note"
   | "add_timeline_milestone";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
@@ -2180,6 +2181,12 @@ function parseStageCommand(
     return simulationRunCommand;
   }
 
+  const annotationCommand = parseObjectAnnotationCommand(intentText, objects);
+
+  if (annotationCommand) {
+    return annotationCommand;
+  }
+
   const documentNoteCommand = parseDocumentNoteCommand(intentText, objects);
 
   if (documentNoteCommand) {
@@ -2393,6 +2400,37 @@ function parseDocumentNoteCommand(
   };
 }
 
+function parseObjectAnnotationCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:annotate|note)\s+(.+?)\s+(?:with|as|saying|that|:|-)\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:add|append)\s+(?:a\s+)?(?:note|annotation)\s+(?:to|on)\s+(.+?)\s+(?:with|as|saying|that|:|-)\s+(.+?)\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const targetText = normalizeStageCommandTarget(match[1] ?? "");
+  const target = findStageCommandTarget(objects, targetText);
+  const noteText = sanitizeStageCommandText(match[2] ?? "");
+
+  if (!target || !noteText) {
+    return undefined;
+  }
+
+  return {
+    action: "annotate_object",
+    target,
+    value: noteText
+  };
+}
+
 function parseTimelineMilestoneCommand(
   intentText: string,
   objects: StageObject[]
@@ -2591,6 +2629,8 @@ function applyStageCommandToObject(
       return applyModelScenarioCommand(object, command.field, command.value);
     case "run_simulation":
       return applySimulationRunCommand(object, command.value);
+    case "annotate_object":
+      return applyObjectAnnotationCommand(object, command.value);
     case "add_document_note":
       return applyDocumentNoteCommand(object, command.value);
     case "add_timeline_milestone":
@@ -2622,6 +2662,8 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Updated ${targetTitle} ${command.field ?? "scenario"} to ${command.value ?? "the requested value"}.`;
     case "run_simulation":
       return `Ran ${targetTitle} for ${command.value ?? "the requested scenario"}.`;
+    case "annotate_object":
+      return `Annotated ${targetTitle}.`;
     case "add_document_note":
       return `Added a note to ${targetTitle}.`;
     case "add_timeline_milestone":
@@ -2833,6 +2875,38 @@ function applyDocumentNoteCommand(
         ...sections
       ].slice(0, 6),
       guardrail: "Document note is stored locally on the stage; no file write occurred."
+    }
+  };
+}
+
+function applyObjectAnnotationCommand(
+  object: StageObject,
+  noteText: string | undefined
+): StageObject {
+  if (!noteText) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const annotations = Array.isArray(payload.annotations)
+    ? payload.annotations.filter(isObjectPayload)
+    : [];
+
+  return {
+    ...object,
+    state: "expanded",
+    payload: {
+      ...payload,
+      status: "local annotation",
+      annotations: [
+        {
+          label: "User annotation",
+          value: noteText
+        },
+        ...annotations
+      ].slice(0, 5),
+      guardrail:
+        "Annotation is stored locally on the stage; no external system was called."
     }
   };
 }

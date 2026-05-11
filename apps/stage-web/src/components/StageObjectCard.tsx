@@ -164,6 +164,7 @@ export function StageObjectCard({
         <>
           {object.summary ? <p>{object.summary}</p> : null}
           <ObjectSurface object={object} />
+          <ObjectAnnotations object={object} />
         </>
       )}
     </article>
@@ -483,6 +484,34 @@ function PayloadPreview({ payload }: { payload: unknown }) {
         <div key={key}>
           <dt>{formatPayloadKey(key)}</dt>
           <dd>{formatPayloadValue(value)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function ObjectAnnotations({ object }: { object: StageObject }) {
+  if (!isRecord(object.payload) || !Array.isArray(object.payload.annotations)) {
+    return null;
+  }
+
+  const annotations = object.payload.annotations.filter(isRecord);
+
+  if (annotations.length === 0) {
+    return null;
+  }
+
+  return (
+    <dl
+      className="object-facts object-annotations"
+      data-testid={`object-annotations-${object.type}`}
+    >
+      {annotations.slice(0, 3).map((annotation, index) => (
+        <div
+          key={`${index}_${formatPayloadValue(annotation.value ?? annotation.label)}`}
+        >
+          <dt>{formatPayloadValue(annotation.label ?? "User annotation")}</dt>
+          <dd>{formatPayloadValue(annotation.value ?? annotation.text ?? "")}</dd>
         </div>
       ))}
     </dl>

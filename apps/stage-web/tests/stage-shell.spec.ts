@@ -1805,6 +1805,89 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
   expect(commandEvidence).toBe(true);
 });
 
+test("Stage Shell v0 annotates arbitrary stage objects by voice", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  await installFakeSpeechRecognition(page);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByTestId("map-surface")).toContainText("Build Stage Shell v0");
+
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
+
+  await emitFakeSpeechFinal(page, "annotate map with prioritize warm intros");
+
+  await expect(page.getByTestId("object-annotations-map_portal")).toContainText(
+    "User annotation"
+  );
+  await expect(page.getByTestId("object-annotations-map_portal")).toContainText(
+    "prioritize warm intros"
+  );
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Annotated Object map."
+  );
+
+  const annotationEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              command_action?: string;
+              command_input_mode?: string;
+              command_value_redacted?: string;
+            };
+          }>;
+          stageEvents?: Array<{
+            type?: string;
+            payload?: {
+              type?: string;
+              payload?: {
+                annotations?: Array<{
+                  label?: string;
+                  value?: string;
+                }>;
+              };
+            };
+          }>;
+        })
+      : undefined;
+
+    const commandWasLogged =
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "annotate_object" &&
+          event.payload?.command_input_mode === "voice" &&
+          event.payload.command_value_redacted === "prioritize warm intros"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot?.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "map_portal" &&
+          event.payload.payload?.annotations?.some(
+            (annotation) =>
+              annotation.label === "User annotation" &&
+              annotation.value === "prioritize warm intros"
+          )
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(annotationEvidence).toBe(true);
+});
+
 test("Stage Shell v0 applies spoken artifact revision commands", async ({ page }) => {
   test.setTimeout(120_000);
 

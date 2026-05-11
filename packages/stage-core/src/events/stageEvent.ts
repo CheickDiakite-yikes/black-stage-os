@@ -69,6 +69,7 @@ export type UserInterventionPayload = {
     | "set_model"
     | "run_simulation"
     | "run_harness"
+    | "annotate_object"
     | "add_document_note"
     | "add_timeline_milestone"
     | "undo_object";
