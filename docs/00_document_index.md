@@ -33,6 +33,17 @@ Read these documents in order when starting the project.
 18. `18_risk_register.md` — product, technical, research, and business risks.
 19. `19_source_notes_codex.md` — official Codex source notes used to shape this build pack.
 
+## Operations and live readiness
+
+20. `20_codex_goal_mode_runbook.md` — how to run long Codex goal loops.
+21. `21_agentic_harness_architecture.md` — local-first harness architecture and live-worker boundaries.
+22. `22_reality_interface_completion_audit.md` — current goal-completion evidence, gaps, and next slice.
+23. `23_realtime_live_smoke.md` — skip-gated Realtime SDP smoke runbook and proof policy.
+24. `24_codex_runner_live_preflight.md` — local Codex runner arming and readiness gate.
+25. `25_agents_sdk_live_preflight.md` — Agents SDK live-readiness gate.
+26. `26_live_readiness_preflight.md` — aggregate live-readiness preflight.
+27. `27_live_voice_test_protocol.md` — manual live voice, tool-call, rendering, and debug-export protocol.
+
 ## Artifacts
 
 - `BlackStage_OS_Development_Tracker.xlsx` — roadmap, backlog, experiments, decisions, risks, and checklists.
