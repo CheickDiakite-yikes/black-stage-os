@@ -18,6 +18,16 @@ const checks = [
   },
   {
     file: "WORKFLOW.md",
+    label: "root workflow carries the Codex open-source anchor",
+    pattern: /https:\/\/github\.com\/openai\/codex/
+  },
+  {
+    file: "WORKFLOW.md",
+    label: "root workflow carries the Symphony open-source anchor",
+    pattern: /https:\/\/github\.com\/openai\/symphony/
+  },
+  {
+    file: "WORKFLOW.md",
     label: "root workflow blocks browser-origin mutations",
     pattern: /Browser-origin mutations remain disabled/
   },
@@ -35,6 +45,16 @@ const checks = [
     file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
     label: "typed policy names the supported Codex transports",
     pattern: /codexTransports: \["cli", "app_server"\]/
+  },
+  {
+    file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
+    label: "typed policy carries the Codex open-source anchor",
+    pattern: /openSourceUrl: "https:\/\/github\.com\/openai\/codex"/
+  },
+  {
+    file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
+    label: "typed policy carries the Symphony open-source anchor",
+    pattern: /openSourceUrl: "https:\/\/github\.com\/openai\/symphony"/
   },
   {
     file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
@@ -70,6 +90,16 @@ const checks = [
     file: "docs/19_source_notes_codex.md",
     label: "source notes keep Symphony as an orchestration reference",
     pattern: /open-source Codex orchestration reference/
+  },
+  {
+    file: "docs/19_source_notes_codex.md",
+    label: "source notes mention the Codex open-source anchor",
+    pattern: /https:\/\/github\.com\/openai\/codex/
+  },
+  {
+    file: "docs/19_source_notes_codex.md",
+    label: "source notes mention the Symphony open-source anchor",
+    pattern: /https:\/\/github\.com\/openai\/symphony/
   },
   {
     file: "docs/19_source_notes_codex.md",

@@ -20,6 +20,8 @@ After the 2026-05-11 workflow-policy slice, that stance is also codified in root
 
 After the 2026-05-11 upstream-matrix slice, `HarnessWorkflowPolicy` also carries a source-pinned integration matrix for Codex CLI, Codex App Server, Agents SDK, Symphony, and `gpt-realtime-2`. The matrix makes each upstream role explicit while keeping browser mutation, browser credential access, and high-impact execution gated by Blackstage.
 
+After the 2026-05-11 open-source-anchor slice, the same policy also carries explicit open-source anchors for Codex and Symphony. This preserves the founder's direction to leverage open-source Codex and Symphony without making either project the foreground UI or bypassing Blackstage approvals.
+
 ## Source-Verified Assumptions
 
 - `gpt-realtime-2` is listed as a reasoning model for realtime voice interactions, supports speech-to-speech interaction, configurable reasoning effort, stronger tool use, text/audio/image input, text/audio output, and the `v1/realtime` endpoint. Source: <https://developers.openai.com/api/docs/models/gpt-realtime-2>
@@ -28,6 +30,7 @@ After the 2026-05-11 upstream-matrix slice, `HarnessWorkflowPolicy` also carries
 - Codex CLI is OpenAI's local coding agent, is open source, and can inspect a repository, edit files, and run commands in the selected directory. Source: <https://developers.openai.com/codex/cli>
 - Codex App Server is OpenAI's programmatic Codex transport for integrating Codex into custom developer workflows and orchestration systems. Source: <https://developers.openai.com/codex/app-server/>
 - Symphony is an open-source spec/reference for Codex orchestration where task trackers become a control plane, active tasks get agents, work happens in isolated workspaces, and humans review results. Source: <https://openai.com/index/open-source-codex-orchestration-symphony/>
+- Codex and Symphony open-source anchors are carried as typed policy metadata so future workers can inspect official repositories without confusing source availability with permission to execute live work. Sources: <https://github.com/openai/codex>, <https://github.com/openai/symphony>
 - OpenAI's current Realtime WebRTC guidance recommends WebRTC for browser/mobile client connections and a developer-controlled server for session creation, with the trusted backend holding the standard API key and setting safety identifiers. Source: <https://developers.openai.com/api/docs/guides/realtime-webrtc>
 - OpenAI's Agents SDK orchestration guidance distinguishes handoffs from manager-style agents-as-tools; Blackstage should prefer manager-style ownership for the visible stage, using specialists as bounded capabilities until a branch truly needs delegated ownership. Source: <https://developers.openai.com/api/docs/guides/agents/orchestration>
 

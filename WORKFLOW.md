@@ -24,6 +24,7 @@ This file is the repo-owned policy for Blackstage's background agentic harness. 
 - Agents SDK: manager-style agent runtime source for research, artifact, memory, and analysis work; dry-run remains the default.
 - Symphony: open-source Codex orchestration reference; Blackstage uses the control-plane pattern with its internal queue before any external tracker.
 - Realtime voice: `gpt-realtime-2` source-pinned voice edge; microphone capture, SDP exchange, and tool calls stay behind explicit Stage approval.
+- Open-source anchors: Codex maps to `https://github.com/openai/codex`; Symphony maps to `https://github.com/openai/symphony`.
 
 ## Boundaries
 

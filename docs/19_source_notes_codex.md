@@ -15,6 +15,8 @@ The current Blackstage harness direction is source-aligned:
 
 Implementation consequence: Blackstage should leverage these upstream pieces behind `WORKFLOW.md`, stage events, approval gates, proof packets, and replayable traces. Background agents should receive redacted memory summaries by default, and any memory inspection, write, or delete should cross a Stage approval boundary. None of these upstream pieces should replace the black living render field as the user's operating metaphor.
 
+The typed `HarnessWorkflowPolicy` now carries open-source anchors for the two source-available orchestration pieces: Codex maps to `https://github.com/openai/codex`, and Symphony maps to `https://github.com/openai/symphony`. The browser can read those anchors as policy metadata, but it still cannot enqueue work, run Codex, or receive provider credentials.
+
 Sources:
 
 - https://developers.openai.com/codex/cli

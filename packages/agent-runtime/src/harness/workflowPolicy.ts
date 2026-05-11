@@ -15,6 +15,7 @@ export type HarnessUpstreamIntegration = {
     | "official_open_source_reference"
     | "official_model_docs";
   sourceUrl: string;
+  openSourceUrl?: string;
   blackstageRole:
     | "coding_worker_cli"
     | "coding_worker_app_server"
@@ -32,6 +33,7 @@ export const BLACKSTAGE_UPSTREAM_INTEGRATIONS = [
     id: "openai_codex_cli",
     sourceKind: "official_docs",
     sourceUrl: "https://developers.openai.com/codex/cli",
+    openSourceUrl: "https://github.com/openai/codex",
     blackstageRole: "coding_worker_cli",
     liveDefault: "disabled",
     browserMutationAllowed: false,
@@ -62,6 +64,7 @@ export const BLACKSTAGE_UPSTREAM_INTEGRATIONS = [
     id: "openai_symphony",
     sourceKind: "official_open_source_reference",
     sourceUrl: "https://openai.com/index/open-source-codex-orchestration-symphony/",
+    openSourceUrl: "https://github.com/openai/symphony",
     blackstageRole: "orchestration_control_plane_pattern",
     liveDefault: "dry_run",
     browserMutationAllowed: false,
@@ -167,6 +170,7 @@ function hasExpectedUpstreamIntegrations(value: unknown): boolean {
       candidate?.id === expected.id &&
       candidate.sourceKind === expected.sourceKind &&
       candidate.sourceUrl === expected.sourceUrl &&
+      candidate.openSourceUrl === getExpectedOpenSourceUrl(expected) &&
       candidate.blackstageRole === expected.blackstageRole &&
       candidate.liveDefault === expected.liveDefault &&
       candidate.browserMutationAllowed === false &&
@@ -174,4 +178,10 @@ function hasExpectedUpstreamIntegrations(value: unknown): boolean {
       candidate.highImpactApprovalRequired === true
     );
   });
+}
+
+function getExpectedOpenSourceUrl(
+  integration: (typeof BLACKSTAGE_UPSTREAM_INTEGRATIONS)[number]
+): string | undefined {
+  return "openSourceUrl" in integration ? integration.openSourceUrl : undefined;
 }
