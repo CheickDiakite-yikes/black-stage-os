@@ -9,6 +9,9 @@ export type CodexWorkerTransport = "cli" | "app_server";
 
 export type CodexWorkerExecutionMode = "dry_run" | "local_exec";
 
+export const CODEX_APP_SERVER_HANDOFF_PROTOCOL =
+  "blackstage.codex_app_server_handoff.v0";
+
 export type CodexWorkerPolicy = {
   allowNetwork: boolean;
   allowPush: boolean;
@@ -27,6 +30,24 @@ export type CodexWorkerEnvelope = {
   prompt: string;
   validationCommands: string[];
   policy: CodexWorkerPolicy;
+};
+
+export type CodexAppServerHandoff = {
+  protocol: typeof CODEX_APP_SERVER_HANDOFF_PROTOCOL;
+  provider: "openai_codex";
+  transport: "app_server";
+  executionMode: CodexWorkerExecutionMode;
+  taskId: string;
+  threadId: string;
+  title: string;
+  workspace: HarnessWorkspace;
+  prompt: string;
+  validationCommands: string[];
+  policy: CodexWorkerPolicy & {
+    browserMutationAllowed: false;
+    providerCredentialsExposedToBrowser: false;
+    liveTransportArmed: false;
+  };
 };
 
 export type CodexWorkerAdapterOptions = {
@@ -50,7 +71,9 @@ export function createCodexWorkerEnvelope(
   options: CodexWorkerAdapterOptions = {}
 ): CodexWorkerEnvelope {
   if (task.kind !== "codex") {
-    throw new Error(`Codex worker can only prepare codex tasks, received ${task.kind}.`);
+    throw new Error(
+      `Codex worker can only prepare codex tasks, received ${task.kind}.`
+    );
   }
 
   if (task.approvalRequired) {
@@ -93,7 +116,51 @@ export function createDryRunCodexWorkerAdapter(
   };
 }
 
-export function isApprovedHarnessWorkspace(workspace: HarnessWorkspace | undefined): boolean {
+export function createCodexAppServerHandoff(
+  task: HarnessTask,
+  options: Omit<CodexWorkerAdapterOptions, "transport"> = {}
+): CodexAppServerHandoff {
+  return createCodexAppServerHandoffFromEnvelope(
+    createCodexWorkerEnvelope(task, {
+      ...options,
+      transport: "app_server"
+    })
+  );
+}
+
+export function createCodexAppServerHandoffFromEnvelope(
+  envelope: CodexWorkerEnvelope
+): CodexAppServerHandoff {
+  if (envelope.transport !== "app_server") {
+    throw new Error("Codex App Server handoff requires app_server transport.");
+  }
+
+  return {
+    protocol: CODEX_APP_SERVER_HANDOFF_PROTOCOL,
+    provider: envelope.provider,
+    transport: "app_server",
+    executionMode: envelope.executionMode,
+    taskId: envelope.taskId,
+    threadId: envelope.threadId,
+    title: envelope.title,
+    workspace: {
+      kind: "local",
+      path: envelope.workspacePath
+    },
+    prompt: envelope.prompt,
+    validationCommands: envelope.validationCommands,
+    policy: {
+      ...envelope.policy,
+      browserMutationAllowed: false,
+      providerCredentialsExposedToBrowser: false,
+      liveTransportArmed: false
+    }
+  };
+}
+
+export function isApprovedHarnessWorkspace(
+  workspace: HarnessWorkspace | undefined
+): boolean {
   if (!workspace || workspace.kind !== "local") {
     return false;
   }
@@ -108,7 +175,9 @@ export function isApprovedHarnessWorkspace(workspace: HarnessWorkspace | undefin
   );
 }
 
-function requireApprovedWorkspace(workspace: HarnessWorkspace | undefined): HarnessWorkspace {
+function requireApprovedWorkspace(
+  workspace: HarnessWorkspace | undefined
+): HarnessWorkspace {
   if (!workspace) {
     throw new Error("Codex worker requires an approved local workspace boundary.");
   }
@@ -121,35 +190,57 @@ function requireApprovedWorkspace(workspace: HarnessWorkspace | undefined): Harn
 }
 
 function createDryRunCodexResult(envelope: CodexWorkerEnvelope): HarnessRunResult {
+  const appServerHandoff =
+    envelope.transport === "app_server"
+      ? createCodexAppServerHandoffFromEnvelope(envelope)
+      : undefined;
+  const events: NonNullable<HarnessRunResult["events"]> = [
+    {
+      type: "task.progress",
+      summary: "Prepared Codex worker prompt and workspace boundary.",
+      payload: {
+        provider: envelope.provider,
+        transport: envelope.transport,
+        execution_mode: envelope.executionMode,
+        workspace_path: envelope.workspacePath
+      }
+    },
+    {
+      type: "task.progress",
+      summary: "Validation commands and human review policy attached.",
+      payload: {
+        validation_commands: envelope.validationCommands,
+        require_human_review: envelope.policy.requireHumanReview,
+        allow_push: envelope.policy.allowPush,
+        allow_network: envelope.policy.allowNetwork
+      }
+    }
+  ];
+
+  if (appServerHandoff) {
+    events.push({
+      type: "task.progress",
+      summary: "Prepared Codex App Server handoff packet.",
+      payload: {
+        handoff_protocol: appServerHandoff.protocol,
+        transport: appServerHandoff.transport,
+        live_transport_armed: appServerHandoff.policy.liveTransportArmed,
+        browser_mutation_allowed: appServerHandoff.policy.browserMutationAllowed
+      }
+    });
+  }
+
   return {
     status: "completed",
     summary: `Prepared dry-run Codex worker envelope for ${envelope.title}.`,
-    events: [
-      {
-        type: "task.progress",
-        summary: "Prepared Codex worker prompt and workspace boundary.",
-        payload: {
-          provider: envelope.provider,
-          transport: envelope.transport,
-          execution_mode: envelope.executionMode,
-          workspace_path: envelope.workspacePath
-        }
-      },
-      {
-        type: "task.progress",
-        summary: "Validation commands and human review policy attached.",
-        payload: {
-          validation_commands: envelope.validationCommands,
-          require_human_review: envelope.policy.requireHumanReview,
-          allow_push: envelope.policy.allowPush,
-          allow_network: envelope.policy.allowNetwork
-        }
-      }
-    ]
+    events
   };
 }
 
-function createCodexWorkerPrompt(task: HarnessTask, validationCommands: string[]): string {
+function createCodexWorkerPrompt(
+  task: HarnessTask,
+  validationCommands: string[]
+): string {
   return [
     `Task: ${task.title}`,
     "",

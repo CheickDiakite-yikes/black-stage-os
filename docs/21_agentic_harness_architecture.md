@@ -24,6 +24,7 @@ After the 2026-05-11 workflow-policy slice, that stance is also codified in root
 - OpenAI's Agents SDK docs say the SDK path is appropriate when the application owns orchestration, tool execution, approvals, and state; the same page points to voice agents as the SDK path for speech-to-speech workflows. Source: <https://developers.openai.com/api/docs/guides/agents>
 - The OpenAI Agents SDK JavaScript/TypeScript repo describes agents, sandbox agents, tools, guardrails, human-in-the-loop, sessions, tracing, and realtime agents. Source: <https://github.com/openai/openai-agents-js>
 - Codex CLI is OpenAI's local coding agent, is open source, and can inspect a repository, edit files, and run commands in the selected directory. Source: <https://developers.openai.com/codex/cli>
+- Codex App Server is OpenAI's programmatic Codex transport for integrating Codex into custom developer workflows and orchestration systems. Source: <https://developers.openai.com/codex/app-server/>
 - Symphony is an open-source spec/reference for Codex orchestration where task trackers become a control plane, active tasks get agents, work happens in isolated workspaces, and humans review results. Source: <https://openai.com/index/open-source-codex-orchestration-symphony/>
 - OpenAI's current Realtime WebRTC guidance recommends WebRTC for browser/mobile client connections and a developer-controlled server for session creation, with the trusted backend holding the standard API key and setting safety identifiers. Source: <https://developers.openai.com/api/docs/guides/realtime-webrtc>
 - OpenAI's Agents SDK orchestration guidance distinguishes handoffs from manager-style agents-as-tools; Blackstage should prefer manager-style ownership for the visible stage, using specialists as bounded capabilities until a branch truly needs delegated ownership. Source: <https://developers.openai.com/api/docs/guides/agents/orchestration>
@@ -75,12 +76,12 @@ in dry-run mode.
 
 ### 5. Codex Execution Adapter
 
-Coding tasks should run through a Codex adapter rather than bespoke shell scripts. The adapter should map Blackstage task briefs into Codex prompts, collect proof of work, run validations, and return artifacts or pull-request-ready diffs.
+Coding tasks should run through a Codex adapter rather than bespoke shell scripts. The adapter should map Blackstage task briefs into Codex prompts, collect proof of work, run validations, and return artifacts or pull-request-ready diffs. The local runner can use Codex CLI, while larger Symphony-style orchestration should be prepared to hand work to Codex App Server.
 
 The adapter boundary should be:
 
 - input: approved `HarnessTask`, task workspace, stage thread context, and validation command list;
-- execution: Codex CLI/App Server in a bounded workspace;
+- execution: Codex CLI or Codex App Server in a bounded workspace;
 - output: normalized `HarnessEvent` stream, validation evidence, artifact manifests, and optional PR-ready diff metadata;
 - refusal/blocking: any workspace escape, unapproved network call, unapproved push, or missing validation proof.
 
@@ -204,6 +205,13 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - `agent-runtime` exports `HarnessWorkflowPolicy`
     - Symphony-style snapshots and `apps/stage-runner` readiness expose the policy without granting browser execution rights
     - Status: implemented with agent-runtime and stage-runner tests; no live Codex, Agents SDK, or Realtime network call runs by default.
+
+15. Add the Codex App Server handoff contract:
+    - app-server transport in the typed Codex worker envelope
+    - Blackstage-owned handoff protocol for approved task packets
+    - browser mutation and provider credential boundaries set to false
+    - dry-run scheduler proof that no live transport is armed
+    - Status: implemented with agent-runtime tests; no live App Server process or network call runs by default.
 
 ## Risks
 

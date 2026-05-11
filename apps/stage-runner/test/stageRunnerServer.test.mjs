@@ -68,7 +68,8 @@ describe("Stage runner server", () => {
     assert.equal(body.agentsSdkMode, "dry_run");
     assert.equal(body.workflowPolicy.source, "WORKFLOW.md");
     assert.equal(body.workflowPolicy.controlPlane, "symphony_style_internal_queue");
-    assert.equal(body.workflowPolicy.codingWorker, "openai_codex_cli");
+    assert.equal(body.workflowPolicy.codingWorker, "openai_codex");
+    assert.deepEqual(body.workflowPolicy.codexTransports, ["cli", "app_server"]);
     assert.equal(body.workflowPolicy.agentWorker, "openai_agents_sdk_manager");
     assert.equal(body.workflowPolicy.voiceModel, "gpt-realtime-2");
     assert.equal(body.workflowPolicy.browserMutationAllowed, false);

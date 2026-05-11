@@ -647,13 +647,34 @@ function formatHarnessRunnerPolicy(
       ? "Symphony queue"
       : policy.controlPlane;
   const codingWorkerLabel =
-    policy.codingWorker === "openai_codex_cli" ? "Codex CLI" : policy.codingWorker;
+    policy.codingWorker === "openai_codex"
+      ? formatCodexTransportLabel(policy.codexTransports)
+      : policy.codingWorker;
   const agentWorkerLabel =
     policy.agentWorker === "openai_agents_sdk_manager"
       ? "Agents SDK manager"
       : policy.agentWorker;
 
   return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${agentWorkerLabel} · ${policy.voiceModel}`;
+}
+
+function formatCodexTransportLabel(transports: readonly string[]): string {
+  const hasCli = transports.includes("cli");
+  const hasAppServer = transports.includes("app_server");
+
+  if (hasCli && hasAppServer) {
+    return "Codex CLI/App Server";
+  }
+
+  if (hasAppServer) {
+    return "Codex App Server";
+  }
+
+  if (hasCli) {
+    return "Codex CLI";
+  }
+
+  return "Codex";
 }
 
 type SpeechRecognitionAlternativeLike = {

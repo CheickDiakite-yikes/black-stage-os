@@ -11,7 +11,7 @@ This file is the repo-owned policy for Blackstage's background agentic harness. 
 
 ## Workers
 
-- Use Codex CLI as the coding worker for implementation tasks.
+- Use Codex CLI or Codex App Server as the coding worker transport for implementation tasks.
 - Use Agents SDK manager-style plans for non-coding research, artifact, memory, and analysis tasks.
 - Keep specialist agents as tools unless a branch truly needs delegated ownership.
 - Use `gpt-realtime-2` as the Realtime voice target for live voice contracts.
@@ -21,6 +21,7 @@ This file is the repo-owned policy for Blackstage's background agentic harness. 
 - Browser-origin mutations remain disabled.
 - Browser surfaces never receive provider credentials.
 - Live Codex subprocess execution is disabled by default.
+- Live Codex App Server execution is disabled by default.
 - Live Realtime SDP exchange is disabled unless local env, local approval phrase, and visible stage approval are all armed.
 - All external or high-impact actions require explicit human approval and later human review.
 

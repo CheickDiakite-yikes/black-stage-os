@@ -5,7 +5,8 @@ export type HarnessWorkflowPolicy = {
   source: typeof BLACKSTAGE_WORKFLOW_POLICY_SOURCE;
   version: typeof BLACKSTAGE_WORKFLOW_POLICY_VERSION;
   controlPlane: "symphony_style_internal_queue";
-  codingWorker: "openai_codex_cli";
+  codingWorker: "openai_codex";
+  codexTransports: readonly ["cli", "app_server"];
   agentWorker: "openai_agents_sdk_manager";
   voiceModel: "gpt-realtime-2";
   workspaceRoot: ".blackstage/workspaces";
@@ -22,7 +23,8 @@ export function createBlackstageWorkflowPolicy(): HarnessWorkflowPolicy {
     source: BLACKSTAGE_WORKFLOW_POLICY_SOURCE,
     version: BLACKSTAGE_WORKFLOW_POLICY_VERSION,
     controlPlane: "symphony_style_internal_queue",
-    codingWorker: "openai_codex_cli",
+    codingWorker: "openai_codex",
+    codexTransports: ["cli", "app_server"],
     agentWorker: "openai_agents_sdk_manager",
     voiceModel: "gpt-realtime-2",
     workspaceRoot: ".blackstage/workspaces",
@@ -48,7 +50,11 @@ export function isHarnessWorkflowPolicy(
     candidate.source === BLACKSTAGE_WORKFLOW_POLICY_SOURCE &&
     candidate.version === BLACKSTAGE_WORKFLOW_POLICY_VERSION &&
     candidate.controlPlane === "symphony_style_internal_queue" &&
-    candidate.codingWorker === "openai_codex_cli" &&
+    candidate.codingWorker === "openai_codex" &&
+    Array.isArray(candidate.codexTransports) &&
+    candidate.codexTransports.length === 2 &&
+    candidate.codexTransports[0] === "cli" &&
+    candidate.codexTransports[1] === "app_server" &&
     candidate.agentWorker === "openai_agents_sdk_manager" &&
     candidate.voiceModel === "gpt-realtime-2" &&
     candidate.workspaceRoot === ".blackstage/workspaces" &&

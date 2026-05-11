@@ -15,6 +15,8 @@ import {
   createDryRunAgentsSdkAdapter
 } from "../dist/harness/agentsSdkAdapter.js";
 import {
+  CODEX_APP_SERVER_HANDOFF_PROTOCOL,
+  createCodexAppServerHandoff,
   createCodexWorkerEnvelope,
   createDryRunCodexWorkerAdapter,
   isApprovedHarnessWorkspace
@@ -191,6 +193,58 @@ describe("Codex worker adapter", () => {
           event.type === "task.progress" &&
           event.payload?.provider === "openai_codex" &&
           event.payload?.execution_mode === "dry_run"
+      )
+    );
+  });
+
+  it("prepares a Codex App Server handoff packet without arming live transport", async () => {
+    const task = {
+      id: "task_codex_app_server",
+      threadId: "thread_build_blackstage",
+      title: "Prepare App Server worker packet",
+      objective: "Create a programmatic Codex handoff for later human review.",
+      kind: "codex",
+      status: "queued",
+      priority: 0,
+      approvalRequired: false,
+      blockedBy: [],
+      workspace: {
+        kind: "local",
+        path: ".blackstage/workspaces/task_codex_app_server"
+      },
+      createdAt: now(),
+      updatedAt: now()
+    };
+    const handoff = createCodexAppServerHandoff(task);
+    const scheduler = new InMemoryHarnessScheduler({
+      adapters: [
+        createDryRunCodexWorkerAdapter({
+          transport: "app_server"
+        })
+      ],
+      now
+    });
+
+    scheduler.enqueueTask(task);
+    const run = await scheduler.runNext();
+    const snapshot = scheduler.getSnapshot();
+
+    assert.equal(handoff.protocol, CODEX_APP_SERVER_HANDOFF_PROTOCOL);
+    assert.equal(handoff.provider, "openai_codex");
+    assert.equal(handoff.transport, "app_server");
+    assert.equal(handoff.policy.liveTransportArmed, false);
+    assert.equal(handoff.policy.browserMutationAllowed, false);
+    assert.equal(handoff.policy.providerCredentialsExposedToBrowser, false);
+    assert.equal(handoff.policy.allowPush, false);
+    assert.match(handoff.prompt, /Return validation evidence/);
+    assert.equal(run?.status, "completed");
+    assert.ok(
+      snapshot.events.some(
+        (event) =>
+          event.type === "task.progress" &&
+          event.payload?.handoff_protocol === CODEX_APP_SERVER_HANDOFF_PROTOCOL &&
+          event.payload?.transport === "app_server" &&
+          event.payload?.live_transport_armed === false
       )
     );
   });
@@ -453,7 +507,11 @@ describe("Symphony control plane", () => {
 
     assert.equal(controlPlane.kind, "blackstage_internal_queue");
     assert.equal(controlPlane.workflowPolicy.source, "WORKFLOW.md");
-    assert.equal(controlPlane.workflowPolicy.codingWorker, "openai_codex_cli");
+    assert.equal(controlPlane.workflowPolicy.codingWorker, "openai_codex");
+    assert.deepEqual(controlPlane.workflowPolicy.codexTransports, [
+      "cli",
+      "app_server"
+    ]);
     assert.equal(controlPlane.workflowPolicy.voiceModel, "gpt-realtime-2");
     assert.equal(controlPlane.workflowPolicy.browserMutationAllowed, false);
     assert.equal(controlPlane.workItems.length, 4);
@@ -515,6 +573,7 @@ describe("Harness runner readiness client", () => {
     assert.equal(readiness.orchestration, "symphony_style_internal_queue");
     assert.equal(readiness.codexMode, "dry_run");
     assert.equal(readiness.workflowPolicy?.source, "WORKFLOW.md");
+    assert.deepEqual(readiness.workflowPolicy?.codexTransports, ["cli", "app_server"]);
     assert.equal(
       readiness.workflowPolicy?.controlPlane,
       "symphony_style_internal_queue"

@@ -6,7 +6,8 @@ const workflowPolicy = {
   source: "WORKFLOW.md",
   version: "blackstage.workflow.v0",
   controlPlane: "symphony_style_internal_queue",
-  codingWorker: "openai_codex_cli",
+  codingWorker: "openai_codex",
+  codexTransports: ["cli", "app_server"],
   agentWorker: "openai_agents_sdk_manager",
   voiceModel: "gpt-realtime-2",
   workspaceRoot: ".blackstage/workspaces",
@@ -101,7 +102,7 @@ test("Stage Web renders the active harness workflow policy", async ({ page }) =>
   await expect(harnessStatus).toContainText("0 open");
   await expect(harnessStatus).toContainText("WORKFLOW.md");
   await expect(harnessStatus).toContainText("Symphony queue");
-  await expect(harnessStatus).toContainText("Codex CLI");
+  await expect(harnessStatus).toContainText("Codex CLI/App Server");
   await expect(harnessStatus).toContainText("Agents SDK manager");
   await expect(harnessStatus).toContainText("gpt-realtime-2");
 });

@@ -8,8 +8,8 @@ const checks = [
   },
   {
     file: "WORKFLOW.md",
-    label: "root workflow assigns coding tasks to Codex CLI",
-    pattern: /Use Codex CLI as the coding worker/
+    label: "root workflow assigns coding tasks to Codex worker transports",
+    pattern: /Use Codex CLI or Codex App Server as the coding worker transport/
   },
   {
     file: "WORKFLOW.md",
@@ -25,6 +25,11 @@ const checks = [
     file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
     label: "typed policy points at the root workflow",
     pattern: /BLACKSTAGE_WORKFLOW_POLICY_SOURCE = "WORKFLOW\.md"/
+  },
+  {
+    file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
+    label: "typed policy names the supported Codex transports",
+    pattern: /codexTransports: \["cli", "app_server"\]/
   },
   {
     file: "packages/agent-runtime/src/harness/workflowPolicy.ts",

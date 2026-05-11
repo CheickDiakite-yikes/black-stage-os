@@ -8,7 +8,7 @@ Last refreshed: 2026-05-11.
 
 The current Blackstage harness direction is source-aligned:
 
-- Codex CLI remains the coding worker. It is OpenAI's local coding agent for inspecting repositories, editing files, and running commands in a selected local directory, with sandbox and approval controls owned by the operator.
+- Codex remains the coding worker. Codex CLI is the local operator path for inspecting repositories, editing files, and running commands in a selected local directory, with sandbox and approval controls owned by the operator. Codex App Server is the programmatic transport Blackstage should prepare for scalable Symphony-style orchestration.
 - Symphony remains the orchestration reference, not the product UI. It is OpenAI's open-source Codex orchestration reference for turning an issue or task tracker into a control plane, assigning active tasks to agents, isolating work in dedicated workspaces, and returning results for human review.
 - The Agents SDK remains the manager-agent path for non-coding research, artifact, memory, and analysis workflows where Blackstage owns tools, approvals, handoffs, state, and traces.
 - `gpt-realtime-2` remains the pinned Realtime voice model for the live voice path. It is the current target for speech-to-speech realtime sessions, with text, audio, and image input; text and audio output; tool use; and configurable reasoning effort.
@@ -18,6 +18,7 @@ Implementation consequence: Blackstage should leverage these upstream pieces beh
 Sources:
 
 - https://developers.openai.com/codex/cli
+- https://developers.openai.com/codex/app-server/
 - https://github.com/openai/codex
 - https://openai.com/index/open-source-codex-orchestration-symphony/
 - https://github.com/openai/symphony
