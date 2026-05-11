@@ -1219,6 +1219,8 @@ test("Stage Shell v0 attaches local context as a private document object", async
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Context: stage-note.txt"
   );
+  await expect(page.getByTestId("stage-workspace")).toContainText("Text structure");
+  await expect(page.getByTestId("stage-workspace")).toContainText("16 words · 1 line");
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Attach this local note as context"
   );
@@ -1226,6 +1228,35 @@ test("Stage Shell v0 attaches local context as a private document object", async
     "Local-only context object. No external upload."
   );
   await expect(page.getByTestId("research-capture")).toContainText("context attached");
+
+  const textContextWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      researchEvents: Array<{
+        eventType: string;
+        payload?: {
+          structured_kind?: string;
+          structured_item_count?: number;
+          local_only?: boolean;
+        };
+      }>;
+    };
+
+    return snapshot.researchEvents.some(
+      (event) =>
+        event.eventType === "context_attached" &&
+        event.payload?.structured_kind === "text" &&
+        event.payload.structured_item_count === 16 &&
+        event.payload.local_only === true
+    );
+  });
+
+  expect(textContextWasLogged).toBe(true);
 
   await page.getByTestId("context-file-input").setInputFiles({
     name: "investor-list.csv",

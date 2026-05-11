@@ -2977,8 +2977,8 @@ type ImageContextPreview = {
 };
 
 type StructuredContextPreview = {
-  kind: "csv" | "json";
-  label: "CSV structure" | "JSON structure";
+  kind: "csv" | "json" | "text";
+  label: "CSV structure" | "JSON structure" | "Text structure";
   summary: string;
   itemCount: number;
 };
@@ -3057,11 +3057,11 @@ async function readStructuredContextPreview(
     if (extension === "json" || file.type === "application/json") {
       return createJsonContextPreview(text);
     }
+
+    return createTextContextPreview(text);
   } catch {
     return undefined;
   }
-
-  return undefined;
 }
 
 function createCsvContextPreview(text: string): StructuredContextPreview | undefined {
@@ -3123,6 +3123,35 @@ function createJsonContextPreview(text: string): StructuredContextPreview | unde
     label: "JSON structure",
     itemCount: 1,
     summary: `JSON ${typeof parsed}`
+  };
+}
+
+function createTextContextPreview(text: string): StructuredContextPreview | undefined {
+  const trimmedText = text.trim();
+
+  if (!trimmedText) {
+    return undefined;
+  }
+
+  const nonEmptyLines = trimmedText
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+  const wordCount = trimmedText.match(/\b[\w'-]+\b/g)?.length ?? 0;
+  const headingCount = nonEmptyLines.filter((line) =>
+    /^#{1,6}\s+\S/.test(line.trim())
+  ).length;
+  const headingSuffix =
+    headingCount > 0
+      ? ` · ${headingCount} ${headingCount === 1 ? "heading" : "headings"}`
+      : "";
+
+  return {
+    kind: "text",
+    label: "Text structure",
+    itemCount: wordCount,
+    summary: `${wordCount} ${wordCount === 1 ? "word" : "words"} · ${
+      nonEmptyLines.length
+    } ${nonEmptyLines.length === 1 ? "line" : "lines"}${headingSuffix}`
   };
 }
 

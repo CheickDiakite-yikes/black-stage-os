@@ -25,7 +25,7 @@ export type ContextAttachmentPayload = {
     width: number;
     height: number;
   };
-  structuredKind?: "csv" | "json";
+  structuredKind?: "csv" | "json" | "text";
   structuredItemCount?: number;
   attachedAt: string;
   localOnly: true;
