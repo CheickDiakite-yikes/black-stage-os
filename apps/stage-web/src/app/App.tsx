@@ -89,6 +89,7 @@ type StageCommandAction =
   | "set_model"
   | "run_simulation"
   | "annotate_object"
+  | "update_summary"
   | "add_document_note"
   | "add_timeline_milestone";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
@@ -2169,6 +2170,12 @@ function parseStageCommand(
     return mapFocusCommand;
   }
 
+  const summaryCommand = parseObjectSummaryCommand(intentText, objects);
+
+  if (summaryCommand) {
+    return summaryCommand;
+  }
+
   const modelScenarioCommand = parseModelScenarioCommand(intentText, objects);
 
   if (modelScenarioCommand) {
@@ -2431,6 +2438,37 @@ function parseObjectAnnotationCommand(
   };
 }
 
+function parseObjectSummaryCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:set|update|change|rewrite)\s+(.+?)\s+(?:summary|description)\s+(?:to|as|with|saying|that|:|-)\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:summarize|describe)\s+(.+?)\s+(?:as|with|saying|that|:|-)\s+(.+?)\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const targetText = normalizeStageCommandTarget(match[1] ?? "");
+  const target = findStageCommandTarget(objects, targetText);
+  const summaryText = sanitizeStageCommandText(match[2] ?? "");
+
+  if (!target || !summaryText) {
+    return undefined;
+  }
+
+  return {
+    action: "update_summary",
+    target,
+    value: summaryText
+  };
+}
+
 function parseTimelineMilestoneCommand(
   intentText: string,
   objects: StageObject[]
@@ -2631,6 +2669,8 @@ function applyStageCommandToObject(
       return applySimulationRunCommand(object, command.value);
     case "annotate_object":
       return applyObjectAnnotationCommand(object, command.value);
+    case "update_summary":
+      return applyObjectSummaryCommand(object, command.value);
     case "add_document_note":
       return applyDocumentNoteCommand(object, command.value);
     case "add_timeline_milestone":
@@ -2664,6 +2704,8 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Ran ${targetTitle} for ${command.value ?? "the requested scenario"}.`;
     case "annotate_object":
       return `Annotated ${targetTitle}.`;
+    case "update_summary":
+      return `Updated ${targetTitle} summary.`;
     case "add_document_note":
       return `Added a note to ${targetTitle}.`;
     case "add_timeline_milestone":
@@ -2875,6 +2917,30 @@ function applyDocumentNoteCommand(
         ...sections
       ].slice(0, 6),
       guardrail: "Document note is stored locally on the stage; no file write occurred."
+    }
+  };
+}
+
+function applyObjectSummaryCommand(
+  object: StageObject,
+  summaryText: string | undefined
+): StageObject {
+  if (!summaryText) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+
+  return {
+    ...object,
+    summary: summaryText,
+    state: "expanded",
+    payload: {
+      ...payload,
+      status: "local summary",
+      userSummary: summaryText,
+      guardrail:
+        "Summary update is stored locally on the stage; no external system was called."
     }
   };
 }

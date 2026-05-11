@@ -1919,6 +1919,85 @@ test("Stage Shell v0 annotates arbitrary stage objects by voice", async ({ page 
   expect(annotationEvidence).toBe(true);
 });
 
+test("Stage Shell v0 updates arbitrary object summaries by voice", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  await installFakeSpeechRecognition(page);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByTestId("model-surface")).toContainText(
+    "Reality interface model"
+  );
+
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
+
+  await emitFakeSpeechFinal(page, "set model summary to watch the harness voice stack");
+
+  await expect(page.getByTestId("stage-object-model_card")).toContainText(
+    "watch the harness voice stack"
+  );
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Updated Interface model summary."
+  );
+
+  const summaryEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              command_action?: string;
+              command_input_mode?: string;
+              command_value_redacted?: string;
+            };
+          }>;
+          stageEvents?: Array<{
+            type?: string;
+            payload?: {
+              type?: string;
+              summary?: string;
+              payload?: {
+                userSummary?: string;
+                guardrail?: string;
+              };
+            };
+          }>;
+        })
+      : undefined;
+
+    const commandWasLogged =
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "update_summary" &&
+          event.payload?.command_input_mode === "voice" &&
+          event.payload.command_value_redacted === "watch the harness voice stack"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot?.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "model_card" &&
+          event.payload.summary === "watch the harness voice stack" &&
+          event.payload.payload?.userSummary === "watch the harness voice stack" &&
+          event.payload.payload?.guardrail?.includes("stored locally")
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(summaryEvidence).toBe(true);
+});
+
 test("Stage Shell v0 applies spoken artifact revision commands", async ({ page }) => {
   test.setTimeout(120_000);
 
