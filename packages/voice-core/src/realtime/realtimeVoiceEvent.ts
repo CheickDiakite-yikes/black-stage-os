@@ -23,6 +23,16 @@ export function parseRealtimeVoiceServerEvent(
   }
 
   switch (event.type) {
+    case "input_audio_buffer.speech_started":
+      return {
+        type: "voice.capture_started",
+        timestamp
+      };
+    case "input_audio_buffer.speech_stopped":
+      return {
+        type: "voice.capture_stopped",
+        timestamp
+      };
     case "conversation.item.input_audio_transcription.delta":
       return typeof event.delta === "string"
         ? {
@@ -80,7 +90,8 @@ export function parseRealtimeVoiceServerEvent(
         : undefined;
     }
     case "response.function_call_arguments.done": {
-      const callId = readStringField(event, "call_id") ?? readStringField(event, "callId");
+      const callId =
+        readStringField(event, "call_id") ?? readStringField(event, "callId");
       const toolName = readStringField(event, "name") ?? "unknown_realtime_tool";
 
       return callId
@@ -109,7 +120,10 @@ export function parseRealtimeVoiceServerEvent(
   }
 }
 
-function readStringField(record: Record<string, unknown>, field: string): string | undefined {
+function readStringField(
+  record: Record<string, unknown>,
+  field: string
+): string | undefined {
   const value = record[field];
 
   return typeof value === "string" ? value : undefined;

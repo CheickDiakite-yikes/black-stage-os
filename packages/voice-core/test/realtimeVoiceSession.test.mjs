@@ -647,6 +647,36 @@ describe("Realtime voice session contracts", () => {
     assert.equal(stageEvent.payload.proposedBy, "Realtime voice broker");
   });
 
+  it("maps realtime capture lifecycle into visible agent events", () => {
+    const [startedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.capture_started",
+        timestamp: "2026-05-10T23:54:20.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+    const [stoppedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.capture_stopped",
+        timestamp: "2026-05-10T23:54:40.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.equal(startedEvent?.type, "agent.progress");
+    assert.equal(startedEvent.payload.type, "started");
+    assert.equal(startedEvent.payload.summary, "Realtime voice capture started.");
+    assert.equal(stoppedEvent?.type, "agent.progress");
+    assert.equal(stoppedEvent.payload.type, "completed");
+    assert.equal(stoppedEvent.payload.summary, "Realtime voice capture stopped.");
+  });
+
   it("maps realtime errors into failed agent events", () => {
     const [stageEvent] = mapRealtimeVoiceEventToStageEvents(
       {
@@ -708,6 +738,30 @@ describe("Realtime voice session contracts", () => {
       type: "voice.assistant_speech",
       text: "The stage is ready.",
       timestamp: "2026-05-10T00:00:02.000Z"
+    });
+  });
+
+  it("parses realtime speech lifecycle events into voice capture events", () => {
+    const started = parseRealtimeVoiceServerEvent(
+      {
+        type: "input_audio_buffer.speech_started"
+      },
+      "2026-05-10T00:00:03.000Z"
+    );
+    const stopped = parseRealtimeVoiceServerEvent(
+      {
+        type: "input_audio_buffer.speech_stopped"
+      },
+      "2026-05-10T00:00:04.000Z"
+    );
+
+    assert.deepEqual(started, {
+      type: "voice.capture_started",
+      timestamp: "2026-05-10T00:00:03.000Z"
+    });
+    assert.deepEqual(stopped, {
+      type: "voice.capture_stopped",
+      timestamp: "2026-05-10T00:00:04.000Z"
     });
   });
 

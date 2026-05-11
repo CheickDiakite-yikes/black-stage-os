@@ -327,6 +327,30 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "input_audio_buffer.speech_started"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime voice capture started."
+  );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "input_audio_buffer.speech_stopped"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime voice capture stopped."
+  );
 
   await page.evaluate(() => {
     (
@@ -412,6 +436,24 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
 
   expect(toolApprovalEvidence).toBe(true);
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(1);
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "error",
+      error: {
+        message: "Realtime data channel test error."
+      }
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime voice error."
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime data channel test error."
+  );
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect
     .poll(async () =>
