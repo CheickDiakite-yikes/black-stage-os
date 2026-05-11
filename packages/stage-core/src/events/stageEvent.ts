@@ -57,7 +57,14 @@ export type UserInterventionPayload = {
     | "ask_why"
     | "undo"
     | "retry";
-  commandAction?: "focus" | "pin" | "unpin" | "collapse" | "expand" | "rename";
+  commandAction?:
+    | "focus"
+    | "pin"
+    | "unpin"
+    | "collapse"
+    | "expand"
+    | "rename"
+    | "set_url";
   commandValue?: string;
   commandText?: string;
   commandInputMode?: "voice" | "text";

@@ -657,6 +657,81 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
   );
 });
 
+test("Stage Shell v0 retargets the browser portal locally without browsing", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+
+  const browserPortal = page.getByTestId("browser-portal-surface");
+
+  await expect(browserPortal).toContainText("blackstage://validation/stage-shell-v0");
+
+  await page
+    .getByTestId("intent-input")
+    .fill("set browser portal to https://platform.openai.com/docs");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(browserPortal).toContainText("https://platform.openai.com/docs");
+  await expect(browserPortal).toContainText("local target");
+  await expect(browserPortal).toContainText("no external browsing happened");
+
+  const browserRetargetWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          payload?: {
+            url?: string;
+          };
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          command_action?: string;
+          command_value_redacted?: string;
+        };
+      }>;
+    };
+
+    const commandWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "set_url" &&
+          event.payload.command_value_redacted === "https://platform.openai.com/docs"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "browser_portal" &&
+          event.payload.payload?.url === "https://platform.openai.com/docs"
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(browserRetargetWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 attaches local context as a private document object", async ({
   page
 }) => {

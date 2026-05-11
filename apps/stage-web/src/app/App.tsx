@@ -73,7 +73,14 @@ import {
 const idleThread = createIdleIntentThread();
 const loadedSession = loadStageSession();
 
-type StageCommandAction = "focus" | "pin" | "unpin" | "collapse" | "expand" | "rename";
+type StageCommandAction =
+  | "focus"
+  | "pin"
+  | "unpin"
+  | "collapse"
+  | "expand"
+  | "rename"
+  | "set_url";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
@@ -1967,6 +1974,12 @@ function parseStageCommand(
     return renameCommand;
   }
 
+  const browserUrlCommand = parseBrowserPortalUrlCommand(intentText, objects);
+
+  if (browserUrlCommand) {
+    return browserUrlCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -2013,6 +2026,36 @@ function parseRenameStageCommand(
     action: "rename",
     target,
     value: nextTitle
+  };
+}
+
+function parseBrowserPortalUrlCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:set|point|route)\s+(?:the\s+)?(?:browser|browser portal|validation browser)(?:\s+portal)?\s+(?:to|at)\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:open|load)\s+(.+?)\s+(?:in|inside)\s+(?:the\s+)?(?:browser|browser portal|validation browser)(?:\s+portal)?\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const target = objects.find((object) => object.type === "browser_portal");
+  const portalUrl = normalizeStagePortalUrl(match[1] ?? "");
+
+  if (!target || !portalUrl) {
+    return undefined;
+  }
+
+  return {
+    action: "set_url",
+    target,
+    value: portalUrl
   };
 }
 
@@ -2173,6 +2216,8 @@ function applyStageCommandToObject(
         ...object,
         title: command.value ?? object.title
       };
+    case "set_url":
+      return applyBrowserPortalUrlCommand(object, command.value);
   }
 }
 
@@ -2192,7 +2237,65 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Opened ${targetTitle}.`;
     case "rename":
       return `Renamed ${targetTitle} to ${command.value ?? targetTitle}.`;
+    case "set_url":
+      return `Set ${targetTitle} to ${command.value ?? "the requested URL"}.`;
   }
+}
+
+function applyBrowserPortalUrlCommand(
+  object: StageObject,
+  portalUrl: string | undefined
+): StageObject {
+  if (object.type !== "browser_portal" || !portalUrl) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const observations = Array.isArray(payload.observations) ? payload.observations : [];
+
+  return {
+    ...object,
+    state: "expanded",
+    payload: {
+      ...payload,
+      url: portalUrl,
+      status: "local target",
+      observations: [
+        "Portal target changed locally; no external browsing happened.",
+        ...observations
+      ].slice(0, 4),
+      guardrail: "URL is stored as a local portal target only."
+    }
+  };
+}
+
+function normalizeStagePortalUrl(value: string): string | undefined {
+  const trimmed = value.trim().replace(/^["'`]+|["'`.,;!?]+$/g, "");
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const withProtocol = /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    const url = new URL(withProtocol);
+    const allowedProtocols = new Set(["https:", "http:", "blackstage:"]);
+
+    if (!allowedProtocols.has(url.protocol)) {
+      return undefined;
+    }
+
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function isObjectPayload(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function sanitizeStageObjectTitle(title: string): string | undefined {
