@@ -721,13 +721,18 @@ function formatCodexTransportLabel(transports: readonly string[]): string {
 }
 
 function formatHarnessUpstreamPolicyLabel(
-  integrations: readonly { sourceUrl: string }[]
+  integrations: readonly { sourceUrl: string; openSourceUrl?: string }[]
 ): string {
   const pinnedCount = integrations.filter((integration) =>
     integration.sourceUrl.startsWith("https://")
   ).length;
+  const openSourceCount = integrations.filter((integration) =>
+    integration.openSourceUrl?.startsWith("https://github.com/openai/")
+  ).length;
 
-  return `${pinnedCount} source-pinned`;
+  return openSourceCount > 0
+    ? `${pinnedCount} source-pinned · ${openSourceCount} open-source`
+    : `${pinnedCount} source-pinned`;
 }
 
 type SpeechRecognitionAlternativeLike = {

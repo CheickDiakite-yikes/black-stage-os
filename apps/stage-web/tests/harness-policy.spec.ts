@@ -164,5 +164,6 @@ test("Stage Web renders the active harness workflow policy", async ({ page }) =>
   await expect(harnessStatus).toContainText("Agents SDK manager");
   await expect(harnessStatus).toContainText("Memory approvals");
   await expect(harnessStatus).toContainText("5 source-pinned");
+  await expect(harnessStatus).toContainText("2 open-source");
   await expect(harnessStatus).toContainText("gpt-realtime-2");
 });
