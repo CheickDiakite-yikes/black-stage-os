@@ -1,0 +1,62 @@
+export const BLACKSTAGE_WORKFLOW_POLICY_SOURCE = "WORKFLOW.md";
+export const BLACKSTAGE_WORKFLOW_POLICY_VERSION = "blackstage.workflow.v0";
+
+export type HarnessWorkflowPolicy = {
+  source: typeof BLACKSTAGE_WORKFLOW_POLICY_SOURCE;
+  version: typeof BLACKSTAGE_WORKFLOW_POLICY_VERSION;
+  controlPlane: "symphony_style_internal_queue";
+  codingWorker: "openai_codex_cli";
+  agentWorker: "openai_agents_sdk_manager";
+  voiceModel: "gpt-realtime-2";
+  workspaceRoot: ".blackstage/workspaces";
+  browserMutationAllowed: false;
+  browserReceivesProviderCredentials: false;
+  liveExecutionDefault: "disabled";
+  humanApprovalRequiredForHighImpactActions: true;
+  humanReviewRequired: true;
+  proofPacketRequired: true;
+};
+
+export function createBlackstageWorkflowPolicy(): HarnessWorkflowPolicy {
+  return {
+    source: BLACKSTAGE_WORKFLOW_POLICY_SOURCE,
+    version: BLACKSTAGE_WORKFLOW_POLICY_VERSION,
+    controlPlane: "symphony_style_internal_queue",
+    codingWorker: "openai_codex_cli",
+    agentWorker: "openai_agents_sdk_manager",
+    voiceModel: "gpt-realtime-2",
+    workspaceRoot: ".blackstage/workspaces",
+    browserMutationAllowed: false,
+    browserReceivesProviderCredentials: false,
+    liveExecutionDefault: "disabled",
+    humanApprovalRequiredForHighImpactActions: true,
+    humanReviewRequired: true,
+    proofPacketRequired: true
+  };
+}
+
+export function isHarnessWorkflowPolicy(
+  value: unknown
+): value is HarnessWorkflowPolicy {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<HarnessWorkflowPolicy>;
+
+  return (
+    candidate.source === BLACKSTAGE_WORKFLOW_POLICY_SOURCE &&
+    candidate.version === BLACKSTAGE_WORKFLOW_POLICY_VERSION &&
+    candidate.controlPlane === "symphony_style_internal_queue" &&
+    candidate.codingWorker === "openai_codex_cli" &&
+    candidate.agentWorker === "openai_agents_sdk_manager" &&
+    candidate.voiceModel === "gpt-realtime-2" &&
+    candidate.workspaceRoot === ".blackstage/workspaces" &&
+    candidate.browserMutationAllowed === false &&
+    candidate.browserReceivesProviderCredentials === false &&
+    candidate.liveExecutionDefault === "disabled" &&
+    candidate.humanApprovalRequiredForHighImpactActions === true &&
+    candidate.humanReviewRequired === true &&
+    candidate.proofPacketRequired === true
+  );
+}

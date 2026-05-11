@@ -1,3 +1,8 @@
+import {
+  isHarnessWorkflowPolicy,
+  type HarnessWorkflowPolicy
+} from "./workflowPolicy.js";
+
 export const BLACKSTAGE_HARNESS_RUNNER_ROUTE = "/api/blackstage/harness";
 
 export type HarnessRunnerReadinessStatus =
@@ -23,6 +28,7 @@ export type HarnessRunnerReadinessBody = {
   orchestration: "symphony_style_internal_queue";
   codexMode: "dry_run" | "local_exec" | "disabled";
   agentsSdkMode: "dry_run" | "disabled";
+  workflowPolicy: HarnessWorkflowPolicy;
   localCodexSubprocessEnabled: boolean;
   browserCanEnqueueWork: false;
   browserCanRunCodex: false;
@@ -38,6 +44,7 @@ export type HarnessRunnerClientReadiness = {
   orchestration?: HarnessRunnerReadinessBody["orchestration"];
   codexMode?: HarnessRunnerReadinessBody["codexMode"];
   agentsSdkMode?: HarnessRunnerReadinessBody["agentsSdkMode"];
+  workflowPolicy?: HarnessWorkflowPolicy;
   localCodexSubprocessEnabled: boolean;
   browserCanEnqueueWork: false;
   browserCanRunCodex: false;
@@ -106,7 +113,9 @@ export function createHarnessRunnerNetworkErrorReadiness(
     browserCanEnqueueWork: false,
     browserCanRunCodex: false,
     browserReceivesProviderCredentials: false,
-    errors: [error instanceof Error ? error.message : "Harness runner readiness check failed."]
+    errors: [
+      error instanceof Error ? error.message : "Harness runner readiness check failed."
+    ]
   };
 }
 
@@ -128,6 +137,7 @@ export function interpretHarnessRunnerReadinessResponse(input: {
       orchestration: body.orchestration,
       codexMode: body.codexMode,
       agentsSdkMode: body.agentsSdkMode,
+      workflowPolicy: body.workflowPolicy,
       localCodexSubprocessEnabled: body.localCodexSubprocessEnabled,
       browserCanEnqueueWork: body.browserCanEnqueueWork,
       browserCanRunCodex: body.browserCanRunCodex,
@@ -164,6 +174,7 @@ function parseHarnessRunnerReadinessBody(
     candidate.orchestration !== "symphony_style_internal_queue" ||
     !isHarnessRunnerCodexMode(candidate.codexMode) ||
     !isHarnessRunnerAgentsSdkMode(candidate.agentsSdkMode) ||
+    !isHarnessWorkflowPolicy(candidate.workflowPolicy) ||
     typeof candidate.localCodexSubprocessEnabled !== "boolean" ||
     candidate.browserCanEnqueueWork !== false ||
     candidate.browserCanRunCodex !== false ||
@@ -179,6 +190,7 @@ function parseHarnessRunnerReadinessBody(
     orchestration: "symphony_style_internal_queue",
     codexMode: candidate.codexMode,
     agentsSdkMode: candidate.agentsSdkMode,
+    workflowPolicy: candidate.workflowPolicy,
     localCodexSubprocessEnabled: candidate.localCodexSubprocessEnabled,
     browserCanEnqueueWork: false,
     browserCanRunCodex: false,

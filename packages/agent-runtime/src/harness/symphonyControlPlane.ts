@@ -3,6 +3,10 @@ import type {
   HarnessTask,
   HarnessTaskStatus
 } from "./harnessTypes";
+import {
+  createBlackstageWorkflowPolicy,
+  type HarnessWorkflowPolicy
+} from "./workflowPolicy.js";
 
 export type SymphonyControlPlaneKind = "blackstage_internal_queue";
 
@@ -28,6 +32,7 @@ export type SymphonyWorkItem = {
 
 export type SymphonyControlPlaneSnapshot = {
   kind: SymphonyControlPlaneKind;
+  workflowPolicy: HarnessWorkflowPolicy;
   workItems: SymphonyWorkItem[];
   openWorkCount: number;
   reviewCount: number;
@@ -41,9 +46,11 @@ export function createSymphonyControlPlaneSnapshot(
 
   return {
     kind: "blackstage_internal_queue",
+    workflowPolicy: createBlackstageWorkflowPolicy(),
     workItems,
-    openWorkCount: workItems.filter((item) => item.lane === "queued" || item.lane === "running")
-      .length,
+    openWorkCount: workItems.filter(
+      (item) => item.lane === "queued" || item.lane === "running"
+    ).length,
     reviewCount: workItems.filter((item) => item.lane === "human_review").length,
     blockedCount: workItems.filter((item) => item.lane === "needs_approval").length
   };

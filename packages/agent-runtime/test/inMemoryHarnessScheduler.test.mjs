@@ -27,6 +27,7 @@ import {
 import { InMemoryHarnessScheduler } from "../dist/harness/inMemoryHarnessScheduler.js";
 import { createSimulatedHarnessAdapter } from "../dist/harness/simulatedHarnessAdapter.js";
 import { createSymphonyControlPlaneSnapshot } from "../dist/harness/symphonyControlPlane.js";
+import { createBlackstageWorkflowPolicy } from "../dist/harness/workflowPolicy.js";
 
 const now = () => "2026-05-10T22:45:00.000Z";
 
@@ -58,7 +59,8 @@ describe("InMemoryHarnessScheduler", () => {
     assert.ok(snapshot.events.some((event) => event.type === "task.completed"));
     assert.ok(
       snapshot.events.some(
-        (event) => event.payload?.workspace_path === ".blackstage/workspaces/task_codex_plan"
+        (event) =>
+          event.payload?.workspace_path === ".blackstage/workspaces/task_codex_plan"
       )
     );
   });
@@ -450,6 +452,10 @@ describe("Symphony control plane", () => {
     const controlPlane = createSymphonyControlPlaneSnapshot(snapshot);
 
     assert.equal(controlPlane.kind, "blackstage_internal_queue");
+    assert.equal(controlPlane.workflowPolicy.source, "WORKFLOW.md");
+    assert.equal(controlPlane.workflowPolicy.codingWorker, "openai_codex_cli");
+    assert.equal(controlPlane.workflowPolicy.voiceModel, "gpt-realtime-2");
+    assert.equal(controlPlane.workflowPolicy.browserMutationAllowed, false);
     assert.equal(controlPlane.workItems.length, 4);
     assert.equal(controlPlane.blockedCount, 1);
     assert.ok(
@@ -470,8 +476,12 @@ describe("Symphony control plane", () => {
 
 describe("Harness runner readiness client", () => {
   it("creates a browser-safe readiness probe without execution rights", () => {
-    const probe = createHarnessRunnerReadinessProbe("http://127.0.0.1:8797/api/blackstage/harness");
-    const defaultReadiness = createHarnessRunnerNotConfiguredReadiness("2026-05-10T23:20:00.000Z");
+    const probe = createHarnessRunnerReadinessProbe(
+      "http://127.0.0.1:8797/api/blackstage/harness"
+    );
+    const defaultReadiness = createHarnessRunnerNotConfiguredReadiness(
+      "2026-05-10T23:20:00.000Z"
+    );
 
     assert.equal(probe.method, "GET");
     assert.equal(probe.browserCanEnqueueWork, false);
@@ -492,6 +502,7 @@ describe("Harness runner readiness client", () => {
         orchestration: "symphony_style_internal_queue",
         codexMode: "dry_run",
         agentsSdkMode: "dry_run",
+        workflowPolicy: createBlackstageWorkflowPolicy(),
         localCodexSubprocessEnabled: false,
         browserCanEnqueueWork: false,
         browserCanRunCodex: false,
@@ -503,6 +514,11 @@ describe("Harness runner readiness client", () => {
     assert.equal(readiness.status, "reachable");
     assert.equal(readiness.orchestration, "symphony_style_internal_queue");
     assert.equal(readiness.codexMode, "dry_run");
+    assert.equal(readiness.workflowPolicy?.source, "WORKFLOW.md");
+    assert.equal(
+      readiness.workflowPolicy?.controlPlane,
+      "symphony_style_internal_queue"
+    );
     assert.equal(readiness.browserCanEnqueueWork, false);
     assert.equal(readiness.browserCanRunCodex, false);
   });

@@ -49,6 +49,7 @@ The intended split is:
 - `voice-core` owns Realtime session, broker, WebRTC, server-event parsing, and Stage event mapping contracts.
 - Stage Web can invoke the Realtime SDP bridge only when explicitly configured by local runtime/env settings, a local approval phrase, and a visible operator approval inside the stage.
 - `agent-runtime` grows a Symphony-inspired scheduler and adapter contracts.
+- Root `WORKFLOW.md` owns the background harness policy, and `HarnessWorkflowPolicy` exposes that policy to the local runner and control-plane snapshot.
 - Codex handles coding execution in isolated workspaces.
 - OpenAI Agents SDK handles product/research agents that need handoffs, guardrails, human review, tracing, or voice workflows.
 - All live work streams auditable stage events back into the render field.

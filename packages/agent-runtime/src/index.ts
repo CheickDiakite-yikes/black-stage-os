@@ -8,6 +8,7 @@ export * from "./harness/harnessTypes";
 export * from "./harness/inMemoryHarnessScheduler";
 export * from "./harness/simulatedHarnessAdapter";
 export * from "./harness/symphonyControlPlane";
+export * from "./harness/workflowPolicy";
 export * from "./simulators/simulatedAgentRuntime";
 export * from "./tasks/agentTask";
 export * from "./tool-adapters/toolAdapter";

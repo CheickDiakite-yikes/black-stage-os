@@ -6,12 +6,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
-import {
-  createDryRunCodexWorkerAdapter
-} from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
-import {
-  InMemoryHarnessScheduler
-} from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
+import { createDryRunCodexWorkerAdapter } from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
+import { InMemoryHarnessScheduler } from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
 import {
   BLACKSTAGE_HARNESS_RUNNER_ROUTE,
   STAGE_RUNNER_CODEX_APPROVAL_HEADER,
@@ -35,31 +31,47 @@ afterEach(async () => {
         })
     )
   );
-  await Promise.all(tempDirs.splice(0).map((directory) => rm(directory, {
-    force: true,
-    recursive: true
-  })));
+  await Promise.all(
+    tempDirs.splice(0).map((directory) =>
+      rm(directory, {
+        force: true,
+        recursive: true
+      })
+    )
+  );
 });
 
 describe("Stage runner server", () => {
   it("exposes safe harness readiness without browser-side execution rights", async () => {
     const server = await listen(createStageRunnerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        origin: "http://127.0.0.1:4187"
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          origin: "http://127.0.0.1:4187"
+        }
       }
-    });
+    );
     const body = await response.json();
 
     assert.equal(response.status, 200);
-    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4187");
+    assert.equal(
+      response.headers.get("access-control-allow-origin"),
+      "http://127.0.0.1:4187"
+    );
     assert.equal(body.ok, true);
     assert.equal(body.route, BLACKSTAGE_HARNESS_RUNNER_ROUTE);
     assert.equal(body.orchestration, "symphony_style_internal_queue");
     assert.equal(body.codexMode, "dry_run");
     assert.equal(body.agentsSdkMode, "dry_run");
+    assert.equal(body.workflowPolicy.source, "WORKFLOW.md");
+    assert.equal(body.workflowPolicy.controlPlane, "symphony_style_internal_queue");
+    assert.equal(body.workflowPolicy.codingWorker, "openai_codex_cli");
+    assert.equal(body.workflowPolicy.agentWorker, "openai_agents_sdk_manager");
+    assert.equal(body.workflowPolicy.voiceModel, "gpt-realtime-2");
+    assert.equal(body.workflowPolicy.browserMutationAllowed, false);
     assert.equal(body.localCodexSubprocessEnabled, false);
     assert.equal(body.browserCanEnqueueWork, false);
     assert.equal(body.browserCanRunCodex, false);
@@ -75,11 +87,15 @@ describe("Stage runner server", () => {
         runtimeConfig
       })
     );
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`);
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`
+    );
     const body = await response.json();
 
     assert.equal(response.status, 200);
     assert.equal(body.codexMode, "local_exec");
+    assert.equal(body.workflowPolicy.liveExecutionDefault, "disabled");
+    assert.equal(body.workflowPolicy.humanApprovalRequiredForHighImpactActions, true);
     assert.equal(body.localCodexSubprocessEnabled, true);
     assert.equal(body.browserCanRunCodex, false);
     assert.equal(body.browserReceivesProviderCredentials, false);
@@ -101,11 +117,16 @@ describe("Stage runner server", () => {
 
     await enqueueCodexTask(server, "task_live_codex_requires_token");
 
-    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
-      method: "POST"
-    });
+    const runResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST"
+      }
+    );
     const runBody = await runResponse.json();
-    const snapshotResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/snapshot`);
+    const snapshotResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/snapshot`
+    );
     const snapshotBody = await snapshotResponse.json();
 
     assert.equal(runResponse.status, 403);
@@ -138,23 +159,29 @@ describe("Stage runner server", () => {
 
     await enqueueCodexTask(server, "task_live_codex_matching_token");
 
-    const blockedResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
-      method: "POST",
-      headers: {
-        [STAGE_RUNNER_CODEX_APPROVAL_HEADER]: "wrong-token"
+    const blockedResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST",
+        headers: {
+          [STAGE_RUNNER_CODEX_APPROVAL_HEADER]: "wrong-token"
+        }
       }
-    });
+    );
     const blockedBody = await blockedResponse.json();
 
     assert.equal(blockedResponse.status, 403);
     assert.equal(blockedBody.ok, false);
 
-    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
-      method: "POST",
-      headers: {
-        [STAGE_RUNNER_CODEX_APPROVAL_HEADER]: approvalPhrase
+    const runResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST",
+        headers: {
+          [STAGE_RUNNER_CODEX_APPROVAL_HEADER]: approvalPhrase
+        }
       }
-    });
+    );
     const runBody = await runResponse.json();
 
     assert.equal(runResponse.status, 200);
@@ -165,59 +192,78 @@ describe("Stage runner server", () => {
 
   it("answers local readiness preflight without allowing browser mutations", async () => {
     const server = await listen(createStageRunnerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`, {
-      method: "OPTIONS",
-      headers: {
-        origin: "http://127.0.0.1:4187",
-        "access-control-request-method": "GET"
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`,
+      {
+        method: "OPTIONS",
+        headers: {
+          origin: "http://127.0.0.1:4187",
+          "access-control-request-method": "GET"
+        }
       }
-    });
+    );
 
     assert.equal(response.status, 204);
-    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4187");
+    assert.equal(
+      response.headers.get("access-control-allow-origin"),
+      "http://127.0.0.1:4187"
+    );
     assert.match(response.headers.get("access-control-allow-methods") ?? "", /GET/);
-    assert.doesNotMatch(response.headers.get("access-control-allow-methods") ?? "", /POST/);
+    assert.doesNotMatch(
+      response.headers.get("access-control-allow-methods") ?? "",
+      /POST/
+    );
   });
 
   it("returns a Symphony-style empty snapshot before local work is enqueued", async () => {
     const server = await listen(createStageRunnerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/snapshot`);
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/snapshot`
+    );
     const body = await response.json();
 
     assert.equal(response.status, 200);
     assert.equal(body.ok, true);
     assert.deepEqual(body.snapshot.tasks, []);
     assert.equal(body.controlPlane.kind, "blackstage_internal_queue");
+    assert.equal(body.controlPlane.workflowPolicy.source, "WORKFLOW.md");
+    assert.equal(body.controlPlane.workflowPolicy.proofPacketRequired, true);
     assert.equal(body.controlPlane.openWorkCount, 0);
   });
 
   it("enqueues and dry-runs approved Codex tasks through the local service", async () => {
     const server = await listen(createStageRunnerServer());
-    const taskResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        id: "task_stage_runner_codex",
-        threadId: "thread_build_blackstage",
-        title: "Prepare Codex worker packet",
-        objective: "Prepare a dry-run Codex packet for human review.",
-        kind: "codex",
-        workspace: {
-          kind: "local",
-          path: ".blackstage/workspaces/task_stage_runner_codex"
-        }
-      })
-    });
+    const taskResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          id: "task_stage_runner_codex",
+          threadId: "thread_build_blackstage",
+          title: "Prepare Codex worker packet",
+          objective: "Prepare a dry-run Codex packet for human review.",
+          kind: "codex",
+          workspace: {
+            kind: "local",
+            path: ".blackstage/workspaces/task_stage_runner_codex"
+          }
+        })
+      }
+    );
     const taskBody = await taskResponse.json();
 
     assert.equal(taskResponse.status, 202);
     assert.equal(taskBody.task.status, "queued");
 
-    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
-      method: "POST"
-    });
+    const runResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST"
+      }
+    );
     const runBody = await runResponse.json();
 
     assert.equal(runResponse.status, 200);
@@ -255,32 +301,40 @@ describe("Stage runner server", () => {
         }
       })
     });
-    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
-      method: "POST"
-    });
+    const runResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST"
+      }
+    );
     const runBody = await runResponse.json();
 
     assert.equal(runResponse.status, 200);
     assert.equal(runBody.run, null);
     assert.equal(runBody.controlPlane.blockedCount, 1);
-    assert.ok(runBody.snapshot.events.some((event) => event.type === "approval.required"));
+    assert.ok(
+      runBody.snapshot.events.some((event) => event.type === "approval.required")
+    );
   });
 
   it("rejects browser-origin mutations even when the origin is local", async () => {
     const server = await listen(createStageRunnerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: "http://127.0.0.1:4187"
-      },
-      body: JSON.stringify({
-        threadId: "thread_build_blackstage",
-        title: "Browser enqueue attempt",
-        objective: "Should be blocked.",
-        kind: "agent"
-      })
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://127.0.0.1:4187"
+        },
+        body: JSON.stringify({
+          threadId: "thread_build_blackstage",
+          title: "Browser enqueue attempt",
+          objective: "Should be blocked.",
+          kind: "agent"
+        })
+      }
+    );
     const body = await response.json();
 
     assert.equal(response.status, 403);
@@ -290,15 +344,18 @@ describe("Stage runner server", () => {
 
   it("rejects malformed task inputs", async () => {
     const server = await listen(createStageRunnerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        title: "Missing fields"
-      })
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          title: "Missing fields"
+        })
+      }
+    );
     const body = await response.json();
 
     assert.equal(response.status, 400);
@@ -316,19 +373,22 @@ describe("Stage runner server", () => {
         }
       })
     );
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        id: "task_prepare_workspace",
-        threadId: "thread_build_blackstage",
-        title: "Prepare workspace",
-        objective: "Create the bounded Codex workspace manifest.",
-        kind: "codex"
-      })
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          id: "task_prepare_workspace",
+          threadId: "thread_build_blackstage",
+          title: "Prepare workspace",
+          objective: "Create the bounded Codex workspace manifest.",
+          kind: "codex"
+        })
+      }
+    );
     const body = await response.json();
     const manifestPath = join(
       repoRoot,
@@ -337,7 +397,10 @@ describe("Stage runner server", () => {
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
     assert.equal(response.status, 202);
-    assert.equal(body.task.workspace.path, ".blackstage/workspaces/task_prepare_workspace");
+    assert.equal(
+      body.task.workspace.path,
+      ".blackstage/workspaces/task_prepare_workspace"
+    );
     assert.equal(
       body.workspacePreparation.manifestPath,
       ".blackstage/workspaces/task_prepare_workspace/blackstage-task.json"
@@ -347,9 +410,12 @@ describe("Stage runner server", () => {
     assert.equal(manifest.policy.humanReviewRequired, true);
     assert.equal(manifest.validationStatus, "pending");
 
-    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
-      method: "POST"
-    });
+    const runResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST"
+      }
+    );
     const runBody = await runResponse.json();
     const proofPath = join(
       repoRoot,
@@ -369,7 +435,9 @@ describe("Stage runner server", () => {
     assert.equal(proof.policy.humanReviewRequired, true);
     assert.ok(proof.eventCount >= 3);
 
-    const proofsResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/proofs`);
+    const proofsResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/proofs`
+    );
     const proofsBody = await proofsResponse.json();
 
     assert.equal(proofsResponse.status, 200);
@@ -393,23 +461,26 @@ describe("Stage runner server", () => {
         }
       })
     );
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        id: "task_escape_workspace",
-        threadId: "thread_build_blackstage",
-        title: "Escape workspace",
-        objective: "Should be rejected.",
-        kind: "codex",
-        workspace: {
-          kind: "local",
-          path: "../outside"
-        }
-      })
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          id: "task_escape_workspace",
+          threadId: "thread_build_blackstage",
+          title: "Escape workspace",
+          objective: "Should be rejected.",
+          kind: "codex",
+          workspace: {
+            kind: "local",
+            path: "../outside"
+          }
+        })
+      }
+    );
     const body = await response.json();
 
     assert.equal(response.status, 400);
@@ -485,19 +556,22 @@ function baseUrl(server) {
 }
 
 async function enqueueCodexTask(server, taskId) {
-  const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      id: taskId,
-      threadId: "thread_build_blackstage",
-      title: "Run live Codex boundary",
-      objective: "Prove the local live Codex execution gate.",
-      kind: "codex"
-    })
-  });
+  const response = await fetch(
+    `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        id: taskId,
+        threadId: "thread_build_blackstage",
+        title: "Run live Codex boundary",
+        objective: "Prove the local live Codex execution gate.",
+        kind: "codex"
+      })
+    }
+  );
 
   assert.equal(response.status, 202);
 }

@@ -1,27 +1,21 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse
+} from "node:http";
 import { URL } from "node:url";
 import {
   BLACKSTAGE_HARNESS_RUNNER_ROUTE,
   type HarnessRunnerReadinessBody
 } from "../../../packages/agent-runtime/dist/harness/harnessRunnerClient.js";
-import {
-  createDryRunAgentsSdkAdapter
-} from "../../../packages/agent-runtime/dist/harness/agentsSdkAdapter.js";
-import {
-  createDryRunCodexWorkerAdapter
-} from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
-import {
-  createLocalCodexWorkerAdapter
-} from "../../../packages/agent-runtime/dist/harness/codexLocalRunner.js";
-import {
-  InMemoryHarnessScheduler
-} from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
-import {
-  createSimulatedHarnessAdapter
-} from "../../../packages/agent-runtime/dist/harness/simulatedHarnessAdapter.js";
-import {
-  createSymphonyControlPlaneSnapshot
-} from "../../../packages/agent-runtime/dist/harness/symphonyControlPlane.js";
+import { createDryRunAgentsSdkAdapter } from "../../../packages/agent-runtime/dist/harness/agentsSdkAdapter.js";
+import { createDryRunCodexWorkerAdapter } from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
+import { createLocalCodexWorkerAdapter } from "../../../packages/agent-runtime/dist/harness/codexLocalRunner.js";
+import { InMemoryHarnessScheduler } from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
+import { createSimulatedHarnessAdapter } from "../../../packages/agent-runtime/dist/harness/simulatedHarnessAdapter.js";
+import { createSymphonyControlPlaneSnapshot } from "../../../packages/agent-runtime/dist/harness/symphonyControlPlane.js";
+import { createBlackstageWorkflowPolicy } from "../../../packages/agent-runtime/dist/harness/workflowPolicy.js";
 import type {
   HarnessSchedulerSnapshot,
   HarnessTaskInput,
@@ -44,7 +38,8 @@ export const DEFAULT_STAGE_RUNNER_ALLOWED_ORIGINS = [
   "http://localhost:4187"
 ];
 export const STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_RUNNER_ALLOWED_ORIGINS";
-export const STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR = "BLACKSTAGE_CODEX_SUBPROCESS_ENABLED";
+export const STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR =
+  "BLACKSTAGE_CODEX_SUBPROCESS_ENABLED";
 export const STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR =
   "BLACKSTAGE_CODEX_RUN_APPROVAL_TOKEN";
 export const STAGE_RUNNER_CODEX_APPROVAL_HEADER = "x-blackstage-codex-approval";
@@ -100,14 +95,17 @@ export function createStageRunnerRuntimeConfig(
     workspacePreparationEnabled:
       codexSubprocessEnabled || env[STAGE_RUNNER_WORKSPACE_PREP_ENV_VAR] === "1",
     repoRoot: env[STAGE_RUNNER_REPO_ROOT_ENV_VAR] ?? process.cwd(),
-    workspaceRoot: env[STAGE_RUNNER_WORKSPACE_ROOT_ENV_VAR] ?? DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT
+    workspaceRoot:
+      env[STAGE_RUNNER_WORKSPACE_ROOT_ENV_VAR] ?? DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT
   };
 }
 
-export function createDefaultStageRunnerScheduler(options: {
-  now?: () => string;
-  codexSubprocessEnabled?: boolean;
-} = {}): InMemoryHarnessScheduler {
+export function createDefaultStageRunnerScheduler(
+  options: {
+    now?: () => string;
+    codexSubprocessEnabled?: boolean;
+  } = {}
+): InMemoryHarnessScheduler {
   const codexAdapter = options.codexSubprocessEnabled
     ? createLocalCodexWorkerAdapter({
         enabled: true,
@@ -125,7 +123,9 @@ export function createDefaultStageRunnerScheduler(options: {
   });
 }
 
-export function createStageRunnerServer(options: StageRunnerServerOptions = {}): Server {
+export function createStageRunnerServer(
+  options: StageRunnerServerOptions = {}
+): Server {
   const runtimeConfig = resolveStageRunnerRuntimeConfig(options.runtimeConfig);
   const scheduler =
     options.scheduler ??
@@ -170,7 +170,10 @@ async function handleStageRunnerRequest(
   runtimeConfig: StageRunnerRuntimeConfig,
   scheduler: InMemoryHarnessScheduler
 ): Promise<void> {
-  const routeUrl = new URL(request.url ?? "/", `http://${runtimeConfig.host}:${runtimeConfig.port}`);
+  const routeUrl = new URL(
+    request.url ?? "/",
+    `http://${runtimeConfig.host}:${runtimeConfig.port}`
+  );
   const method = request.method?.toUpperCase() ?? "GET";
   const corsHeaders = createCorsHeaders(request, runtimeConfig);
   const snapshotPath = `${runtimeConfig.routePath}/snapshot`;
@@ -187,12 +190,22 @@ async function handleStageRunnerRequest(
   }
 
   if (routeUrl.pathname === runtimeConfig.routePath && method === "GET") {
-    writeJson(response, 200, createReadinessResponse(runtimeConfig, new Date().toISOString()), corsHeaders);
+    writeJson(
+      response,
+      200,
+      createReadinessResponse(runtimeConfig, new Date().toISOString()),
+      corsHeaders
+    );
     return;
   }
 
   if (routeUrl.pathname === snapshotPath && method === "GET") {
-    writeJson(response, 200, createSnapshotResponse(scheduler, new Date().toISOString()), corsHeaders);
+    writeJson(
+      response,
+      200,
+      createSnapshotResponse(scheduler, new Date().toISOString()),
+      corsHeaders
+    );
     return;
   }
 
@@ -215,13 +228,18 @@ async function handleStageRunnerRequest(
     return;
   }
 
-  if ((routeUrl.pathname === tasksPath || routeUrl.pathname === runNextPath) && request.headers.origin) {
+  if (
+    (routeUrl.pathname === tasksPath || routeUrl.pathname === runNextPath) &&
+    request.headers.origin
+  ) {
     writeJson(
       response,
       403,
       {
         ok: false,
-        errors: ["Browser-origin harness mutations are disabled in this local runner slice."]
+        errors: [
+          "Browser-origin harness mutations are disabled in this local runner slice."
+        ]
       },
       corsHeaders
     );
@@ -246,7 +264,11 @@ async function handleStageRunnerRequest(
         400,
         {
           ok: false,
-          errors: [error instanceof Error ? error.message : "Could not prepare harness workspace."]
+          errors: [
+            error instanceof Error
+              ? error.message
+              : "Could not prepare harness workspace."
+          ]
         },
         corsHeaders
       );
@@ -276,7 +298,9 @@ async function handleStageRunnerRequest(
         403,
         {
           ok: false,
-          errors: ["Live Codex subprocess execution requires a matching local approval token."]
+          errors: [
+            "Live Codex subprocess execution requires a matching local approval token."
+          ]
         },
         corsHeaders
       );
@@ -284,7 +308,10 @@ async function handleStageRunnerRequest(
     }
 
     const run = await scheduler.runNext();
-    const snapshotResponse = createSnapshotResponse(scheduler, new Date().toISOString());
+    const snapshotResponse = createSnapshotResponse(
+      scheduler,
+      new Date().toISOString()
+    );
     const runProof =
       run && runtimeConfig.workspacePreparationEnabled
         ? await writeProofForRunner(run, snapshotResponse.snapshot, runtimeConfig)
@@ -328,7 +355,10 @@ function requestHasLiveCodexRunApproval(
   return Boolean(requiredToken) && providedToken === requiredToken;
 }
 
-function readSingleHeader(request: IncomingMessage, headerName: string): string | undefined {
+function readSingleHeader(
+  request: IncomingMessage,
+  headerName: string
+): string | undefined {
   const header = request.headers[headerName.toLowerCase()];
 
   if (Array.isArray(header)) {
@@ -342,9 +372,12 @@ async function writeProofForRunner(
   run: NonNullable<Awaited<ReturnType<InMemoryHarnessScheduler["runNext"]>>>,
   snapshot: HarnessSchedulerSnapshot,
   runtimeConfig: StageRunnerRuntimeConfig
-): Promise<{
-  proofPath: string;
-} | undefined> {
+): Promise<
+  | {
+      proofPath: string;
+    }
+  | undefined
+> {
   const proof = await writeStageRunnerRunProof(run, snapshot, {
     repoRoot: runtimeConfig.repoRoot,
     workspaceRoot: runtimeConfig.workspaceRoot
@@ -406,6 +439,7 @@ function createReadinessResponse(
     orchestration: "symphony_style_internal_queue",
     codexMode: runtimeConfig.codexSubprocessEnabled ? "local_exec" : "dry_run",
     agentsSdkMode: "dry_run",
+    workflowPolicy: createBlackstageWorkflowPolicy(),
     localCodexSubprocessEnabled: runtimeConfig.codexSubprocessEnabled,
     browserCanEnqueueWork: false,
     browserCanRunCodex: false,
@@ -434,7 +468,11 @@ function createCorsHeaders(
 ): Record<string, string> {
   const origin = request.headers.origin;
 
-  if (!origin || Array.isArray(origin) || !runtimeConfig.allowedOrigins.includes(origin)) {
+  if (
+    !origin ||
+    Array.isArray(origin) ||
+    !runtimeConfig.allowedOrigins.includes(origin)
+  ) {
     return {};
   }
 
@@ -518,9 +556,13 @@ function parseHarnessTaskInput(
       kind: candidate.kind as HarnessTaskKind,
       priority: typeof candidate.priority === "number" ? candidate.priority : undefined,
       approvalRequired:
-        typeof candidate.approvalRequired === "boolean" ? candidate.approvalRequired : undefined,
+        typeof candidate.approvalRequired === "boolean"
+          ? candidate.approvalRequired
+          : undefined,
       blockedBy: Array.isArray(candidate.blockedBy)
-        ? candidate.blockedBy.filter((taskId): taskId is string => typeof taskId === "string")
+        ? candidate.blockedBy.filter(
+            (taskId): taskId is string => typeof taskId === "string"
+          )
         : undefined,
       workspace: candidate.workspace
     }
@@ -558,7 +600,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     runtimeConfig
   })
     .then(() => {
-      console.log(`Blackstage harness runner listening on http://${runtimeConfig.host}:${runtimeConfig.port}`);
+      console.log(
+        `Blackstage harness runner listening on http://${runtimeConfig.host}:${runtimeConfig.port}`
+      );
       console.log(`Harness route: ${runtimeConfig.routePath}`);
       console.log("Codex and Agents SDK execution remain dry-run only in this slice.");
     })

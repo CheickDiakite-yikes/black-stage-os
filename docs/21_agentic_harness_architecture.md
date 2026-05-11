@@ -16,6 +16,8 @@ This is not a replacement for Stage Shell v0. It is the path from simulation to 
 
 After the 2026-05-10 provider refresh, the stance is: yes, Blackstage should leverage open-source Codex, Symphony, and `gpt-realtime-2`, but only behind Blackstage-owned stage events, approval gates, and replayable traces. Codex/Symphony can power the background labor loop; they should not become the user-facing operating metaphor.
 
+After the 2026-05-11 workflow-policy slice, that stance is also codified in root `WORKFLOW.md` and exposed as typed `HarnessWorkflowPolicy` metadata from the Symphony-style control plane and local harness runner readiness. The policy remains read-only to the browser and keeps live execution disabled by default.
+
 ## Source-Verified Assumptions
 
 - `gpt-realtime-2` is listed as a reasoning model for realtime voice interactions, supports speech-to-speech interaction, configurable reasoning effort, stronger tool use, text/audio/image input, text/audio output, and the `v1/realtime` endpoint. Source: <https://developers.openai.com/api/docs/models/gpt-realtime-2>
@@ -134,7 +136,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - dry-run Codex worker envelope
    - approved workspace guard
    - internal Symphony-style control-plane projection
-   - Status: implemented as local-only contracts and Node tests; no Codex subprocess, App Server, Linear, or network call runs yet.
+   - Status: implemented as local-only contracts, typed workflow policy metadata, and Node tests; no Codex subprocess, App Server, Linear, or network call runs yet.
 
 6. Add disabled-by-default local Codex runner seam:
    - explicit `codex exec` command plan
@@ -196,6 +198,12 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - local callers must send the matching `x-blackstage-codex-approval` header
     - denied requests return `403` and leave queued work untouched
     - Status: implemented with local server tests; no live Codex subprocess ran during validation.
+
+14. Codify the upstream-aligned workflow policy:
+    - root `WORKFLOW.md` defines the Blackstage harness control plane, worker split, safety boundaries, evidence expectations, and validation floor
+    - `agent-runtime` exports `HarnessWorkflowPolicy`
+    - Symphony-style snapshots and `apps/stage-runner` readiness expose the policy without granting browser execution rights
+    - Status: implemented with agent-runtime and stage-runner tests; no live Codex, Agents SDK, or Realtime network call runs by default.
 
 ## Risks
 
