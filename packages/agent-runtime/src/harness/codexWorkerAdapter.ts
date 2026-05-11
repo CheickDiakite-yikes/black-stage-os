@@ -11,6 +11,10 @@ export type CodexWorkerExecutionMode = "dry_run" | "local_exec";
 
 export const CODEX_APP_SERVER_HANDOFF_PROTOCOL =
   "blackstage.codex_app_server_handoff.v0";
+export const CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL =
+  "blackstage.codex_app_server_json_rpc_plan.v0";
+export const CODEX_APP_SERVER_SOURCE_URL =
+  "https://developers.openai.com/codex/app-server/";
 
 export type CodexWorkerPolicy = {
   allowNetwork: boolean;
@@ -48,6 +52,40 @@ export type CodexAppServerHandoff = {
     providerCredentialsExposedToBrowser: false;
     liveTransportArmed: false;
   };
+};
+
+export type CodexAppServerJsonRpcMethod =
+  | "initialize"
+  | "initialized"
+  | "thread/start"
+  | "turn/start";
+
+export type CodexAppServerJsonRpcStep = {
+  label: string;
+  jsonrpc: "2.0";
+  method: CodexAppServerJsonRpcMethod;
+  direction: "client_to_server";
+  id?: string;
+  notification?: boolean;
+  params: Record<string, unknown>;
+};
+
+export type CodexAppServerJsonRpcPlan = {
+  protocol: typeof CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL;
+  sourceUrl: typeof CODEX_APP_SERVER_SOURCE_URL;
+  provider: "openai_codex";
+  transport: "app_server";
+  executionMode: CodexWorkerExecutionMode;
+  taskId: string;
+  threadId: string;
+  title: string;
+  workspace: HarnessWorkspace;
+  requestSequence: CodexAppServerJsonRpcStep[];
+  liveTransportArmed: false;
+  browserMutationAllowed: false;
+  providerCredentialsExposedToBrowser: false;
+  stageApprovalRequiredForHighImpactActions: true;
+  humanReviewRequired: true;
 };
 
 export type CodexWorkerAdapterOptions = {
@@ -158,6 +196,107 @@ export function createCodexAppServerHandoffFromEnvelope(
   };
 }
 
+export function createCodexAppServerJsonRpcPlan(
+  task: HarnessTask,
+  options: Omit<CodexWorkerAdapterOptions, "transport"> = {}
+): CodexAppServerJsonRpcPlan {
+  return createCodexAppServerJsonRpcPlanFromHandoff(
+    createCodexAppServerHandoff(task, options)
+  );
+}
+
+export function createCodexAppServerJsonRpcPlanFromHandoff(
+  handoff: CodexAppServerHandoff
+): CodexAppServerJsonRpcPlan {
+  const workspacePath = handoff.workspace.path;
+
+  return {
+    protocol: CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL,
+    sourceUrl: CODEX_APP_SERVER_SOURCE_URL,
+    provider: handoff.provider,
+    transport: "app_server",
+    executionMode: handoff.executionMode,
+    taskId: handoff.taskId,
+    threadId: handoff.threadId,
+    title: handoff.title,
+    workspace: handoff.workspace,
+    requestSequence: [
+      {
+        label: "Initialize Codex App Server session",
+        jsonrpc: "2.0",
+        method: "initialize",
+        direction: "client_to_server",
+        id: "blackstage_initialize",
+        params: {
+          clientInfo: {
+            name: "blackstage_harness",
+            version: CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL
+          },
+          capabilities: {
+            stageApprovalRequired: true,
+            browserReceivesProviderCredentials: false
+          }
+        }
+      },
+      {
+        label: "Acknowledge initialization without granting browser capabilities",
+        jsonrpc: "2.0",
+        method: "initialized",
+        direction: "client_to_server",
+        notification: true,
+        params: {
+          blackstageThreadId: handoff.threadId,
+          browserMutationAllowed: false
+        }
+      },
+      {
+        label: "Start bounded Codex thread in the approved workspace",
+        jsonrpc: "2.0",
+        method: "thread/start",
+        direction: "client_to_server",
+        id: "blackstage_thread_start",
+        params: {
+          cwd: workspacePath,
+          metadata: {
+            blackstageTaskId: handoff.taskId,
+            blackstageThreadId: handoff.threadId,
+            source: "blackstage_harness"
+          }
+        }
+      },
+      {
+        label: "Start the first Codex turn after thread/start returns a thread id",
+        jsonrpc: "2.0",
+        method: "turn/start",
+        direction: "client_to_server",
+        id: "blackstage_turn_start",
+        params: {
+          threadId: "<thread id returned by thread/start>",
+          cwd: workspacePath,
+          input: [
+            {
+              role: "user",
+              content: handoff.prompt
+            }
+          ],
+          approvalPolicy: "never",
+          sandboxPolicy: {
+            mode: "workspace-write",
+            writableRoots: [workspacePath],
+            networkAccess: handoff.policy.allowNetwork
+          },
+          validationCommands: handoff.validationCommands
+        }
+      }
+    ],
+    liveTransportArmed: false,
+    browserMutationAllowed: false,
+    providerCredentialsExposedToBrowser: false,
+    stageApprovalRequiredForHighImpactActions: true,
+    humanReviewRequired: true
+  };
+}
+
 export function isApprovedHarnessWorkspace(
   workspace: HarnessWorkspace | undefined
 ): boolean {
@@ -194,6 +333,9 @@ function createDryRunCodexResult(envelope: CodexWorkerEnvelope): HarnessRunResul
     envelope.transport === "app_server"
       ? createCodexAppServerHandoffFromEnvelope(envelope)
       : undefined;
+  const appServerJsonRpcPlan = appServerHandoff
+    ? createCodexAppServerJsonRpcPlanFromHandoff(appServerHandoff)
+    : undefined;
   const events: NonNullable<HarnessRunResult["events"]> = [
     {
       type: "task.progress",
@@ -226,6 +368,22 @@ function createDryRunCodexResult(envelope: CodexWorkerEnvelope): HarnessRunResul
         transport: appServerHandoff.transport,
         live_transport_armed: appServerHandoff.policy.liveTransportArmed,
         browser_mutation_allowed: appServerHandoff.policy.browserMutationAllowed
+      }
+    });
+  }
+
+  if (appServerJsonRpcPlan) {
+    events.push({
+      type: "task.progress",
+      summary: "Prepared source-aligned Codex App Server JSON-RPC plan.",
+      payload: {
+        json_rpc_protocol: appServerJsonRpcPlan.protocol,
+        source_url: appServerJsonRpcPlan.sourceUrl,
+        methods: appServerJsonRpcPlan.requestSequence.map((step) => step.method),
+        live_transport_armed: appServerJsonRpcPlan.liveTransportArmed,
+        browser_mutation_allowed: appServerJsonRpcPlan.browserMutationAllowed,
+        provider_credentials_exposed_to_browser:
+          appServerJsonRpcPlan.providerCredentialsExposedToBrowser
       }
     });
   }

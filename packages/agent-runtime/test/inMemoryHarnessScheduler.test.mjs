@@ -16,7 +16,10 @@ import {
 } from "../dist/harness/agentsSdkAdapter.js";
 import {
   CODEX_APP_SERVER_HANDOFF_PROTOCOL,
+  CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL,
+  CODEX_APP_SERVER_SOURCE_URL,
   createCodexAppServerHandoff,
+  createCodexAppServerJsonRpcPlan,
   createCodexWorkerEnvelope,
   createDryRunCodexWorkerAdapter,
   isApprovedHarnessWorkspace
@@ -219,6 +222,7 @@ describe("Codex worker adapter", () => {
       updatedAt: now()
     };
     const handoff = createCodexAppServerHandoff(task);
+    const jsonRpcPlan = createCodexAppServerJsonRpcPlan(task);
     const scheduler = new InMemoryHarnessScheduler({
       adapters: [
         createDryRunCodexWorkerAdapter({
@@ -240,6 +244,25 @@ describe("Codex worker adapter", () => {
     assert.equal(handoff.policy.providerCredentialsExposedToBrowser, false);
     assert.equal(handoff.policy.allowPush, false);
     assert.match(handoff.prompt, /Return validation evidence/);
+    assert.equal(jsonRpcPlan.protocol, CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL);
+    assert.equal(jsonRpcPlan.sourceUrl, CODEX_APP_SERVER_SOURCE_URL);
+    assert.equal(jsonRpcPlan.liveTransportArmed, false);
+    assert.equal(jsonRpcPlan.browserMutationAllowed, false);
+    assert.equal(jsonRpcPlan.providerCredentialsExposedToBrowser, false);
+    assert.deepEqual(
+      jsonRpcPlan.requestSequence.map((step) => step.method),
+      ["initialize", "initialized", "thread/start", "turn/start"]
+    );
+    assert.equal(
+      jsonRpcPlan.requestSequence.find((step) => step.method === "thread/start")?.params
+        .cwd,
+      ".blackstage/workspaces/task_codex_app_server"
+    );
+    assert.equal(
+      jsonRpcPlan.requestSequence.find((step) => step.method === "turn/start")?.params
+        .approvalPolicy,
+      "never"
+    );
     assert.equal(run?.status, "completed");
     assert.ok(
       snapshot.events.some(
@@ -248,6 +271,18 @@ describe("Codex worker adapter", () => {
           event.payload?.handoff_protocol === CODEX_APP_SERVER_HANDOFF_PROTOCOL &&
           event.payload?.transport === "app_server" &&
           event.payload?.live_transport_armed === false
+      )
+    );
+    assert.ok(
+      snapshot.events.some(
+        (event) =>
+          event.type === "task.progress" &&
+          event.payload?.json_rpc_protocol ===
+            CODEX_APP_SERVER_JSON_RPC_PLAN_PROTOCOL &&
+          Array.isArray(event.payload.methods) &&
+          event.payload.methods.includes("thread/start") &&
+          event.payload.methods.includes("turn/start") &&
+          event.payload?.browser_mutation_allowed === false
       )
     );
   });

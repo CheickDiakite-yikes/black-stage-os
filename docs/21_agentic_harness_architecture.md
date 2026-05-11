@@ -213,6 +213,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
 15. Add the Codex App Server handoff contract:
     - app-server transport in the typed Codex worker envelope
     - Blackstage-owned handoff protocol for approved task packets
+    - source-aligned dry-run JSON-RPC sequence for `initialize`, `initialized`, `thread/start`, and `turn/start`
     - browser mutation and provider credential boundaries set to false
     - dry-run scheduler proof that no live transport is armed
     - local runner transport selection with `BLACKSTAGE_CODEX_TRANSPORT=app_server`
