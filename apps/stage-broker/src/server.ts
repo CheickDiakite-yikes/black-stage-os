@@ -5,6 +5,7 @@ import {
   type RealtimeBrokerOpenAiExchange,
   type RealtimeBrokerRouteEnvironment
 } from "../../../packages/voice-core/dist/realtime/realtimeVoiceBrokerRoute.js";
+import type { RealtimeBrokerReadinessBody } from "../../../packages/voice-core/dist/realtime/realtimeVoiceBrokerClient.js";
 import { BLACKSTAGE_REALTIME_BROKER_ROUTE } from "../../../packages/voice-core/dist/realtime/realtimeVoiceServerBroker.js";
 import { createRealtimeVoiceSessionConfig } from "../../../packages/voice-core/dist/realtime/realtimeVoiceSession.js";
 
@@ -12,13 +13,19 @@ export { BLACKSTAGE_REALTIME_BROKER_ROUTE } from "../../../packages/voice-core/d
 
 export const DEFAULT_STAGE_BROKER_HOST = "127.0.0.1";
 export const DEFAULT_STAGE_BROKER_PORT = 8798;
+export const DEFAULT_STAGE_BROKER_ALLOWED_ORIGINS = [
+  "http://127.0.0.1:4187",
+  "http://localhost:4187"
+];
 export const STAGE_BROKER_LIVE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE";
 export const STAGE_BROKER_SAFETY_ENV_VAR = "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER";
+export const STAGE_BROKER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_BROKER_ALLOWED_ORIGINS";
 
 export type StageBrokerRuntimeConfig = {
   host: string;
   port: number;
   routePath: string;
+  allowedOrigins: string[];
   environment: RealtimeBrokerRouteEnvironment;
 };
 
@@ -34,6 +41,7 @@ export function createStageBrokerRuntimeConfig(
     host: env.BLACKSTAGE_BROKER_HOST ?? DEFAULT_STAGE_BROKER_HOST,
     port: Number(env.BLACKSTAGE_BROKER_PORT ?? DEFAULT_STAGE_BROKER_PORT),
     routePath: env.BLACKSTAGE_REALTIME_BROKER_ROUTE ?? BLACKSTAGE_REALTIME_BROKER_ROUTE,
+    allowedOrigins: parseAllowedOrigins(env[STAGE_BROKER_ALLOWED_ORIGINS_ENV_VAR]),
     environment: {
       liveModeEnabled: env[STAGE_BROKER_LIVE_ENV_VAR] === "1",
       openAiApiKey: env.OPENAI_API_KEY,
@@ -88,6 +96,25 @@ async function handleStageBrokerRequest(
   exchangeWithOpenAi?: RealtimeBrokerOpenAiExchange
 ): Promise<void> {
   const routeUrl = new URL(request.url ?? "/", `http://${runtimeConfig.host}:${runtimeConfig.port}`);
+  const corsHeaders = createCorsHeaders(request, runtimeConfig);
+
+  if (routeUrl.pathname === runtimeConfig.routePath && request.method?.toUpperCase() === "OPTIONS") {
+    response.writeHead(204, {
+      ...corsHeaders
+    });
+    response.end();
+    return;
+  }
+
+  if (routeUrl.pathname === runtimeConfig.routePath && request.method?.toUpperCase() === "GET") {
+    response.writeHead(200, {
+      "content-type": "application/json",
+      ...corsHeaders
+    });
+    response.end(JSON.stringify(createReadinessResponse(runtimeConfig, new Date().toISOString())));
+    return;
+  }
+
   const body = await readRequestBody(request);
   const brokerResponse = await handleRealtimeUnifiedWebrtcBrokerRoute(
     {
@@ -109,8 +136,45 @@ async function handleStageBrokerRequest(
     }
   );
 
-  response.writeHead(brokerResponse.status, brokerResponse.headers);
+  response.writeHead(brokerResponse.status, {
+    ...brokerResponse.headers,
+    ...corsHeaders
+  });
   response.end(brokerResponse.body);
+}
+
+function createReadinessResponse(
+  runtimeConfig: StageBrokerRuntimeConfig,
+  checkedAt: string
+): RealtimeBrokerReadinessBody {
+  return {
+    ok: true,
+    route: runtimeConfig.routePath,
+    liveModeEnabled: runtimeConfig.environment.liveModeEnabled === true,
+    accepts: "application/sdp",
+    browserSendsAudio: false,
+    browserReceivesStandardApiKey: false,
+    checkedAt
+  };
+}
+
+function createCorsHeaders(
+  request: IncomingMessage,
+  runtimeConfig: StageBrokerRuntimeConfig
+): Record<string, string> {
+  const origin = request.headers.origin;
+
+  if (!origin || Array.isArray(origin) || !runtimeConfig.allowedOrigins.includes(origin)) {
+    return {};
+  }
+
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "accept, content-type",
+    "access-control-max-age": "600",
+    vary: "origin"
+  };
 }
 
 function normalizeHeaders(headers: IncomingMessage["headers"]): Record<string, string | undefined> {
@@ -133,6 +197,17 @@ async function readRequestBody(request: IncomingMessage): Promise<string> {
   }
 
   return Buffer.concat(chunks).toString("utf8");
+}
+
+function parseAllowedOrigins(value?: string): string[] {
+  if (!value?.trim()) {
+    return DEFAULT_STAGE_BROKER_ALLOWED_ORIGINS;
+  }
+
+  return value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

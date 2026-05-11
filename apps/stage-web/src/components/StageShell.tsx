@@ -6,6 +6,7 @@ import type {
 } from "@blackstage/stage-core";
 import {
   createTranscriptState,
+  type RealtimeBrokerClientReadiness,
   type TranscriptState,
   type VoiceCaptureState
 } from "@blackstage/voice-core";
@@ -24,6 +25,7 @@ type StageShellProps = {
   activeScenario?: StageShellScenario;
   assistantSpeechText?: string;
   researchEvents: ResearchEvent[];
+  realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   stageEventCount: number;
   stageVoiceEnabled: boolean;
   isRunning: boolean;
@@ -65,6 +67,7 @@ export function StageShell({
   activeScenario,
   assistantSpeechText,
   researchEvents,
+  realtimeBrokerReadiness,
   stageEventCount,
   stageVoiceEnabled,
   isRunning,
@@ -215,6 +218,7 @@ export function StageShell({
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
+  const realtimeBrokerStatus = formatRealtimeBrokerReadiness(realtimeBrokerReadiness);
 
   return (
     <main
@@ -407,6 +411,14 @@ export function StageShell({
         <div className="stage-voice-reply" aria-live="polite" data-testid="assistant-speech">
           {assistantSpeechStatus}
         </div>
+        <div
+          className={`realtime-broker-status realtime-broker-status-${realtimeBrokerReadiness.status}`}
+          aria-live="polite"
+          data-testid="realtime-broker-status"
+        >
+          <span>Realtime edge</span>
+          <strong>{realtimeBrokerStatus}</strong>
+        </div>
       </form>
       <p className="stage-memory-status">local memory · private</p>
       <ResearchCapture
@@ -422,6 +434,19 @@ export function StageShell({
       </p>
     </main>
   );
+}
+
+function formatRealtimeBrokerReadiness(readiness: RealtimeBrokerClientReadiness): string {
+  switch (readiness.status) {
+    case "checking":
+      return "checking";
+    case "reachable":
+      return readiness.liveModeEnabled ? "live broker" : "broker mounted";
+    case "unreachable":
+      return "offline";
+    case "not_configured":
+      return "simulation";
+  }
 }
 
 type SpeechRecognitionAlternativeLike = {

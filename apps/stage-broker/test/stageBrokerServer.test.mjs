@@ -21,6 +21,42 @@ afterEach(async () => {
 });
 
 describe("Stage broker server", () => {
+  it("exposes safe readiness without audio, SDP, or browser credentials", async () => {
+    const server = await listen(createStageBrokerServer());
+    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        origin: "http://127.0.0.1:4187"
+      }
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4187");
+    assert.equal(body.ok, true);
+    assert.equal(body.route, BLACKSTAGE_REALTIME_BROKER_ROUTE);
+    assert.equal(body.liveModeEnabled, false);
+    assert.equal(body.accepts, "application/sdp");
+    assert.equal(body.browserSendsAudio, false);
+    assert.equal(body.browserReceivesStandardApiKey, false);
+  });
+
+  it("answers local preflight requests without opening a realtime session", async () => {
+    const server = await listen(createStageBrokerServer());
+    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
+      method: "OPTIONS",
+      headers: {
+        origin: "http://127.0.0.1:4187",
+        "access-control-request-method": "POST"
+      }
+    });
+
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4187");
+    assert.match(response.headers.get("access-control-allow-methods") ?? "", /POST/);
+  });
+
   it("mounts the realtime broker route disabled by default", async () => {
     const server = await listen(createStageBrokerServer());
     const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {

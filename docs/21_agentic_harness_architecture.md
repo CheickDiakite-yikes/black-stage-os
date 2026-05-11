@@ -110,7 +110,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - session config type
    - voice event mapping
    - no API key handling yet
-   - Status: implemented as a local-only contract with `gpt-realtime-2` defaults, simulation mode, server-broker policy, WebRTC broker plan, trusted-server unified WebRTC request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, Realtime-to-Stage event mapper, safety identifier readiness checks, and Node tests. No default OpenAI network call runs yet.
+   - Status: implemented as a local-only contract with `gpt-realtime-2` defaults, simulation mode, server-broker policy, WebRTC broker plan, trusted-server unified WebRTC request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, browser-safe broker readiness probe, Realtime-to-Stage event mapper, safety identifier readiness checks, and Node tests. No default OpenAI network call runs yet.
 
 3. Add Stage Shell harness fixtures:
    - one simulated background Codex run

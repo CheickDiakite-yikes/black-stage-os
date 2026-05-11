@@ -4,6 +4,11 @@ import {
   createRealtimeVoiceBrokerPlan,
   inspectRealtimeVoiceBrokerReadiness
 } from "../dist/realtime/realtimeVoiceBroker.js";
+import {
+  createRealtimeBrokerNetworkErrorReadiness,
+  createRealtimeBrokerReadinessProbe,
+  interpretRealtimeBrokerReadinessResponse
+} from "../dist/realtime/realtimeVoiceBrokerClient.js";
 import { handleRealtimeUnifiedWebrtcBrokerRoute } from "../dist/realtime/realtimeVoiceBrokerRoute.js";
 import {
   BLACKSTAGE_REALTIME_BROKER_ROUTE,
@@ -87,6 +92,55 @@ describe("Realtime voice session contracts", () => {
         }),
       /safety identifier/
     );
+  });
+
+  it("builds a browser readiness probe that sends no audio, SDP, or key material", () => {
+    const probe = createRealtimeBrokerReadinessProbe(
+      "http://127.0.0.1:8798/api/blackstage/realtime/session"
+    );
+
+    assert.equal(probe.method, "GET");
+    assert.equal(probe.headers.accept, "application/json");
+    assert.equal(probe.browserSendsAudio, false);
+    assert.equal(probe.browserSendsSdp, false);
+    assert.equal(probe.browserReceivesStandardApiKey, false);
+  });
+
+  it("interprets a mounted broker readiness response without treating live mode as connected", () => {
+    const readiness = interpretRealtimeBrokerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      status: 200,
+      body: {
+        ok: true,
+        route: "/api/blackstage/realtime/session",
+        liveModeEnabled: false,
+        accepts: "application/sdp",
+        browserSendsAudio: false,
+        browserReceivesStandardApiKey: false,
+        checkedAt: "2026-05-10T00:00:00.000Z"
+      },
+      checkedAt: "2026-05-10T00:00:00.000Z"
+    });
+
+    assert.equal(readiness.status, "reachable");
+    assert.equal(readiness.liveModeEnabled, false);
+    assert.equal(readiness.browserSendsAudio, false);
+    assert.equal(readiness.browserSendsSdp, false);
+    assert.equal(readiness.browserReceivesStandardApiKey, false);
+  });
+
+  it("keeps broker network errors explicit and credential-free", () => {
+    const readiness = createRealtimeBrokerNetworkErrorReadiness(
+      "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      new Error("connection refused"),
+      "2026-05-10T00:00:00.000Z"
+    );
+
+    assert.equal(readiness.status, "unreachable");
+    assert.equal(readiness.networkAttempted, true);
+    assert.equal(readiness.browserSendsAudio, false);
+    assert.equal(readiness.browserReceivesStandardApiKey, false);
+    assert.deepEqual(readiness.errors, ["connection refused"]);
   });
 
   it("keeps the unified WebRTC server broker disabled by default", () => {

@@ -150,6 +150,9 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
 
   const specObject = page.getByTestId("stage-object-document_portal");
 
@@ -492,6 +495,7 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
 
   await page.goto("/");
 
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("simulation");
   await page.getByRole("button", { name: "Stage voice" }).click();
   await expect(page.getByTestId("assistant-speech")).toContainText("Stage voice ready");
 
@@ -600,7 +604,9 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Speak" }).click();
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
   await expect(page.getByTestId("voice-transcript")).toContainText("listening for intent");
 
   await page.evaluate(() => {

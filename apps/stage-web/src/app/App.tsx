@@ -27,6 +27,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { StageShell } from "../components/StageShell";
 import { researchEventFromStageEvent } from "../instrumentation/researchLogger";
 import {
+  checkStageWebRealtimeBrokerReadiness,
+  createDefaultStageWebBrokerReadiness,
+  createStageWebBrokerCheckingReadiness,
+  resolveStageWebRealtimeBrokerRouteUrl
+} from "../voice/realtimeBrokerReadiness";
+import {
   applyStageEventToThread,
   clearStageSession,
   createStageSession,
@@ -94,6 +100,9 @@ export function App() {
   const [approvalExplanationVisible, setApprovalExplanationVisible] = useState(false);
   const [stageVoiceEnabled, setStageVoiceEnabled] = useState(false);
   const [assistantSpeechText, setAssistantSpeechText] = useState<string | undefined>();
+  const [realtimeBrokerReadiness, setRealtimeBrokerReadiness] = useState(
+    createDefaultStageWebBrokerReadiness
+  );
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
   const timerRefs = useRef<number[]>([]);
@@ -959,6 +968,30 @@ export function App() {
     });
   }, [activeScenario?.id, memoryRecords, researchEvents, sessionId, stageEvents, thread]);
 
+  useEffect(() => {
+    const routeUrl = resolveStageWebRealtimeBrokerRouteUrl();
+    let cancelled = false;
+
+    if (!routeUrl) {
+      setRealtimeBrokerReadiness(createDefaultStageWebBrokerReadiness());
+      return;
+    }
+
+    setRealtimeBrokerReadiness(createStageWebBrokerCheckingReadiness(routeUrl));
+
+    void checkStageWebRealtimeBrokerReadiness({
+      routeUrl
+    }).then((readiness) => {
+      if (!cancelled) {
+        setRealtimeBrokerReadiness(readiness);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => clearTimers, [clearTimers]);
 
   return (
@@ -970,6 +1003,7 @@ export function App() {
       isReplaying={isReplaying}
       isRunning={isRunning}
       researchEvents={researchEvents}
+      realtimeBrokerReadiness={realtimeBrokerReadiness}
       scenarios={stageShellScenarios}
       stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}

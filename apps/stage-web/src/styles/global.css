@@ -1185,12 +1185,13 @@ button:disabled {
   bottom: 2.2rem;
   display: grid;
   place-items: center;
-  z-index: 3;
+  z-index: 8;
   width: min(44rem, calc(100vw - 2rem));
   grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   grid-template-rows: auto auto auto;
   gap: 0.5rem;
   opacity: 0.44;
+  pointer-events: auto;
   transform: translateX(50%);
   transition:
     opacity 180ms ease,
@@ -1256,7 +1257,8 @@ button:disabled {
 }
 
 .voice-transcript,
-.stage-voice-reply {
+.stage-voice-reply,
+.realtime-broker-status {
   grid-column: 1 / -1;
   min-height: 1rem;
   color: rgba(239, 228, 210, 0.58);
@@ -1268,6 +1270,32 @@ button:disabled {
 .stage-voice-reply {
   color: rgba(216, 189, 133, 0.7);
   font-size: 0.64rem;
+}
+
+.realtime-broker-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.realtime-broker-status span {
+  color: rgba(239, 228, 210, 0.42);
+}
+
+.realtime-broker-status strong {
+  color: rgba(216, 189, 133, 0.72);
+  font-weight: 600;
+}
+
+.realtime-broker-status-reachable strong {
+  color: rgba(158, 255, 205, 0.82);
+}
+
+.realtime-broker-status-unreachable strong {
+  color: rgba(255, 185, 160, 0.82);
 }
 
 .stage-memory-status {
@@ -1607,7 +1635,8 @@ button:disabled {
   }
 
   .voice-transcript,
-  .stage-voice-reply {
+  .stage-voice-reply,
+  .realtime-broker-status {
     grid-column: 1 / -1;
   }
 
