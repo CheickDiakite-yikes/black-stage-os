@@ -546,6 +546,10 @@ function formatRealtimeBrokerReadiness(
       return "checking";
     case "reachable":
       if (readiness.liveModeEnabled) {
+        if (readiness.liveApprovalConfigured !== true) {
+          return "live locked";
+        }
+
         switch (bridge.status) {
           case "connecting":
             return "SDP linking";

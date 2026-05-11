@@ -80,6 +80,8 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
           ok: true,
           route: "/api/blackstage/realtime/session",
           liveModeEnabled: true,
+          liveApprovalRequired: true,
+          liveApprovalConfigured: true,
           accepts: "application/sdp",
           browserSendsAudio: false,
           browserReceivesStandardApiKey: false,

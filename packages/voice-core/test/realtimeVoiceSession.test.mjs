@@ -119,6 +119,8 @@ describe("Realtime voice session contracts", () => {
         ok: true,
         route: "/api/blackstage/realtime/session",
         liveModeEnabled: false,
+        liveApprovalRequired: false,
+        liveApprovalConfigured: false,
         accepts: "application/sdp",
         browserSendsAudio: false,
         browserReceivesStandardApiKey: false,
@@ -129,6 +131,8 @@ describe("Realtime voice session contracts", () => {
 
     assert.equal(readiness.status, "reachable");
     assert.equal(readiness.liveModeEnabled, false);
+    assert.equal(readiness.liveApprovalRequired, false);
+    assert.equal(readiness.liveApprovalConfigured, false);
     assert.equal(readiness.browserSendsAudio, false);
     assert.equal(readiness.browserSendsSdp, false);
     assert.equal(readiness.browserReceivesStandardApiKey, false);
@@ -156,6 +160,8 @@ describe("Realtime voice session contracts", () => {
         ok: true,
         route: "/api/blackstage/realtime/session",
         liveModeEnabled: false,
+        liveApprovalRequired: false,
+        liveApprovalConfigured: false,
         accepts: "application/sdp",
         browserSendsAudio: false,
         browserReceivesStandardApiKey: false,
@@ -194,6 +200,8 @@ describe("Realtime voice session contracts", () => {
         ok: true,
         route: "/api/blackstage/realtime/session",
         liveModeEnabled: true,
+        liveApprovalRequired: true,
+        liveApprovalConfigured: true,
         accepts: "application/sdp",
         browserSendsAudio: false,
         browserReceivesStandardApiKey: false,
@@ -227,7 +235,10 @@ describe("Realtime voice session contracts", () => {
         }
       }),
       fetchBrokerAnswer: async (request) => {
-        assert.equal(request.routeUrl, "http://127.0.0.1:8798/api/blackstage/realtime/session");
+        assert.equal(
+          request.routeUrl,
+          "http://127.0.0.1:8798/api/blackstage/realtime/session"
+        );
         assert.equal(request.headers["content-type"], "application/sdp");
         assert.equal(request.offerSdp, "v=0\r\no=- blackstage-browser-offer\r\n");
 
@@ -244,7 +255,12 @@ describe("Realtime voice session contracts", () => {
     assert.equal(exchange.dataChannelName, "oai-events");
     assert.equal(exchange.browserSendsAudio, false);
     assert.equal(exchange.browserReceivesStandardApiKey, false);
-    assert.deepEqual(peerEvents, ["data:oai-events", "offer", "local:offer", "remote:answer"]);
+    assert.deepEqual(peerEvents, [
+      "data:oai-events",
+      "offer",
+      "local:offer",
+      "remote:answer"
+    ]);
   });
 
   it("requires a reachable broker before browser SDP exchange can start", () => {
@@ -285,7 +301,8 @@ describe("Realtime voice session contracts", () => {
       sessionId: "voice_session_live_request",
       threadId: "thread_build_blackstage",
       networkMode: "configured_live",
-      instructions: "Speak only key turns and route every tool call through Blackstage approvals."
+      instructions:
+        "Speak only key turns and route every tool call through Blackstage approvals."
     });
     const request = createRealtimeUnifiedWebrtcBrokerRequest(config, {
       requestedAt: "2026-05-10T23:51:00.000Z",
@@ -306,7 +323,10 @@ describe("Realtime voice session contracts", () => {
     assert.equal(request.openAiRequest.body.sdp, "v=0\r\no=- blackstage-test\r\n");
     assert.equal(request.openAiRequest.body.session.model, "gpt-realtime-2");
     assert.equal(request.openAiRequest.body.session.audio.output.voice, "marin");
-    assert.equal(request.openAiRequest.body.session.metadata.blackstageThreadId, "thread_build_blackstage");
+    assert.equal(
+      request.openAiRequest.body.session.metadata.blackstageThreadId,
+      "thread_build_blackstage"
+    );
     assert.equal(request.clientContract.browserReceives, "sdp_answer_only");
   });
 
@@ -393,7 +413,10 @@ describe("Realtime voice session contracts", () => {
 
     assert.equal(stageEvent?.type, "agent.progress");
     assert.equal(stageEvent.payload.type, "failed");
-    assert.equal(stageEvent.payload.details, "Realtime connection closed before an answer SDP arrived.");
+    assert.equal(
+      stageEvent.payload.details,
+      "Realtime connection closed before an answer SDP arrived."
+    );
   });
 
   it("parses realtime server transcript events into voice events", () => {
@@ -603,7 +626,10 @@ describe("Realtime voice session contracts", () => {
     assert.equal(response.headers["x-openai-request-id"], "req_test");
     assert.equal(response.headers.authorization, undefined);
     assert.equal(response.body, "v=0\r\no=- blackstage-answer\r\n");
-    assert.doesNotMatch(JSON.stringify(response), new RegExp(`${testRouteCredential}|should-not-leak`));
+    assert.doesNotMatch(
+      JSON.stringify(response),
+      new RegExp(`${testRouteCredential}|should-not-leak`)
+    );
   });
 
   it("returns a safe broker route failure when the OpenAI exchange throws", async () => {
@@ -639,7 +665,10 @@ describe("Realtime voice session contracts", () => {
 
     assert.equal(response.status, 503);
     assert.equal(response.networkAttempted, true);
-    assert.equal(body.errors[0], "Realtime broker exchange failed before returning an SDP answer.");
+    assert.equal(
+      body.errors[0],
+      "Realtime broker exchange failed before returning an SDP answer."
+    );
     assert.doesNotMatch(response.body, /internal detail/);
   });
 });

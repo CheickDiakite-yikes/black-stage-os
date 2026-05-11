@@ -21,6 +21,8 @@ export type RealtimeBrokerReadinessBody = {
   ok: true;
   route: string;
   liveModeEnabled: boolean;
+  liveApprovalRequired: boolean;
+  liveApprovalConfigured: boolean;
   accepts: "application/sdp";
   browserSendsAudio: false;
   browserReceivesStandardApiKey: false;
@@ -33,6 +35,8 @@ export type RealtimeBrokerClientReadiness = {
   checkedAt: string;
   networkAttempted: boolean;
   liveModeEnabled?: boolean;
+  liveApprovalRequired?: boolean;
+  liveApprovalConfigured?: boolean;
   browserSendsAudio: false;
   browserSendsSdp: false;
   browserReceivesStandardApiKey: false;
@@ -97,7 +101,9 @@ export function createRealtimeBrokerNetworkErrorReadiness(
     browserSendsAudio: false,
     browserSendsSdp: false,
     browserReceivesStandardApiKey: false,
-    errors: [error instanceof Error ? error.message : "Realtime broker readiness check failed."]
+    errors: [
+      error instanceof Error ? error.message : "Realtime broker readiness check failed."
+    ]
   };
 }
 
@@ -117,6 +123,8 @@ export function interpretRealtimeBrokerReadinessResponse(input: {
       checkedAt,
       networkAttempted: true,
       liveModeEnabled: body.liveModeEnabled,
+      liveApprovalRequired: body.liveApprovalRequired,
+      liveApprovalConfigured: body.liveApprovalConfigured,
       browserSendsAudio: false,
       browserSendsSdp: false,
       browserReceivesStandardApiKey: body.browserReceivesStandardApiKey,
@@ -149,6 +157,8 @@ function parseRealtimeBrokerReadinessBody(
     candidate.ok !== true ||
     typeof candidate.route !== "string" ||
     typeof candidate.liveModeEnabled !== "boolean" ||
+    typeof candidate.liveApprovalRequired !== "boolean" ||
+    typeof candidate.liveApprovalConfigured !== "boolean" ||
     candidate.accepts !== "application/sdp" ||
     candidate.browserSendsAudio !== false ||
     candidate.browserReceivesStandardApiKey !== false ||
@@ -161,6 +171,8 @@ function parseRealtimeBrokerReadinessBody(
     ok: true,
     route: candidate.route,
     liveModeEnabled: candidate.liveModeEnabled,
+    liveApprovalRequired: candidate.liveApprovalRequired,
+    liveApprovalConfigured: candidate.liveApprovalConfigured,
     accepts: "application/sdp",
     browserSendsAudio: false,
     browserReceivesStandardApiKey: false,

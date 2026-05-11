@@ -28,20 +28,28 @@ afterEach(async () => {
 describe("Stage broker server", () => {
   it("exposes safe readiness without audio, SDP, or browser credentials", async () => {
     const server = await listen(createStageBrokerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        origin: "http://127.0.0.1:4187"
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          origin: "http://127.0.0.1:4187"
+        }
       }
-    });
+    );
     const body = await response.json();
 
     assert.equal(response.status, 200);
-    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4187");
+    assert.equal(
+      response.headers.get("access-control-allow-origin"),
+      "http://127.0.0.1:4187"
+    );
     assert.equal(body.ok, true);
     assert.equal(body.route, BLACKSTAGE_REALTIME_BROKER_ROUTE);
     assert.equal(body.liveModeEnabled, false);
+    assert.equal(body.liveApprovalRequired, false);
+    assert.equal(body.liveApprovalConfigured, false);
     assert.equal(body.accepts, "application/sdp");
     assert.equal(body.browserSendsAudio, false);
     assert.equal(body.browserReceivesStandardApiKey, false);
@@ -49,28 +57,66 @@ describe("Stage broker server", () => {
 
   it("answers local preflight requests without opening a realtime session", async () => {
     const server = await listen(createStageBrokerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "OPTIONS",
-      headers: {
-        origin: "http://127.0.0.1:4187",
-        "access-control-request-method": "POST"
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "OPTIONS",
+        headers: {
+          origin: "http://127.0.0.1:4187",
+          "access-control-request-method": "POST"
+        }
       }
-    });
+    );
 
     assert.equal(response.status, 204);
-    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4187");
+    assert.equal(
+      response.headers.get("access-control-allow-origin"),
+      "http://127.0.0.1:4187"
+    );
     assert.match(response.headers.get("access-control-allow-methods") ?? "", /POST/);
+  });
+
+  it("reports whether live broker approval is configured", async () => {
+    const server = await listen(
+      createStageBrokerServer({
+        runtimeConfig: createStageBrokerRuntimeConfig({
+          OPENAI_API_KEY: "test-key",
+          BLACKSTAGE_REALTIME_LIVE: "1",
+          BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER: "hashed-user-id",
+          [STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR]: "approve-local-realtime"
+        })
+      })
+    );
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json"
+        }
+      }
+    );
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.liveModeEnabled, true);
+    assert.equal(body.liveApprovalRequired, true);
+    assert.equal(body.liveApprovalConfigured, true);
+    assert.equal(body.browserReceivesStandardApiKey, false);
   });
 
   it("mounts the realtime broker route disabled by default", async () => {
     const server = await listen(createStageBrokerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/sdp"
-      },
-      body: "v=0\r\n"
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/sdp"
+        },
+        body: "v=0\r\n"
+      }
+    );
     const body = await response.json();
 
     assert.equal(response.status, 503);
@@ -79,13 +125,16 @@ describe("Stage broker server", () => {
 
   it("rejects non-SDP requests at the mounted route", async () => {
     const server = await listen(createStageBrokerServer());
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: "{}"
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: "{}"
+      }
+    );
 
     assert.equal(response.status, 415);
     assert.equal(response.headers.get("content-type"), "application/json");
@@ -114,14 +163,17 @@ describe("Stage broker server", () => {
         }
       })
     );
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/sdp",
-        [STAGE_BROKER_APPROVAL_HEADER]: approvalPhrase
-      },
-      body: "v=0\r\no=- stage-broker-offer\r\n"
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/sdp",
+          [STAGE_BROKER_APPROVAL_HEADER]: approvalPhrase
+        },
+        body: "v=0\r\no=- stage-broker-offer\r\n"
+      }
+    );
     const text = await response.text();
 
     assert.equal(exchangeCalls, 1);
@@ -149,13 +201,16 @@ describe("Stage broker server", () => {
         }
       })
     );
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/sdp"
-      },
-      body: "v=0\r\no=- stage-broker-offer\r\n"
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/sdp"
+        },
+        body: "v=0\r\no=- stage-broker-offer\r\n"
+      }
+    );
     const body = await response.json();
 
     assert.equal(response.status, 403);
@@ -242,18 +297,24 @@ describe("Stage broker server", () => {
         }
       })
     );
-    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/sdp",
-        [STAGE_BROKER_APPROVAL_HEADER]: approvalPhrase
-      },
-      body: "v=0\r\no=- stage-broker-offer\r\n"
-    });
+    const response = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/sdp",
+          [STAGE_BROKER_APPROVAL_HEADER]: approvalPhrase
+        },
+        body: "v=0\r\no=- stage-broker-offer\r\n"
+      }
+    );
     const body = await response.json();
 
     assert.equal(response.status, 503);
-    assert.equal(body.errors[0], "Realtime broker exchange failed before returning an SDP answer.");
+    assert.equal(
+      body.errors[0],
+      "Realtime broker exchange failed before returning an SDP answer."
+    );
     assert.doesNotMatch(JSON.stringify(body), /secret-ish/);
   });
 });

@@ -1,4 +1,9 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse
+} from "node:http";
 import { URL } from "node:url";
 import {
   handleRealtimeUnifiedWebrtcBrokerRoute,
@@ -56,9 +61,12 @@ export function createStageBrokerRuntimeConfig(
   };
 }
 
-export function createStageBrokerServer(options: StageBrokerServerOptions = {}): Server {
+export function createStageBrokerServer(
+  options: StageBrokerServerOptions = {}
+): Server {
   const runtimeConfig = resolveStageBrokerRuntimeConfig(options.runtimeConfig);
-  const exchangeWithOpenAi = options.exchangeWithOpenAi ?? createOpenAiRealtimeExchange();
+  const exchangeWithOpenAi =
+    options.exchangeWithOpenAi ?? createOpenAiRealtimeExchange();
 
   return createServer((request, response) => {
     void handleStageBrokerRequest(request, response, runtimeConfig, exchangeWithOpenAi);
@@ -102,10 +110,16 @@ async function handleStageBrokerRequest(
   runtimeConfig: StageBrokerRuntimeConfig,
   exchangeWithOpenAi?: RealtimeBrokerOpenAiExchange
 ): Promise<void> {
-  const routeUrl = new URL(request.url ?? "/", `http://${runtimeConfig.host}:${runtimeConfig.port}`);
+  const routeUrl = new URL(
+    request.url ?? "/",
+    `http://${runtimeConfig.host}:${runtimeConfig.port}`
+  );
   const corsHeaders = createCorsHeaders(request, runtimeConfig);
 
-  if (routeUrl.pathname === runtimeConfig.routePath && request.method?.toUpperCase() === "OPTIONS") {
+  if (
+    routeUrl.pathname === runtimeConfig.routePath &&
+    request.method?.toUpperCase() === "OPTIONS"
+  ) {
     response.writeHead(204, {
       ...corsHeaders
     });
@@ -113,12 +127,17 @@ async function handleStageBrokerRequest(
     return;
   }
 
-  if (routeUrl.pathname === runtimeConfig.routePath && request.method?.toUpperCase() === "GET") {
+  if (
+    routeUrl.pathname === runtimeConfig.routePath &&
+    request.method?.toUpperCase() === "GET"
+  ) {
     response.writeHead(200, {
       "content-type": "application/json",
       ...corsHeaders
     });
-    response.end(JSON.stringify(createReadinessResponse(runtimeConfig, new Date().toISOString())));
+    response.end(
+      JSON.stringify(createReadinessResponse(runtimeConfig, new Date().toISOString()))
+    );
     return;
   }
 
@@ -153,7 +172,9 @@ async function handleStageBrokerRequest(
       config: createRealtimeVoiceSessionConfig({
         sessionId: "stage_broker_local",
         threadId: "thread_stage_broker",
-        networkMode: runtimeConfig.environment.liveModeEnabled ? "configured_live" : "simulation"
+        networkMode: runtimeConfig.environment.liveModeEnabled
+          ? "configured_live"
+          : "simulation"
       }),
       environment: runtimeConfig.environment,
       serverRoute: runtimeConfig.routePath,
@@ -176,6 +197,8 @@ function createReadinessResponse(
     ok: true,
     route: runtimeConfig.routePath,
     liveModeEnabled: runtimeConfig.environment.liveModeEnabled === true,
+    liveApprovalRequired: runtimeConfig.environment.liveModeEnabled === true,
+    liveApprovalConfigured: Boolean(runtimeConfig.runApprovalToken?.trim()),
     accepts: "application/sdp",
     browserSendsAudio: false,
     browserReceivesStandardApiKey: false,
@@ -189,7 +212,11 @@ function createCorsHeaders(
 ): Record<string, string> {
   const origin = request.headers.origin;
 
-  if (!origin || Array.isArray(origin) || !runtimeConfig.allowedOrigins.includes(origin)) {
+  if (
+    !origin ||
+    Array.isArray(origin) ||
+    !runtimeConfig.allowedOrigins.includes(origin)
+  ) {
     return {};
   }
 
@@ -216,7 +243,10 @@ function requestHasLiveRealtimeApproval(
   return Boolean(requiredPhrase) && providedPhrase === requiredPhrase;
 }
 
-function readSingleHeader(request: IncomingMessage, headerName: string): string | undefined {
+function readSingleHeader(
+  request: IncomingMessage,
+  headerName: string
+): string | undefined {
   const header = request.headers[headerName.toLowerCase()];
 
   if (Array.isArray(header)) {
@@ -226,7 +256,9 @@ function readSingleHeader(request: IncomingMessage, headerName: string): string 
   return header;
 }
 
-function normalizeHeaders(headers: IncomingMessage["headers"]): Record<string, string | undefined> {
+function normalizeHeaders(
+  headers: IncomingMessage["headers"]
+): Record<string, string | undefined> {
   const normalizedHeaders: Record<string, string | undefined> = {};
 
   Object.entries(headers).forEach(([headerName, headerValue]) => {
@@ -266,7 +298,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     runtimeConfig
   })
     .then(() => {
-      console.log(`Blackstage broker listening on http://${runtimeConfig.host}:${runtimeConfig.port}`);
+      console.log(
+        `Blackstage broker listening on http://${runtimeConfig.host}:${runtimeConfig.port}`
+      );
       console.log(`Realtime route: ${runtimeConfig.routePath}`);
       console.log("Live exchange remains disabled unless explicitly configured.");
     })

@@ -231,6 +231,7 @@ export function App() {
     if (
       realtimeBrokerReadiness.status !== "reachable" ||
       realtimeBrokerReadiness.liveModeEnabled !== true ||
+      realtimeBrokerReadiness.liveApprovalConfigured !== true ||
       !routeUrl
     ) {
       emitStageEvent({
@@ -1339,6 +1340,7 @@ export function App() {
   const realtimeArmPending = thread.approvals.some(isRealtimeLiveApprovalPending);
   const realtimeArmAvailable =
     realtimeArmVisible &&
+    realtimeBrokerReadiness.liveApprovalConfigured === true &&
     Boolean(readStageWebRealtimeApprovalPhrase()) &&
     !realtimeArmPending &&
     realtimeBridge.status !== "connecting" &&
