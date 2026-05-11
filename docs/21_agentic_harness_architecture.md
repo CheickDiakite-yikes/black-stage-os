@@ -18,6 +18,8 @@ After the 2026-05-10 provider refresh, the stance is: yes, Blackstage should lev
 
 After the 2026-05-11 workflow-policy slice, that stance is also codified in root `WORKFLOW.md` and exposed as typed `HarnessWorkflowPolicy` metadata from the Symphony-style control plane and local harness runner readiness. The policy remains read-only to the browser, keeps live execution disabled by default, and requires Stage approval before background agents inspect, write, or delete memory.
 
+After the 2026-05-11 upstream-matrix slice, `HarnessWorkflowPolicy` also carries a source-pinned integration matrix for Codex CLI, Codex App Server, Agents SDK, Symphony, and `gpt-realtime-2`. The matrix makes each upstream role explicit while keeping browser mutation, browser credential access, and high-impact execution gated by Blackstage.
+
 ## Source-Verified Assumptions
 
 - `gpt-realtime-2` is listed as a reasoning model for realtime voice interactions, supports speech-to-speech interaction, configurable reasoning effort, stronger tool use, text/audio/image input, text/audio output, and the `v1/realtime` endpoint. Source: <https://developers.openai.com/api/docs/models/gpt-realtime-2>
@@ -205,7 +207,8 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - root `WORKFLOW.md` defines the Blackstage harness control plane, worker split, safety boundaries, evidence expectations, and validation floor
     - `agent-runtime` exports `HarnessWorkflowPolicy`
     - Symphony-style snapshots and `apps/stage-runner` readiness expose the policy without granting browser execution rights
-    - Status: implemented with agent-runtime and stage-runner tests; no live Codex, Agents SDK, or Realtime network call runs by default.
+    - source-pinned integration matrix for Codex CLI, Codex App Server, Agents SDK, Symphony, and Realtime voice
+    - Status: implemented with agent-runtime, stage-runner, and Stage Web policy tests; no live Codex, Agents SDK, or Realtime network call runs by default.
 
 15. Add the Codex App Server handoff contract:
     - app-server transport in the typed Codex worker envelope

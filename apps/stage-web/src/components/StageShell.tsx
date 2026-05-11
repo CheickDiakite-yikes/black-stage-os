@@ -658,8 +658,11 @@ function formatHarnessRunnerPolicy(
     policy.agentMemoryAccessDefault === "stage_approval_required"
       ? "Memory approvals"
       : policy.agentMemoryAccessDefault;
+  const upstreamPolicyLabel = formatHarnessUpstreamPolicyLabel(
+    policy.upstreamIntegrations
+  );
 
-  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${agentWorkerLabel} · ${memoryPolicyLabel} · ${policy.voiceModel}`;
+  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${agentWorkerLabel} · ${memoryPolicyLabel} · ${upstreamPolicyLabel} · ${policy.voiceModel}`;
 }
 
 function formatCodexTransportLabel(transports: readonly string[]): string {
@@ -679,6 +682,16 @@ function formatCodexTransportLabel(transports: readonly string[]): string {
   }
 
   return "Codex";
+}
+
+function formatHarnessUpstreamPolicyLabel(
+  integrations: readonly { sourceUrl: string }[]
+): string {
+  const pinnedCount = integrations.filter((integration) =>
+    integration.sourceUrl.startsWith("https://")
+  ).length;
+
+  return `${pinnedCount} source-pinned`;
 }
 
 type SpeechRecognitionAlternativeLike = {

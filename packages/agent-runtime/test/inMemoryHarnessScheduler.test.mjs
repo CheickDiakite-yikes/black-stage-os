@@ -29,7 +29,10 @@ import {
 import { InMemoryHarnessScheduler } from "../dist/harness/inMemoryHarnessScheduler.js";
 import { createSimulatedHarnessAdapter } from "../dist/harness/simulatedHarnessAdapter.js";
 import { createSymphonyControlPlaneSnapshot } from "../dist/harness/symphonyControlPlane.js";
-import { createBlackstageWorkflowPolicy } from "../dist/harness/workflowPolicy.js";
+import {
+  BLACKSTAGE_UPSTREAM_INTEGRATIONS,
+  createBlackstageWorkflowPolicy
+} from "../dist/harness/workflowPolicy.js";
 
 const now = () => "2026-05-10T22:45:00.000Z";
 
@@ -551,6 +554,18 @@ describe("Symphony control plane", () => {
       "app_server"
     ]);
     assert.equal(controlPlane.workflowPolicy.voiceModel, "gpt-realtime-2");
+    assert.deepEqual(
+      controlPlane.workflowPolicy.upstreamIntegrations,
+      BLACKSTAGE_UPSTREAM_INTEGRATIONS
+    );
+    assert.ok(
+      controlPlane.workflowPolicy.upstreamIntegrations.every(
+        (integration) =>
+          integration.browserMutationAllowed === false &&
+          integration.browserReceivesProviderCredentials === false &&
+          integration.highImpactApprovalRequired === true
+      )
+    );
     assert.equal(
       controlPlane.workflowPolicy.agentMemoryAccessDefault,
       "stage_approval_required"
@@ -618,6 +633,10 @@ describe("Harness runner readiness client", () => {
     assert.equal(readiness.codexTransport, "cli");
     assert.equal(readiness.workflowPolicy?.source, "WORKFLOW.md");
     assert.deepEqual(readiness.workflowPolicy?.codexTransports, ["cli", "app_server"]);
+    assert.deepEqual(
+      readiness.workflowPolicy?.upstreamIntegrations,
+      BLACKSTAGE_UPSTREAM_INTEGRATIONS
+    );
     assert.equal(
       readiness.workflowPolicy?.controlPlane,
       "symphony_style_internal_queue"

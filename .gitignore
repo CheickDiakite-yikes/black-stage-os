@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+apps/stage-web/test-results/
 .turbo/
 .vite/
 .cache/

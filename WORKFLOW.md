@@ -17,6 +17,14 @@ This file is the repo-owned policy for Blackstage's background agentic harness. 
 - Keep specialist agents as tools unless a branch truly needs delegated ownership.
 - Use `gpt-realtime-2` as the Realtime voice target for live voice contracts.
 
+## Upstream Integrations
+
+- Codex CLI: official Codex local coding worker source; live subprocess execution stays disabled until local approval is armed.
+- Codex App Server: programmatic Codex transport source; Blackstage treats it as a handoff protocol, not a browser capability.
+- Agents SDK: manager-style agent runtime source for research, artifact, memory, and analysis work; dry-run remains the default.
+- Symphony: open-source Codex orchestration reference; Blackstage uses the control-plane pattern with its internal queue before any external tracker.
+- Realtime voice: `gpt-realtime-2` source-pinned voice edge; microphone capture, SDP exchange, and tool calls stay behind explicit Stage approval.
+
 ## Boundaries
 
 - Browser-origin mutations remain disabled.

@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { createDryRunCodexWorkerAdapter } from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
+import { BLACKSTAGE_UPSTREAM_INTEGRATIONS } from "../../../packages/agent-runtime/dist/harness/workflowPolicy.js";
 import { InMemoryHarnessScheduler } from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
 import {
   BLACKSTAGE_HARNESS_RUNNER_ROUTE,
@@ -74,6 +75,10 @@ describe("Stage runner server", () => {
     assert.deepEqual(body.workflowPolicy.codexTransports, ["cli", "app_server"]);
     assert.equal(body.workflowPolicy.agentWorker, "openai_agents_sdk_manager");
     assert.equal(body.workflowPolicy.voiceModel, "gpt-realtime-2");
+    assert.deepEqual(
+      body.workflowPolicy.upstreamIntegrations,
+      BLACKSTAGE_UPSTREAM_INTEGRATIONS
+    );
     assert.equal(body.workflowPolicy.browserMutationAllowed, false);
     assert.equal(body.localCodexSubprocessEnabled, false);
     assert.equal(body.browserCanEnqueueWork, false);
