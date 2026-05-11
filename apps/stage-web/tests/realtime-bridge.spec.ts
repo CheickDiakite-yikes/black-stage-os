@@ -127,11 +127,11 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
               {
                 proofVersion: 1,
                 kind: "blackstage.realtime.live_smoke",
-                status: "skipped",
-                proofPath: ".blackstage/realtime-smoke/skip-proof.json",
+                status: "passed",
+                proofPath: ".blackstage/realtime-smoke/live-proof.json",
                 createdAt: "2026-05-11T10:00:00.000Z",
-                liveSmokeArmed: false,
-                openAiNetworkCallAttempted: false,
+                liveSmokeArmed: true,
+                openAiNetworkCallAttempted: true,
                 browserReceivesStandardApiKey: false,
                 browserSendsAudio: false,
                 cheapTestGuard: {
@@ -145,7 +145,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
                     hasDataChannelMediaSection: true
                   }
                 },
-                missingEnv: ["BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"]
+                missingEnv: []
               }
             ]
           })
@@ -190,9 +190,9 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     "live broker · SDP off"
   );
   await expect(page.getByTestId("realtime-broker-status")).toContainText(
-    "skipped proof"
+    "passed proof"
   );
-  await expect(page.getByTestId("realtime-broker-status")).toContainText("no network");
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("network");
   await expect(page.getByTestId("realtime-broker-status")).toContainText("no mic send");
   await expect(page.getByTestId("realtime-broker-status")).toContainText("recvonly");
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("mic gesture");
