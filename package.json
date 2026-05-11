@@ -27,6 +27,7 @@
     "preflight:agents-sdk": "node scripts/preflight-agents-sdk.mjs",
     "prepare:realtime-smoke": "node scripts/prepare-realtime-smoke-env.mjs",
     "smoke:realtime": "pnpm --filter @blackstage/voice-core build && pnpm --filter @blackstage/stage-broker build && node scripts/smoke-realtime-live.mjs",
+    "smoke:realtime-ui": "pnpm --filter @blackstage/voice-core build && pnpm --filter @blackstage/stage-broker build && node scripts/smoke-realtime-ui-live.mjs",
     "test": "pnpm check:workflow && pnpm test:scripts && pnpm -r --if-present test",
     "test:scripts": "node --test scripts/test/*.test.mjs",
     "test:e2e": "pnpm --filter @blackstage/stage-web test:e2e",
