@@ -190,11 +190,18 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - returns sanitized proof summaries, not raw workspace files
     - Status: implemented with temp-directory tests; browser mutation and execution rights remain blocked.
 
+13. Require explicit local approval before live Codex run-next:
+    - `BLACKSTAGE_CODEX_SUBPROCESS_ENABLED=1` is not enough to launch a worker
+    - live-mode `POST /api/blackstage/harness/run-next` requires `BLACKSTAGE_CODEX_RUN_APPROVAL_TOKEN`
+    - local callers must send the matching `x-blackstage-codex-approval` header
+    - denied requests return `403` and leave queued work untouched
+    - Status: implemented with local server tests; no live Codex subprocess ran during validation.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.
 - Symphony is a reference pattern, not something to blindly copy into the product. Blackstage should start with internal task queues before integrating Linear or GitHub Issues.
-- Codex workers need strict workspace boundaries and visible proof, especially if they can run commands.
+- Codex workers need strict workspace boundaries, explicit local arming, and visible proof, especially if they can run commands.
 - Agents SDK traces and app logs can contain sensitive data. Redaction and storage policy must be explicit before production use.
 - The Stage Shell must keep showing agent labor calmly; background orchestration should never degrade into a generic dashboard.
 

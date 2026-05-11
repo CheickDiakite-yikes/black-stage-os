@@ -45,6 +45,9 @@ export const DEFAULT_STAGE_RUNNER_ALLOWED_ORIGINS = [
 ];
 export const STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_RUNNER_ALLOWED_ORIGINS";
 export const STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR = "BLACKSTAGE_CODEX_SUBPROCESS_ENABLED";
+export const STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR =
+  "BLACKSTAGE_CODEX_RUN_APPROVAL_TOKEN";
+export const STAGE_RUNNER_CODEX_APPROVAL_HEADER = "x-blackstage-codex-approval";
 export const STAGE_RUNNER_WORKSPACE_PREP_ENV_VAR = "BLACKSTAGE_PREPARE_WORKSPACES";
 export const STAGE_RUNNER_REPO_ROOT_ENV_VAR = "BLACKSTAGE_RUNNER_REPO_ROOT";
 export const STAGE_RUNNER_WORKSPACE_ROOT_ENV_VAR = "BLACKSTAGE_RUNNER_WORKSPACE_ROOT";
@@ -55,6 +58,7 @@ export type StageRunnerRuntimeConfig = {
   routePath: string;
   allowedOrigins: string[];
   codexSubprocessEnabled: boolean;
+  codexRunApprovalToken?: string;
   workspacePreparationEnabled: boolean;
   repoRoot: string;
   workspaceRoot: string;
@@ -92,6 +96,7 @@ export function createStageRunnerRuntimeConfig(
     routePath: env.BLACKSTAGE_HARNESS_RUNNER_ROUTE ?? BLACKSTAGE_HARNESS_RUNNER_ROUTE,
     allowedOrigins: parseAllowedOrigins(env[STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR]),
     codexSubprocessEnabled,
+    codexRunApprovalToken: env[STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR],
     workspacePreparationEnabled:
       codexSubprocessEnabled || env[STAGE_RUNNER_WORKSPACE_PREP_ENV_VAR] === "1",
     repoRoot: env[STAGE_RUNNER_REPO_ROOT_ENV_VAR] ?? process.cwd(),
@@ -265,6 +270,19 @@ async function handleStageRunnerRequest(
   }
 
   if (routeUrl.pathname === runNextPath && method === "POST") {
+    if (!requestHasLiveCodexRunApproval(request, runtimeConfig)) {
+      writeJson(
+        response,
+        403,
+        {
+          ok: false,
+          errors: ["Live Codex subprocess execution requires a matching local approval token."]
+        },
+        corsHeaders
+      );
+      return;
+    }
+
     const run = await scheduler.runNext();
     const snapshotResponse = createSnapshotResponse(scheduler, new Date().toISOString());
     const runProof =
@@ -294,6 +312,30 @@ async function handleStageRunnerRequest(
     },
     corsHeaders
   );
+}
+
+function requestHasLiveCodexRunApproval(
+  request: IncomingMessage,
+  runtimeConfig: StageRunnerRuntimeConfig
+): boolean {
+  if (!runtimeConfig.codexSubprocessEnabled) {
+    return true;
+  }
+
+  const requiredToken = runtimeConfig.codexRunApprovalToken?.trim();
+  const providedToken = readSingleHeader(request, STAGE_RUNNER_CODEX_APPROVAL_HEADER);
+
+  return Boolean(requiredToken) && providedToken === requiredToken;
+}
+
+function readSingleHeader(request: IncomingMessage, headerName: string): string | undefined {
+  const header = request.headers[headerName.toLowerCase()];
+
+  if (Array.isArray(header)) {
+    return undefined;
+  }
+
+  return header;
 }
 
 async function writeProofForRunner(

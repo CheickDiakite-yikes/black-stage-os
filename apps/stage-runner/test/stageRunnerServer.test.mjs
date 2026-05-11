@@ -7,7 +7,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import {
+  createDryRunCodexWorkerAdapter
+} from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
+import {
+  InMemoryHarnessScheduler
+} from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
+import {
   BLACKSTAGE_HARNESS_RUNNER_ROUTE,
+  STAGE_RUNNER_CODEX_APPROVAL_HEADER,
+  STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR,
   STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR,
   createCodexSubprocessPreview,
   createNodeCodexCommandExecutor,
@@ -75,6 +83,84 @@ describe("Stage runner server", () => {
     assert.equal(body.localCodexSubprocessEnabled, true);
     assert.equal(body.browserCanRunCodex, false);
     assert.equal(body.browserReceivesProviderCredentials, false);
+  });
+
+  it("requires a local approval token before live Codex run-next can schedule work", async () => {
+    const repoRoot = await createTempRepoRoot();
+    const runtimeConfig = createStageRunnerRuntimeConfig({
+      [STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR]: "1"
+    });
+    const server = await listen(
+      createStageRunnerServer({
+        runtimeConfig: {
+          ...runtimeConfig,
+          repoRoot
+        }
+      })
+    );
+
+    await enqueueCodexTask(server, "task_live_codex_requires_token");
+
+    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
+      method: "POST"
+    });
+    const runBody = await runResponse.json();
+    const snapshotResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/snapshot`);
+    const snapshotBody = await snapshotResponse.json();
+
+    assert.equal(runResponse.status, 403);
+    assert.equal(runBody.ok, false);
+    assert.match(runBody.errors[0], /matching local approval token/);
+    assert.equal(snapshotBody.controlPlane.openWorkCount, 1);
+    assert.equal(snapshotBody.snapshot.tasks[0].status, "queued");
+  });
+
+  it("accepts live Codex run-next only with a matching local approval token", async () => {
+    const repoRoot = await createTempRepoRoot();
+    const approvalPhrase = "approve-local-codex";
+    const runtimeConfig = createStageRunnerRuntimeConfig({
+      [STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR]: "1",
+      [STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR]: approvalPhrase
+    });
+    const scheduler = new InMemoryHarnessScheduler({
+      adapters: [createDryRunCodexWorkerAdapter()],
+      now: () => "2026-05-10T00:00:00.000Z"
+    });
+    const server = await listen(
+      createStageRunnerServer({
+        runtimeConfig: {
+          ...runtimeConfig,
+          repoRoot
+        },
+        scheduler
+      })
+    );
+
+    await enqueueCodexTask(server, "task_live_codex_matching_token");
+
+    const blockedResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
+      method: "POST",
+      headers: {
+        [STAGE_RUNNER_CODEX_APPROVAL_HEADER]: "wrong-token"
+      }
+    });
+    const blockedBody = await blockedResponse.json();
+
+    assert.equal(blockedResponse.status, 403);
+    assert.equal(blockedBody.ok, false);
+
+    const runResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`, {
+      method: "POST",
+      headers: {
+        [STAGE_RUNNER_CODEX_APPROVAL_HEADER]: approvalPhrase
+      }
+    });
+    const runBody = await runResponse.json();
+
+    assert.equal(runResponse.status, 200);
+    assert.equal(runBody.run.status, "completed");
+    assert.equal(runBody.run.adapterId, "codex_worker_adapter_dry_run");
+    assert.equal(runBody.controlPlane.reviewCount, 1);
   });
 
   it("answers local readiness preflight without allowing browser mutations", async () => {
@@ -396,6 +482,24 @@ function baseUrl(server) {
   }
 
   return `http://127.0.0.1:${address.port}`;
+}
+
+async function enqueueCodexTask(server, taskId) {
+  const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      id: taskId,
+      threadId: "thread_build_blackstage",
+      title: "Run live Codex boundary",
+      objective: "Prove the local live Codex execution gate.",
+      kind: "codex"
+    })
+  });
+
+  assert.equal(response.status, 202);
 }
 
 async function createTempRepoRoot() {
