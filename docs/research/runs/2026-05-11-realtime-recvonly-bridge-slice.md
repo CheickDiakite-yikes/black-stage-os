@@ -51,6 +51,7 @@ Realtime output audio has its own lifecycle separate from final assistant transc
 
 ## Evidence
 
+- Official OpenAI Realtime server-events reference: https://platform.openai.com/docs/api-reference/realtime-server-events/output_audio_buffer
 - `packages/voice-core/src/realtime/realtimeVoiceWebrtcClient.ts`
 - `apps/stage-web/src/voice/realtimeWebrtcBridge.ts`
 - `apps/stage-web/src/app/App.tsx`
