@@ -15,6 +15,7 @@ import {
   OPENAI_API_KEY_ENV_VAR,
   createRealtimeUnifiedWebrtcBrokerRequest
 } from "../dist/realtime/realtimeVoiceServerBroker.js";
+import { parseRealtimeVoiceServerEvent } from "../dist/realtime/realtimeVoiceEvent.js";
 import { mapRealtimeVoiceEventToStageEvents } from "../dist/realtime/realtimeVoiceStageMapper.js";
 import {
   exchangeRealtimeWebrtcSdp,
@@ -393,6 +394,68 @@ describe("Realtime voice session contracts", () => {
     assert.equal(stageEvent?.type, "agent.progress");
     assert.equal(stageEvent.payload.type, "failed");
     assert.equal(stageEvent.payload.details, "Realtime connection closed before an answer SDP arrived.");
+  });
+
+  it("parses realtime server transcript events into voice events", () => {
+    const finalTranscript = parseRealtimeVoiceServerEvent(
+      {
+        type: "conversation.item.input_audio_transcription.completed",
+        transcript: "Build the next Blackstage proof object."
+      },
+      "2026-05-10T00:00:00.000Z"
+    );
+    const assistantSpeech = parseRealtimeVoiceServerEvent(
+      {
+        type: "response.output_audio_transcript.done",
+        transcript: "I am shaping the stage."
+      },
+      "2026-05-10T00:00:01.000Z"
+    );
+    const contentPartSpeech = parseRealtimeVoiceServerEvent(
+      {
+        type: "response.content_part.done",
+        part: {
+          type: "audio",
+          transcript: "The stage is ready."
+        }
+      },
+      "2026-05-10T00:00:02.000Z"
+    );
+
+    assert.deepEqual(finalTranscript, {
+      type: "voice.final_transcript",
+      text: "Build the next Blackstage proof object.",
+      timestamp: "2026-05-10T00:00:00.000Z"
+    });
+    assert.deepEqual(assistantSpeech, {
+      type: "voice.assistant_speech",
+      text: "I am shaping the stage.",
+      timestamp: "2026-05-10T00:00:01.000Z"
+    });
+    assert.deepEqual(contentPartSpeech, {
+      type: "voice.assistant_speech",
+      text: "The stage is ready.",
+      timestamp: "2026-05-10T00:00:02.000Z"
+    });
+  });
+
+  it("parses realtime tool calls into approval-required voice events", () => {
+    const event = parseRealtimeVoiceServerEvent(
+      {
+        type: "response.function_call_arguments.done",
+        call_id: "call_realtime_browser",
+        name: "open_browser"
+      },
+      "2026-05-10T00:00:00.000Z"
+    );
+
+    assert.deepEqual(event, {
+      type: "voice.tool_call_requested",
+      callId: "call_realtime_browser",
+      toolName: "open_browser",
+      requiresApproval: true,
+      timestamp: "2026-05-10T00:00:00.000Z"
+    });
   });
 
   it("rejects unsupported broker route methods before any network exchange", async () => {

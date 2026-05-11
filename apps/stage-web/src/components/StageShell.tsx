@@ -22,6 +22,7 @@ import type {
   StageWebHarnessRunnerProofs,
   StageWebHarnessRunnerSnapshot
 } from "../harness/harnessRunnerReadiness";
+import type { StageWebRealtimeBridgeState } from "../voice/realtimeWebrtcBridge";
 
 type StageShellProps = {
   thread: IntentThread;
@@ -33,6 +34,7 @@ type StageShellProps = {
   harnessRunnerReadiness: HarnessRunnerClientReadiness;
   harnessRunnerSnapshot: StageWebHarnessRunnerSnapshot;
   researchEvents: ResearchEvent[];
+  realtimeBridge: StageWebRealtimeBridgeState;
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   stageEventCount: number;
   stageVoiceEnabled: boolean;
@@ -78,6 +80,7 @@ export function StageShell({
   harnessRunnerReadiness,
   harnessRunnerSnapshot,
   researchEvents,
+  realtimeBridge,
   realtimeBrokerReadiness,
   stageEventCount,
   stageVoiceEnabled,
@@ -234,7 +237,10 @@ export function StageShell({
     harnessRunnerSnapshot,
     harnessRunnerProofs
   );
-  const realtimeBrokerStatus = formatRealtimeBrokerReadiness(realtimeBrokerReadiness);
+  const realtimeBrokerStatus = formatRealtimeBrokerReadiness(
+    realtimeBrokerReadiness,
+    realtimeBridge
+  );
 
   return (
     <main
@@ -460,11 +466,29 @@ export function StageShell({
   );
 }
 
-function formatRealtimeBrokerReadiness(readiness: RealtimeBrokerClientReadiness): string {
+function formatRealtimeBrokerReadiness(
+  readiness: RealtimeBrokerClientReadiness,
+  bridge: StageWebRealtimeBridgeState
+): string {
   switch (readiness.status) {
     case "checking":
       return "checking";
     case "reachable":
+      if (readiness.liveModeEnabled) {
+        switch (bridge.status) {
+          case "connecting":
+            return "SDP linking";
+          case "connected":
+            return "live SDP";
+          case "failed":
+            return "SDP failed";
+          case "blocked":
+            return "SDP blocked";
+          case "disabled":
+            return "live broker · SDP off";
+        }
+      }
+
       return readiness.liveModeEnabled ? "live broker" : "broker mounted";
     case "unreachable":
       return "offline";

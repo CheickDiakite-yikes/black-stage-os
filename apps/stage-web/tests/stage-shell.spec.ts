@@ -297,8 +297,8 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   expect(stopWasLogged).toBe(true);
   await page.getByRole("button", { name: "Resume" }).click();
   await expect(page.getByTestId("agent-activity-feed")).toContainText("Resumed by user.");
-  await expect(page.getByTestId("stage-workspace")).toContainText(
-    "Approval needed to create task prompt cards.",
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts",
     {
       timeout: 35_000
     }

@@ -84,6 +84,24 @@ export function createStageWebBrokerCheckingReadiness(
 }
 
 function readStageWebBrokerEnvValue(): string | undefined {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeBrokerUrl?: string;
+  };
+
+  if (runtimeConfig.__blackstageRealtimeBrokerUrl) {
+    return runtimeConfig.__blackstageRealtimeBrokerUrl;
+  }
+
+  try {
+    const localRouteUrl = localStorage.getItem("blackstage.realtimeBroker.url");
+
+    if (localRouteUrl) {
+      return localRouteUrl;
+    }
+  } catch {
+    // Local runtime config is best-effort; Vite env remains the durable path.
+  }
+
   const meta = import.meta as ImportMeta & {
     env?: Record<string, string | undefined>;
   };

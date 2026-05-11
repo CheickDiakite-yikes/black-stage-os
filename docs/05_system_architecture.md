@@ -46,7 +46,8 @@ Stage Shell v0 should remain simulation-first, but the path from simulation to r
 The intended split is:
 
 - Stage Shell stays the living control surface.
-- `voice-core` grows a Realtime voice adapter.
+- `voice-core` owns Realtime session, broker, WebRTC, server-event parsing, and Stage event mapping contracts.
+- Stage Web can invoke the Realtime SDP bridge only when explicitly configured by local runtime/env settings.
 - `agent-runtime` grows a Symphony-inspired scheduler and adapter contracts.
 - Codex handles coding execution in isolated workspaces.
 - OpenAI Agents SDK handles product/research agents that need handoffs, guardrails, human review, tracing, or voice workflows.

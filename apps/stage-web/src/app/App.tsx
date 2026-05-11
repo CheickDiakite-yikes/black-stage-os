@@ -33,6 +33,12 @@ import {
   resolveStageWebRealtimeBrokerRouteUrl
 } from "../voice/realtimeBrokerReadiness";
 import {
+  createDefaultStageWebRealtimeBridgeState,
+  createStageWebRealtimeBridgeConnectingState,
+  shouldStartStageWebRealtimeBridge,
+  startStageWebRealtimeBridge
+} from "../voice/realtimeWebrtcBridge";
+import {
   checkStageWebHarnessRunnerProofs,
   checkStageWebHarnessRunnerSnapshot,
   checkStageWebHarnessRunnerReadiness,
@@ -115,6 +121,9 @@ export function App() {
   const [realtimeBrokerReadiness, setRealtimeBrokerReadiness] = useState(
     createDefaultStageWebBrokerReadiness
   );
+  const [realtimeBridge, setRealtimeBridge] = useState(
+    createDefaultStageWebRealtimeBridgeState
+  );
   const [harnessRunnerReadiness, setHarnessRunnerReadiness] = useState(
     createDefaultStageWebHarnessReadiness
   );
@@ -126,6 +135,7 @@ export function App() {
   );
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
+  const realtimeBridgeStartedRef = useRef(false);
   const timerRefs = useRef<number[]>([]);
 
   const clearTimers = useCallback(() => {
@@ -994,24 +1004,63 @@ export function App() {
     let cancelled = false;
 
     if (!routeUrl) {
+      realtimeBridgeStartedRef.current = false;
       setRealtimeBrokerReadiness(createDefaultStageWebBrokerReadiness());
+      setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
+      return;
+    }
+
+    if (realtimeBridgeStartedRef.current) {
       return;
     }
 
     setRealtimeBrokerReadiness(createStageWebBrokerCheckingReadiness(routeUrl));
+    setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
 
     void checkStageWebRealtimeBrokerReadiness({
       routeUrl
-    }).then((readiness) => {
+    }).then(async (readiness) => {
+      if (cancelled) {
+        return;
+      }
+
+      setRealtimeBrokerReadiness(readiness);
+
+      if (!shouldStartStageWebRealtimeBridge(readiness) || realtimeBridgeStartedRef.current) {
+        return;
+      }
+
+      realtimeBridgeStartedRef.current = true;
+
+      if (!cancelled && readiness.routeUrl) {
+        setRealtimeBridge(createStageWebRealtimeBridgeConnectingState(readiness.routeUrl));
+      }
+
+      const bridge = await startStageWebRealtimeBridge({
+        readiness,
+        threadId: thread.id,
+        sessionId,
+        emitStageEvents: (events) => {
+          events.forEach((event) => {
+            emitStageEvent(event);
+          });
+        }
+      });
+
       if (!cancelled) {
-        setRealtimeBrokerReadiness(readiness);
+        setRealtimeBridge(bridge.state);
+        bridge.stageEvents.forEach((event) => {
+          emitStageEvent(event);
+        });
+      } else {
+        realtimeBridgeStartedRef.current = false;
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [emitStageEvent, sessionId, thread.id]);
 
   useEffect(() => {
     const routeUrl = resolveStageWebHarnessRunnerRouteUrl();
@@ -1089,6 +1138,7 @@ export function App() {
       isReplaying={isReplaying}
       isRunning={isRunning}
       researchEvents={researchEvents}
+      realtimeBridge={realtimeBridge}
       realtimeBrokerReadiness={realtimeBrokerReadiness}
       scenarios={stageShellScenarios}
       stageVoiceEnabled={stageVoiceEnabled}

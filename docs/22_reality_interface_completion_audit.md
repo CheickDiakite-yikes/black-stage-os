@@ -27,7 +27,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Begins empty | E2e asserts idle presence says `Speak when ready` in `apps/stage-web/tests/stage-shell.spec.ts` | Covered |
 | Text precision | `intent-input` flow in `StageShell.tsx`; e2e submits text commands and scenarios | Covered |
 | Natural voice input | Web Speech path in `StageShell.tsx`; mocked browser speech e2e | Covered for browser prototype |
-| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and defines a server-mediated WebRTC broker plan, trusted-server request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, server-side OpenAI Realtime exchange adapter, browser-safe broker readiness probe, disabled-by-default browser SDP exchange adapter, and Realtime-to-Stage event mapper with safety identifier checks | Live adapter gated |
+| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and defines a server-mediated WebRTC broker plan, trusted-server request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, server-side OpenAI Realtime exchange adapter, browser-safe broker readiness probe, disabled-by-default browser SDP exchange adapter, Realtime server-event parser, Realtime-to-Stage event mapper, and Stage Web explicit SDP bridge with safety identifier checks | Live adapter gated |
 | Assistant speech output | Stage voice toggle speaks sparse browser-native status, shows the last spoken line, and records `assistant.speech` research events | Covered locally |
 | Multimodal precision | File attach creates local document objects; image files are accepted as context metadata | Partial |
 | Intent thread | `IntentThread`, local persistence, session export/replay | Covered for v0 |
@@ -54,23 +54,24 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, dry-run Agents SDK manager plan, internal Symphony control-plane projection, local `apps/stage-runner` readiness/snapshot/run/proofs service, disabled Codex subprocess executor boundary, live-mode run approval token, bounded workspace preparation, local run proof packets, Stage Web read-only harness snapshot/proof probes, architecture doc | Local service/contracts only |
 | Live Codex worker | Dry-run envelope, disabled-by-default local `codex exec` command plan, explicit Node subprocess executor boundary, required live-mode approval token for `run-next`, `.blackstage/workspaces/*` manifest preparation, `blackstage-run.json` proof writing, and read-only proof summary route exist; no real Codex subprocess/App Server execution ran during validation | Gated adapter only |
 | Live Agents SDK worker | Dry-run manager-agent plan exists with specialists as tools and approval-gated memory inspection; no live Agents SDK execution yet | Contract only |
-| Live Realtime session | Trusted-server WebRTC request envelope, route handler, local broker server mount, server-side OpenAI Realtime exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, and event mapper exist, but Stage Web does not invoke the exchange and no default live API session runs yet | Live adapter gated |
+| Live Realtime session | Trusted-server WebRTC request envelope, route handler, local broker server mount, server-side OpenAI Realtime exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, explicit Stage Web SDP bridge, data-channel server-event mapping, and event mapper exist; no default live API session or microphone stream runs yet | Explicit SDP bridge only |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
 
 ## Evidence From Current Gate
 
-Most recent validation after the Codex live approval token slice:
+Most recent validation after the Stage Web Realtime bridge slice:
 
 - `pnpm typecheck`: passed across 8 of 9 workspace projects.
 - `pnpm lint`: passed.
-- `pnpm --filter @blackstage/voice-core test`: passed with 21 Realtime subtests.
+- `pnpm --filter @blackstage/voice-core test`: passed with 23 Realtime subtests.
 - `pnpm --filter @blackstage/agent-runtime test`: passed with 15 harness subtests.
 - `pnpm --filter @blackstage/stage-broker test`: passed with 7 local server/exchange subtests.
 - `pnpm --filter @blackstage/stage-runner test`: passed with 13 local server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
-- `pnpm test`: passed with 21 `voice-core` subtests, 4 `memory-core` subtests, 15 `agent-runtime` subtests, 7 `stage-broker` server/exchange subtests, and 13 `stage-runner` server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
+- `pnpm test`: passed with 23 `voice-core` subtests, 4 `memory-core` subtests, 15 `agent-runtime` subtests, 7 `stage-broker` server/exchange subtests, and 13 `stage-runner` server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
 - `pnpm build`: passed across the sorted workspace build.
-- `pnpm test:e2e`: not rerun in this server-only slice; most recent browser gate passed with 9 tests in the reduced-motion validation context after the Stage Web proof-count slice.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 193 tracked files after final staging.
+- `pnpm --filter @blackstage/stage-web test:e2e -- tests/realtime-bridge.spec.ts`: passed with a mocked live broker and mocked browser peer connection.
+- `pnpm test:e2e`: passed with 10 browser tests, including the explicit Realtime SDP bridge proof.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 197 tracked files after final staging.
 
 Browser validation note: the product keeps its cinematic motion in normal use. Playwright now requests `prefers-reduced-motion: reduce` so the long living-field scenario validates behavior instead of timing out on animation/actionability waits.
 
@@ -78,7 +79,7 @@ Browser validation note: the product keeps its cinematic motion in normal use. P
 
 The goal is not complete yet. The largest remaining gaps are:
 
-1. Live Realtime voice is not connected to Stage Web beyond readiness and disabled SDP contracts. The contract, trusted-server request envelope, route handler, local broker server mount, server-side OpenAI exchange adapter, browser-safe readiness client, disabled browser SDP exchange adapter, and Stage event mapper exist, and local browser-native assistant speech works, but Stage Web does not invoke SDP exchange and no default live Realtime session runs.
+1. Live Realtime voice is not connected by default. The contract, trusted-server request envelope, route handler, local broker server mount, server-side OpenAI exchange adapter, browser-safe readiness client, disabled browser SDP exchange adapter, explicit Stage Web SDP bridge, Realtime server-event parser, and Stage event mapper exist, and local browser-native assistant speech works, but no default live Realtime API session or microphone stream runs.
 2. Live agentic work is not connected by default. Codex, Agents SDK, and Symphony-inspired orchestration are now represented by local contracts, fixtures, a localhost runner service, a disabled Codex subprocess boundary, local approval-token arming, bounded workspace preparation, local run proof packets, read-only proof summaries, and Stage Web read-only proof counts, not default live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
@@ -89,13 +90,15 @@ The goal is not complete yet. The largest remaining gaps are:
 
 ## Next Highest-Leverage Slice
 
-Build the first Stage Web to Realtime SDP bridge while keeping simulation as the default:
+Promote the explicit Stage Web Realtime bridge into a real local live-session smoke while keeping simulation as the default:
 
 - Keep the browser client on SDP-only Realtime exchange, with no standard API key or safety identifier exposed.
-- Connect Realtime text/audio/tool events into the existing Stage event log.
+- Add a human-visible live-session arming path and a broker-side safety identifier.
+- Validate one real OpenAI Realtime SDP exchange from `apps/stage-broker` with a local API key, without committing secrets.
+- Add microphone/audio-track handling only after the no-audio SDP bridge remains stable and auditable.
 - Preserve the Codex/Symphony/Agents SDK harness as background labor behind Blackstage-owned approvals.
-- Add contract and e2e coverage proving live mode is explicitly configured, labeled, and still replayable.
+- Keep Realtime text/audio/tool events mapped into the existing Stage event log.
 
 This moves the prototype toward real directed intelligence without putting long-lived API keys in the browser or letting external tools bypass the stage.
 
-Status: Not started. The local `apps/stage-broker` route mount, server-side OpenAI exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, local `apps/stage-runner` harness service, disabled Codex subprocess boundary, Codex live-mode approval token, bounded workspace preparation, local run proof packets, read-only proof summaries, Stage Web `Harness edge` readiness/snapshot/proof client, and local `Run harness` control are implemented; Stage Web live exchange invocation, default-live Codex, live Agents SDK, external Symphony-backed scheduling, and full client Realtime session wiring remain incomplete.
+Status: Started. The local `apps/stage-broker` route mount, server-side OpenAI exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, explicit Stage Web SDP bridge, Realtime server-event parser, local `apps/stage-runner` harness service, disabled Codex subprocess boundary, Codex live-mode approval token, bounded workspace preparation, local run proof packets, read-only proof summaries, Stage Web `Harness edge` readiness/snapshot/proof client, and local `Run harness` control are implemented; default-live Realtime audio, default-live Codex, live Agents SDK, external Symphony-backed scheduling, and full client Realtime session wiring remain incomplete.
