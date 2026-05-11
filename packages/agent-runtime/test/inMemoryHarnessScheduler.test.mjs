@@ -5,6 +5,12 @@ import {
   projectHarnessSnapshotToStageEvents
 } from "../dist/harness/harnessStageProjection.js";
 import {
+  BLACKSTAGE_HARNESS_RUNNER_ROUTE,
+  createHarnessRunnerNotConfiguredReadiness,
+  createHarnessRunnerReadinessProbe,
+  interpretHarnessRunnerReadinessResponse
+} from "../dist/harness/harnessRunnerClient.js";
+import {
   createAgentsSdkRunPlan,
   createDryRunAgentsSdkAdapter
 } from "../dist/harness/agentsSdkAdapter.js";
@@ -459,5 +465,45 @@ describe("Symphony control plane", () => {
         (item) => item.id.endsWith("_codex_run") && item.lane === "human_review"
       )
     );
+  });
+});
+
+describe("Harness runner readiness client", () => {
+  it("creates a browser-safe readiness probe without execution rights", () => {
+    const probe = createHarnessRunnerReadinessProbe("http://127.0.0.1:8797/api/blackstage/harness");
+    const defaultReadiness = createHarnessRunnerNotConfiguredReadiness("2026-05-10T23:20:00.000Z");
+
+    assert.equal(probe.method, "GET");
+    assert.equal(probe.browserCanEnqueueWork, false);
+    assert.equal(probe.browserCanRunCodex, false);
+    assert.equal(probe.browserReceivesProviderCredentials, false);
+    assert.equal(defaultReadiness.status, "not_configured");
+    assert.equal(defaultReadiness.networkAttempted, false);
+  });
+
+  it("interprets a mounted local runner without granting browser mutation rights", () => {
+    const readiness = interpretHarnessRunnerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8797/api/blackstage/harness",
+      status: 200,
+      checkedAt: "2026-05-10T23:21:00.000Z",
+      body: {
+        ok: true,
+        route: BLACKSTAGE_HARNESS_RUNNER_ROUTE,
+        orchestration: "symphony_style_internal_queue",
+        codexMode: "dry_run",
+        agentsSdkMode: "dry_run",
+        localCodexSubprocessEnabled: false,
+        browserCanEnqueueWork: false,
+        browserCanRunCodex: false,
+        browserReceivesProviderCredentials: false,
+        checkedAt: "2026-05-10T23:21:00.000Z"
+      }
+    });
+
+    assert.equal(readiness.status, "reachable");
+    assert.equal(readiness.orchestration, "symphony_style_internal_queue");
+    assert.equal(readiness.codexMode, "dry_run");
+    assert.equal(readiness.browserCanEnqueueWork, false);
+    assert.equal(readiness.browserCanRunCodex, false);
   });
 });

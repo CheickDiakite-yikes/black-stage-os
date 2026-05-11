@@ -16,6 +16,7 @@
   "scripts": {
     "dev": "pnpm --filter @blackstage/stage-web dev",
     "dev:broker": "pnpm --filter @blackstage/stage-broker dev",
+    "dev:runner": "pnpm --filter @blackstage/stage-runner dev",
     "build": "pnpm -r --sort build",
     "lint": "eslint .",
     "scan:secrets": "node scripts/scan-secrets.mjs",

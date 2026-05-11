@@ -66,6 +66,11 @@ The first model-backed agent should convert voice/text/multimodal context into:
 - cancels work when the stage or human changes task state;
 - streams structured run events back into Stage Shell.
 
+The local service boundary is now mounted in `apps/stage-runner`. It exposes
+safe readiness, snapshot, enqueue, and run-next routes over localhost while
+keeping browser-origin mutations blocked and keeping Codex/Agents SDK execution
+in dry-run mode.
+
 ### 5. Codex Execution Adapter
 
 Coding tasks should run through a Codex adapter rather than bespoke shell scripts. The adapter should map Blackstage task briefs into Codex prompts, collect proof of work, run validations, and return artifacts or pull-request-ready diffs.
@@ -146,6 +151,15 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - memory inspection approval-gated
    - coding work refused so Codex remains the execution worker
    - Status: implemented as local-only contracts and Node tests; no Agents SDK API call runs yet.
+
+8. Mount the local harness runner service:
+   - localhost HTTP server in `apps/stage-runner`
+   - safe readiness endpoint for Stage Web
+   - Symphony-style snapshot projection
+   - local enqueue and run-next routes for CLI/server callers
+   - browser-origin mutations blocked
+   - Codex and Agents SDK remain dry-run only
+   - Status: implemented with Node server tests and a Stage Web `Harness edge` status; no live Codex subprocess, Agents SDK API call, Linear, GitHub, or network-backed Symphony worker runs yet.
 
 ## Risks
 

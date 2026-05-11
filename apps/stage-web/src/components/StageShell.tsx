@@ -1,3 +1,4 @@
+import type { HarnessRunnerClientReadiness } from "@blackstage/agent-runtime";
 import type {
   IntentThread,
   ResearchEvent,
@@ -24,6 +25,7 @@ type StageShellProps = {
   scenarios: StageShellScenario[];
   activeScenario?: StageShellScenario;
   assistantSpeechText?: string;
+  harnessRunnerReadiness: HarnessRunnerClientReadiness;
   researchEvents: ResearchEvent[];
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   stageEventCount: number;
@@ -66,6 +68,7 @@ export function StageShell({
   scenarios,
   activeScenario,
   assistantSpeechText,
+  harnessRunnerReadiness,
   researchEvents,
   realtimeBrokerReadiness,
   stageEventCount,
@@ -218,6 +221,7 @@ export function StageShell({
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
+  const harnessRunnerStatus = formatHarnessRunnerReadiness(harnessRunnerReadiness);
   const realtimeBrokerStatus = formatRealtimeBrokerReadiness(realtimeBrokerReadiness);
 
   return (
@@ -419,6 +423,14 @@ export function StageShell({
           <span>Realtime edge</span>
           <strong>{realtimeBrokerStatus}</strong>
         </div>
+        <div
+          className={`harness-runner-status harness-runner-status-${harnessRunnerReadiness.status}`}
+          aria-live="polite"
+          data-testid="harness-runner-status"
+        >
+          <span>Harness edge</span>
+          <strong>{harnessRunnerStatus}</strong>
+        </div>
       </form>
       <p className="stage-memory-status">local memory · private</p>
       <ResearchCapture
@@ -442,6 +454,19 @@ function formatRealtimeBrokerReadiness(readiness: RealtimeBrokerClientReadiness)
       return "checking";
     case "reachable":
       return readiness.liveModeEnabled ? "live broker" : "broker mounted";
+    case "unreachable":
+      return "offline";
+    case "not_configured":
+      return "simulation";
+  }
+}
+
+function formatHarnessRunnerReadiness(readiness: HarnessRunnerClientReadiness): string {
+  switch (readiness.status) {
+    case "checking":
+      return "checking";
+    case "reachable":
+      return readiness.codexMode === "dry_run" ? "runner mounted" : "runner standby";
     case "unreachable":
       return "offline";
     case "not_configured":

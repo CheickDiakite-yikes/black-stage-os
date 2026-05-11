@@ -36,6 +36,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/voice-core
 
+  apps/stage-runner:
+    dependencies:
+      '@blackstage/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
+
   apps/stage-web:
     dependencies:
       '@blackstage/agent-runtime':

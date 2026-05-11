@@ -3,6 +3,7 @@ export * from "./harness/agentsSdkAdapter";
 export * from "./harness/codexLocalRunner";
 export * from "./harness/codexWorkerAdapter";
 export * from "./harness/harnessStageProjection";
+export * from "./harness/harnessRunnerClient";
 export * from "./harness/harnessTypes";
 export * from "./harness/inMemoryHarnessScheduler";
 export * from "./harness/simulatedHarnessAdapter";

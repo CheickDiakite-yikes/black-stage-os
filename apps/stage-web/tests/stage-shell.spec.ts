@@ -496,6 +496,7 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
   await page.goto("/");
 
   await expect(page.getByTestId("realtime-broker-status")).toContainText("simulation");
+  await expect(page.getByTestId("harness-runner-status")).toContainText("simulation");
   await page.getByRole("button", { name: "Stage voice" }).click();
   await expect(page.getByTestId("assistant-speech")).toContainText("Stage voice ready");
 

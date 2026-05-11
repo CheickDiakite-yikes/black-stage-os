@@ -1258,7 +1258,8 @@ button:disabled {
 
 .voice-transcript,
 .stage-voice-reply,
-.realtime-broker-status {
+.realtime-broker-status,
+.harness-runner-status {
   grid-column: 1 / -1;
   min-height: 1rem;
   color: rgba(239, 228, 210, 0.58);
@@ -1272,7 +1273,8 @@ button:disabled {
   font-size: 0.64rem;
 }
 
-.realtime-broker-status {
+.realtime-broker-status,
+.harness-runner-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1281,20 +1283,24 @@ button:disabled {
   white-space: nowrap;
 }
 
-.realtime-broker-status span {
+.realtime-broker-status span,
+.harness-runner-status span {
   color: rgba(239, 228, 210, 0.42);
 }
 
-.realtime-broker-status strong {
+.realtime-broker-status strong,
+.harness-runner-status strong {
   color: rgba(216, 189, 133, 0.72);
   font-weight: 600;
 }
 
-.realtime-broker-status-reachable strong {
+.realtime-broker-status-reachable strong,
+.harness-runner-status-reachable strong {
   color: rgba(158, 255, 205, 0.82);
 }
 
-.realtime-broker-status-unreachable strong {
+.realtime-broker-status-unreachable strong,
+.harness-runner-status-unreachable strong {
   color: rgba(255, 185, 160, 0.82);
 }
 
@@ -1636,7 +1642,8 @@ button:disabled {
 
   .voice-transcript,
   .stage-voice-reply,
-  .realtime-broker-status {
+  .realtime-broker-status,
+  .harness-runner-status {
     grid-column: 1 / -1;
   }
 

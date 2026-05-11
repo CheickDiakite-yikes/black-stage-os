@@ -33,6 +33,12 @@ import {
   resolveStageWebRealtimeBrokerRouteUrl
 } from "../voice/realtimeBrokerReadiness";
 import {
+  checkStageWebHarnessRunnerReadiness,
+  createDefaultStageWebHarnessReadiness,
+  createStageWebHarnessCheckingReadiness,
+  resolveStageWebHarnessRunnerRouteUrl
+} from "../harness/harnessRunnerReadiness";
+import {
   applyStageEventToThread,
   clearStageSession,
   createStageSession,
@@ -102,6 +108,9 @@ export function App() {
   const [assistantSpeechText, setAssistantSpeechText] = useState<string | undefined>();
   const [realtimeBrokerReadiness, setRealtimeBrokerReadiness] = useState(
     createDefaultStageWebBrokerReadiness
+  );
+  const [harnessRunnerReadiness, setHarnessRunnerReadiness] = useState(
+    createDefaultStageWebHarnessReadiness
   );
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
@@ -992,6 +1001,30 @@ export function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const routeUrl = resolveStageWebHarnessRunnerRouteUrl();
+    let cancelled = false;
+
+    if (!routeUrl) {
+      setHarnessRunnerReadiness(createDefaultStageWebHarnessReadiness());
+      return;
+    }
+
+    setHarnessRunnerReadiness(createStageWebHarnessCheckingReadiness(routeUrl));
+
+    void checkStageWebHarnessRunnerReadiness({
+      routeUrl
+    }).then((readiness) => {
+      if (!cancelled) {
+        setHarnessRunnerReadiness(readiness);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => clearTimers, [clearTimers]);
 
   return (
@@ -1000,6 +1033,7 @@ export function App() {
       activeScenario={activeScenario}
       approvalExplanationVisible={approvalExplanationVisible}
       assistantSpeechText={assistantSpeechText}
+      harnessRunnerReadiness={harnessRunnerReadiness}
       isReplaying={isReplaying}
       isRunning={isRunning}
       researchEvents={researchEvents}
