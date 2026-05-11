@@ -24,6 +24,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       __blackstageRealtimeAudioEnabled?: string;
       __blackstageRealtimeBrokerUrl?: string;
       __blackstageRealtimeWebrtcEnabled?: string;
+      __blackstageTestDelayMultiplier?: number;
       __blackstageClosedPeerConnections?: number;
       __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       __blackstageGetUserMediaCalls?: number;
@@ -34,6 +35,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     browserWindow.__blackstageRealtimeAudioEnabled = "0";
     browserWindow.__blackstageRealtimeBrokerUrl = "http://127.0.0.1:8798";
     browserWindow.__blackstageRealtimeWebrtcEnabled = "1";
+    browserWindow.__blackstageTestDelayMultiplier = 0.1;
     browserWindow.__blackstageClosedPeerConnections = 0;
     browserWindow.__blackstageGetUserMediaCalls = 0;
     browserWindow.__blackstageRealtimeTransceivers = [];
@@ -320,6 +322,12 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       })
     )
     .toBe(true);
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
 
   await page.evaluate(() => {
     (

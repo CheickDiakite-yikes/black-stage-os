@@ -196,6 +196,9 @@ export function App() {
   const realtimeBridgeConnectionRef = useRef<
     StageWebRealtimeBridgeConnection | undefined
   >(undefined);
+  const realtimeStageEventHandlerRef = useRef<
+    ((stageEvent: StageEvent) => void) | undefined
+  >(undefined);
   const timerRefs = useRef<number[]>([]);
 
   const clearTimers = useCallback(() => {
@@ -376,6 +379,17 @@ export function App() {
         );
       }
 
+      const emitRealtimeStageEvent = (stageEvent: StageEvent) => {
+        const realtimeHandler = realtimeStageEventHandlerRef.current;
+
+        if (realtimeHandler) {
+          realtimeHandler(stageEvent);
+          return;
+        }
+
+        emitStageEvent(stageEvent);
+      };
+
       void (async () => {
         const freshMicPreflight = await checkStageWebRealtimeMicPreflight({
           explicitUserGesture: true,
@@ -399,7 +413,7 @@ export function App() {
           approvalPhrase: readStageWebRealtimeApprovalPhrase(),
           emitStageEvents: (events) => {
             events.forEach((event) => {
-              emitStageEvent(event);
+              emitRealtimeStageEvent(event);
             });
           }
         });
@@ -407,7 +421,7 @@ export function App() {
         setRealtimeBridge(bridge.state);
         realtimeBridgeConnectionRef.current = bridge.connection;
         bridge.stageEvents.forEach((event) => {
-          emitStageEvent(event);
+          emitRealtimeStageEvent(event);
         });
 
         if (bridge.state.status !== "connected") {
@@ -906,6 +920,23 @@ export function App() {
       stageVoiceEnabled
     ]
   );
+
+  useEffect(() => {
+    realtimeStageEventHandlerRef.current = (stageEvent) => {
+      if (stageEvent.type === "intent.submitted") {
+        runIntent(stageEvent.payload.rawText, undefined, {
+          source: stageEvent.payload.inputMode === "voice" ? "voice" : "text"
+        });
+        return;
+      }
+
+      emitStageEvent(stageEvent);
+    };
+
+    return () => {
+      realtimeStageEventHandlerRef.current = undefined;
+    };
+  }, [emitStageEvent, runIntent]);
 
   const approveCurrentRequest = useCallback(() => {
     const pendingApproval = thread.approvals
