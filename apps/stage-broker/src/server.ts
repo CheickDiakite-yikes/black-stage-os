@@ -8,6 +8,7 @@ import {
 import type { RealtimeBrokerReadinessBody } from "../../../packages/voice-core/dist/realtime/realtimeVoiceBrokerClient.js";
 import { BLACKSTAGE_REALTIME_BROKER_ROUTE } from "../../../packages/voice-core/dist/realtime/realtimeVoiceServerBroker.js";
 import { createRealtimeVoiceSessionConfig } from "../../../packages/voice-core/dist/realtime/realtimeVoiceSession.js";
+import { createOpenAiRealtimeExchange } from "./openAiRealtimeExchange.js";
 
 export { BLACKSTAGE_REALTIME_BROKER_ROUTE } from "../../../packages/voice-core/dist/realtime/realtimeVoiceServerBroker.js";
 
@@ -52,9 +53,10 @@ export function createStageBrokerRuntimeConfig(
 
 export function createStageBrokerServer(options: StageBrokerServerOptions = {}): Server {
   const runtimeConfig = resolveStageBrokerRuntimeConfig(options.runtimeConfig);
+  const exchangeWithOpenAi = options.exchangeWithOpenAi ?? createOpenAiRealtimeExchange();
 
   return createServer((request, response) => {
-    void handleStageBrokerRequest(request, response, runtimeConfig, options.exchangeWithOpenAi);
+    void handleStageBrokerRequest(request, response, runtimeConfig, exchangeWithOpenAi);
   });
 }
 

@@ -542,4 +542,41 @@ describe("Realtime voice session contracts", () => {
     assert.equal(response.body, "v=0\r\no=- blackstage-answer\r\n");
     assert.doesNotMatch(JSON.stringify(response), new RegExp(`${testRouteCredential}|should-not-leak`));
   });
+
+  it("returns a safe broker route failure when the OpenAI exchange throws", async () => {
+    const dummyApiKey = ["test", "api", "credential"].join("-");
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_route_live_failure",
+      threadId: "thread_build_blackstage",
+      networkMode: "configured_live"
+    });
+    const response = await handleRealtimeUnifiedWebrtcBrokerRoute(
+      {
+        method: "POST",
+        path: BLACKSTAGE_REALTIME_BROKER_ROUTE,
+        headers: {
+          "content-type": "application/sdp"
+        },
+        body: "v=0\r\no=- blackstage-offer\r\n",
+        requestedAt: "2026-05-11T00:01:00.000Z"
+      },
+      {
+        config,
+        environment: {
+          liveModeEnabled: true,
+          openAiApiKey: dummyApiKey,
+          safetyIdentifier: "hashed-user-id"
+        },
+        exchangeWithOpenAi: async () => {
+          throw new Error("provider failed with internal detail");
+        }
+      }
+    );
+    const body = JSON.parse(response.body);
+
+    assert.equal(response.status, 503);
+    assert.equal(response.networkAttempted, true);
+    assert.equal(body.errors[0], "Realtime broker exchange failed before returning an SDP answer.");
+    assert.doesNotMatch(response.body, /internal detail/);
+  });
 });

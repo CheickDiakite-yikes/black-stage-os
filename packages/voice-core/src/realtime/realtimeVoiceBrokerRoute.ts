@@ -99,9 +99,20 @@ export async function handleRealtimeUnifiedWebrtcBrokerRoute(
     );
   }
 
-  const exchangeResult = await context.exchangeWithOpenAi(brokerRequest.openAiRequest, {
-    apiKey: environment.openAiApiKey
-  });
+  let exchangeResult: RealtimeBrokerOpenAiExchangeResult;
+
+  try {
+    exchangeResult = await context.exchangeWithOpenAi(brokerRequest.openAiRequest, {
+      apiKey: environment.openAiApiKey
+    });
+  } catch {
+    return jsonResponse(
+      503,
+      request,
+      ["Realtime broker exchange failed before returning an SDP answer."],
+      true
+    );
+  }
 
   return {
     status: 200,
