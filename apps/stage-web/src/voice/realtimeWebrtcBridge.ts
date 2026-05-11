@@ -374,6 +374,9 @@ function createBrowserRealtimePeerConnection(
     },
     addTrack(track) {
       peerConnection.addTrack(track as MediaStreamTrack);
+    },
+    addTransceiver(kind, init) {
+      peerConnection.addTransceiver(kind, init);
     }
   };
 }
@@ -429,7 +432,7 @@ function createRealtimeBridgeStageEvents(
           status === "connected"
             ? input.browserSendsAudio
               ? "The browser exchanged SDP through the local broker after attaching an approved local audio track; no standard API key was exposed."
-              : "The browser exchanged SDP through the local broker without receiving a standard API key or sending audio."
+              : "The browser exchanged SDP through the local broker without receiving a standard API key or sending microphone audio."
             : input.errors.join(" "),
         evidence: input.routeUrl
           ? [

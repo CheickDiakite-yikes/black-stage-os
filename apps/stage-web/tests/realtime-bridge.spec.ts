@@ -25,6 +25,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       __blackstageRealtimeBrokerUrl?: string;
       __blackstageRealtimeWebrtcEnabled?: string;
       __blackstageGetUserMediaCalls?: number;
+      __blackstageRealtimeTransceivers?: string[];
     };
 
     browserWindow.__blackstageRealtimeApprovalPhrase = "approve-local-realtime";
@@ -32,6 +33,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     browserWindow.__blackstageRealtimeBrokerUrl = "http://127.0.0.1:8798";
     browserWindow.__blackstageRealtimeWebrtcEnabled = "1";
     browserWindow.__blackstageGetUserMediaCalls = 0;
+    browserWindow.__blackstageRealtimeTransceivers = [];
     window.localStorage.removeItem("blackstage.realtimeAudio.enabled");
     window.localStorage.setItem(
       "blackstage.realtime.approvalPhrase",
@@ -44,6 +46,12 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     window.localStorage.setItem("blackstage.realtimeWebrtc.enabled", "1");
 
     class FakeRTCPeerConnection {
+      addTransceiver(kind: "audio", init: { direction: "recvonly" }) {
+        browserWindow.__blackstageRealtimeTransceivers?.push(
+          `${kind}:${init.direction}`
+        );
+      }
+
       createDataChannel(label: "oai-events") {
         return {
           label,
@@ -54,7 +62,12 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       async createOffer() {
         return {
           type: "offer",
-          sdp: "v=0\r\no=- blackstage-playwright-offer\r\n"
+          sdp: [
+            "v=0",
+            "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+            "a=recvonly",
+            "m=application 9 UDP/DTLS/SCTP webrtc-datachannel"
+          ].join("\r\n")
         };
       }
 
@@ -224,10 +237,14 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
           }>;
         })
       : undefined;
+    const browserWindow = window as Window & {
+      __blackstageRealtimeTransceivers?: string[];
+    };
 
     const events = snapshot?.researchEvents ?? [];
 
     return {
+      transceivers: browserWindow.__blackstageRealtimeTransceivers ?? [],
       bridgeConnected: events.some(
         (event) =>
           event.eventType === "agent_event" &&
@@ -245,6 +262,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
 
   expect(bridgeEvidence.bridgeConnected).toBe(true);
   expect(bridgeEvidence.approvalRequested).toBe(true);
+  expect(bridgeEvidence.transceivers).toEqual(["audio:recvonly"]);
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect
     .poll(async () =>
@@ -263,7 +281,12 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       expect.objectContaining({
         method: "POST",
         approval: "approve-local-realtime",
-        body: "v=0\r\no=- blackstage-playwright-offer\r\n"
+        body: [
+          "v=0",
+          "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+          "a=recvonly",
+          "m=application 9 UDP/DTLS/SCTP webrtc-datachannel"
+        ].join("\r\n")
       })
     ])
   );

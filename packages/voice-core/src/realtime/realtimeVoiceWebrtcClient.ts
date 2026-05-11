@@ -19,6 +19,12 @@ export type RealtimeWebrtcAudioTrack = {
 
 export type RealtimeWebrtcPeerConnection = {
   addTrack?: (track: RealtimeWebrtcAudioTrack) => void;
+  addTransceiver?: (
+    kind: "audio",
+    init: {
+      direction: "recvonly";
+    }
+  ) => void;
   createDataChannel?: (label: "oai-events") => RealtimeWebrtcDataChannel;
   createOffer: () => Promise<RealtimeWebrtcSessionDescription>;
   setLocalDescription: (description: RealtimeWebrtcSessionDescription) => Promise<void>;
@@ -97,6 +103,20 @@ export async function exchangeRealtimeWebrtcSdp(
     }
 
     peerConnection.addTrack(input.approvedAudioTrack);
+  } else {
+    if (!peerConnection.addTransceiver) {
+      peerConnection.close?.();
+
+      return failedResult(
+        routeUrl,
+        false,
+        "Browser WebRTC peer connection cannot create a recvonly audio section."
+      );
+    }
+
+    peerConnection.addTransceiver("audio", {
+      direction: "recvonly"
+    });
   }
 
   peerConnection.createDataChannel?.("oai-events");

@@ -285,6 +285,9 @@ describe("Realtime voice session contracts", () => {
       enabled: true,
       readiness,
       createPeerConnection: () => ({
+        addTransceiver(kind, init) {
+          peerEvents.push(`transceiver:${kind}:${init.direction}`);
+        },
         createDataChannel(label) {
           peerEvents.push(`data:${label}`);
           return {
@@ -328,11 +331,65 @@ describe("Realtime voice session contracts", () => {
     assert.equal(exchange.browserSendsAudio, false);
     assert.equal(exchange.browserReceivesStandardApiKey, false);
     assert.deepEqual(peerEvents, [
+      "transceiver:audio:recvonly",
       "data:oai-events",
       "offer",
       "local:offer",
       "remote:answer"
     ]);
+  });
+
+  it("fails before broker fetch when a no-mic offer cannot create recvonly audio", async () => {
+    const readiness = interpretRealtimeBrokerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      status: 200,
+      body: {
+        ok: true,
+        route: "/api/blackstage/realtime/session",
+        liveModeEnabled: true,
+        liveApprovalRequired: true,
+        liveApprovalConfigured: true,
+        accepts: "application/sdp",
+        browserSendsAudio: false,
+        browserReceivesStandardApiKey: false,
+        checkedAt: "2026-05-10T00:00:00.000Z"
+      }
+    });
+    let fetchCalls = 0;
+    let closed = false;
+    const exchange = await exchangeRealtimeWebrtcSdp({
+      enabled: true,
+      readiness,
+      createPeerConnection: () => ({
+        createDataChannel() {
+          throw new Error("data channel should not be created");
+        },
+        async createOffer() {
+          throw new Error("offer should not be created");
+        },
+        async setLocalDescription() {},
+        async setRemoteDescription() {},
+        close() {
+          closed = true;
+        }
+      }),
+      fetchBrokerAnswer: async () => {
+        fetchCalls += 1;
+        throw new Error("should not fetch before recvonly support");
+      }
+    });
+
+    assert.equal(exchange.status, "failed");
+    assert.equal(exchange.networkAttempted, false);
+    assert.equal(exchange.peerConnectionCreated, true);
+    assert.equal(exchange.browserSendsAudio, false);
+    assert.equal(fetchCalls, 0);
+    assert.equal(closed, true);
+    assert.ok(
+      exchange.errors.some((error) =>
+        error.includes("cannot create a recvonly audio section")
+      )
+    );
   });
 
   it("blocks WebRTC audio tracks without explicit Stage approval", async () => {
