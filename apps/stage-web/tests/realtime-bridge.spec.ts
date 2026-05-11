@@ -231,7 +231,11 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("realtime-arm-button")).toBeEnabled();
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(0);
 
-  await page.getByTestId("realtime-arm-button").click({ force: true });
+  const realtimeArmButton = page.getByTestId("realtime-arm-button");
+
+  await realtimeArmButton.focus();
+  await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "auto");
+  await realtimeArmButton.click();
   await expect(page.getByTestId("approval-card")).toContainText(
     "Open live Realtime voice edge"
   );
@@ -316,6 +320,52 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       })
     )
     .toBe(true);
+
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "response.function_call_arguments.done",
+      call_id: "call_realtime_prepare_action",
+      name: "blackstage.prepare_external_action"
+    });
+  });
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Approve realtime tool: blackstage.prepare_external_action"
+  );
+  await expect(page.getByTestId("approval-card")).toContainText("tool call");
+
+  const toolApprovalEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          stageEvents?: Array<{
+            payload?: {
+              actionType?: string;
+              proposedBy?: string;
+              status?: string;
+              title?: string;
+            };
+            type?: string;
+          }>;
+        })
+      : undefined;
+
+    return (snapshot?.stageEvents ?? []).some(
+      (event) =>
+        event.type === "approval.requested" &&
+        event.payload?.actionType === "tool_call" &&
+        event.payload?.proposedBy === "Realtime voice broker" &&
+        event.payload?.status === "pending" &&
+        event.payload?.title ===
+          "Approve realtime tool: blackstage.prepare_external_action"
+    );
+  });
+
+  expect(toolApprovalEvidence).toBe(true);
+  expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(1);
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect
     .poll(async () =>
@@ -537,7 +587,11 @@ test("Stage Web attaches local audio only after Realtime approval and ready mic 
   });
 
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("mic gesture");
-  await page.getByTestId("realtime-arm-button").click({ force: true });
+  const realtimeArmButton = page.getByTestId("realtime-arm-button");
+
+  await realtimeArmButton.focus();
+  await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "auto");
+  await realtimeArmButton.click();
   await expect(page.getByTestId("approval-card")).toContainText(
     "Open live Realtime voice edge"
   );

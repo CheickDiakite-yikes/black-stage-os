@@ -17,6 +17,7 @@ Continue the active Blackstage goal from the pushed Realtime smoke/proof state a
 - Added an early failure path so browsers that cannot create the required audio section fail before a broker/provider request.
 - Retained the connected peer handle in Stage Web so reset/reconfiguration can close the live bridge explicitly.
 - Drove a fake Realtime server transcript through the retained data-channel listener and verified it became a Stage `intent.submitted` event.
+- Drove a fake Realtime server tool-call event through the same data-channel listener and verified it became a visible pending Stage approval instead of an executed action.
 - Kept approved microphone tracks on the explicit approval path instead of adding a transceiver there.
 
 ## What Failed Or Needed Human Intervention
@@ -33,7 +34,7 @@ After a live smoke discovers a provider requirement, the production-adjacent bro
 
 Live bridges also need explicit lifetime ownership. A connected status in serializable state is not enough; the browser peer handle needs a ref so the data channel can remain alive and be closed intentionally.
 
-The first useful event-streaming proof should be small: one server transcript over the data channel becomes one Stage event. That keeps the live path auditable before richer realtime behaviors are turned on.
+The first useful event-streaming proofs should be small: one server transcript over the data channel becomes one Stage event, and one requested tool call becomes one approval card. That keeps the live path auditable before richer realtime behaviors are turned on.
 
 ## Evidence
 
