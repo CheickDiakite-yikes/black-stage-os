@@ -7,17 +7,21 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
 
   const brokerRequests: Array<{
     method: string;
+    approval?: string;
     body?: string;
   }> = [];
 
   await page.addInitScript(() => {
     const browserWindow = window as Window & {
+      __blackstageRealtimeApprovalPhrase?: string;
       __blackstageRealtimeBrokerUrl?: string;
       __blackstageRealtimeWebrtcEnabled?: string;
     };
 
+    browserWindow.__blackstageRealtimeApprovalPhrase = "approve-local-realtime";
     browserWindow.__blackstageRealtimeBrokerUrl = "http://127.0.0.1:8798";
     browserWindow.__blackstageRealtimeWebrtcEnabled = "1";
+    window.localStorage.setItem("blackstage.realtime.approvalPhrase", "approve-local-realtime");
     window.localStorage.setItem("blackstage.realtimeBroker.url", "http://127.0.0.1:8798");
     window.localStorage.setItem("blackstage.realtimeWebrtc.enabled", "1");
 
@@ -56,7 +60,8 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
 
     brokerRequests.push({
       method,
-      body
+      body,
+      approval: request.headers()["x-blackstage-realtime-approval"]
     });
 
     if (method === "GET") {
@@ -119,6 +124,7 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
       }),
       expect.objectContaining({
         method: "POST",
+        approval: "approve-local-realtime",
         body: "v=0\r\no=- blackstage-playwright-offer\r\n"
       })
     ])

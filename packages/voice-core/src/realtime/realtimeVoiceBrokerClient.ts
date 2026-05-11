@@ -4,6 +4,8 @@ export type RealtimeBrokerReadinessStatus =
   | "reachable"
   | "unreachable";
 
+export const BLACKSTAGE_REALTIME_APPROVAL_HEADER = "x-blackstage-realtime-approval";
+
 export type RealtimeBrokerReadinessProbe = {
   method: "GET";
   routeUrl?: string;

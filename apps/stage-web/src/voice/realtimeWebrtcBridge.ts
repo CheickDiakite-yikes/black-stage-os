@@ -1,6 +1,7 @@
 import type { StageEvent } from "@blackstage/stage-core";
 import {
   exchangeRealtimeWebrtcSdp,
+  BLACKSTAGE_REALTIME_APPROVAL_HEADER,
   mapRealtimeVoiceEventToStageEvents,
   parseRealtimeVoiceServerEvent,
   type RealtimeBrokerClientReadiness,
@@ -10,6 +11,8 @@ import {
 
 export const STAGE_WEB_REALTIME_WEBRTC_ENABLED_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_WEBRTC_ENABLED";
+export const STAGE_WEB_REALTIME_APPROVAL_TOKEN_ENV_VAR =
+  "VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN";
 
 export type StageWebRealtimeBridgeStatus =
   | "disabled"
@@ -42,6 +45,7 @@ export type StageWebRealtimeBridgeOptions = {
   enabled?: boolean;
   createPeerConnection?: RealtimeWebrtcPeerConnectionFactory;
   fetchImpl?: typeof fetch;
+  approvalPhrase?: string;
   now?: () => string;
   emitStageEvents?: (events: StageEvent[]) => void;
 };
@@ -115,9 +119,17 @@ export async function startStageWebRealtimeBridge(
     readiness: options.readiness,
     createPeerConnection,
     fetchBrokerAnswer: async (request) => {
+      const approvalPhrase =
+        options.approvalPhrase ?? readStageWebRealtimeApprovalPhrase();
+      const headers = approvalPhrase
+        ? {
+            ...request.headers,
+            [BLACKSTAGE_REALTIME_APPROVAL_HEADER]: approvalPhrase
+          }
+        : request.headers;
       const response = await (options.fetchImpl ?? fetch)(request.routeUrl, {
         method: "POST",
-        headers: request.headers,
+        headers,
         body: request.offerSdp,
         credentials: "omit"
       });
@@ -174,6 +186,14 @@ export function readStageWebRealtimeWebrtcEnabled(
   value = readStageWebRealtimeWebrtcEnvValue()
 ): boolean {
   return value?.trim() === "1";
+}
+
+export function readStageWebRealtimeApprovalPhrase(
+  value = readStageWebRealtimeApprovalEnvValue()
+): string | undefined {
+  const trimmedValue = value?.trim();
+
+  return trimmedValue || undefined;
 }
 
 function createBrowserRealtimePeerConnection(
@@ -306,6 +326,32 @@ function readStageWebRealtimeWebrtcEnvValue(): string | undefined {
   };
 
   return meta.env?.[STAGE_WEB_REALTIME_WEBRTC_ENABLED_ENV_VAR];
+}
+
+function readStageWebRealtimeApprovalEnvValue(): string | undefined {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeApprovalPhrase?: string;
+  };
+
+  if (runtimeConfig.__blackstageRealtimeApprovalPhrase) {
+    return runtimeConfig.__blackstageRealtimeApprovalPhrase;
+  }
+
+  try {
+    const localPhrase = localStorage.getItem("blackstage.realtime.approvalPhrase");
+
+    if (localPhrase) {
+      return localPhrase;
+    }
+  } catch {
+    // Local runtime config is best-effort; Vite env remains the durable path.
+  }
+
+  const meta = import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  };
+
+  return meta.env?.[STAGE_WEB_REALTIME_APPROVAL_TOKEN_ENV_VAR];
 }
 
 function stableHash(value: string): string {

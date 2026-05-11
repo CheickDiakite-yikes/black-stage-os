@@ -20,6 +20,9 @@ export const DEFAULT_STAGE_BROKER_ALLOWED_ORIGINS = [
 ];
 export const STAGE_BROKER_LIVE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE";
 export const STAGE_BROKER_SAFETY_ENV_VAR = "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER";
+export const STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR =
+  "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN";
+export const STAGE_BROKER_APPROVAL_HEADER = "x-blackstage-realtime-approval";
 export const STAGE_BROKER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_BROKER_ALLOWED_ORIGINS";
 
 export type StageBrokerRuntimeConfig = {
@@ -27,6 +30,7 @@ export type StageBrokerRuntimeConfig = {
   port: number;
   routePath: string;
   allowedOrigins: string[];
+  runApprovalToken?: string;
   environment: RealtimeBrokerRouteEnvironment;
 };
 
@@ -43,6 +47,7 @@ export function createStageBrokerRuntimeConfig(
     port: Number(env.BLACKSTAGE_BROKER_PORT ?? DEFAULT_STAGE_BROKER_PORT),
     routePath: env.BLACKSTAGE_REALTIME_BROKER_ROUTE ?? BLACKSTAGE_REALTIME_BROKER_ROUTE,
     allowedOrigins: parseAllowedOrigins(env[STAGE_BROKER_ALLOWED_ORIGINS_ENV_VAR]),
+    runApprovalToken: env[STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR],
     environment: {
       liveModeEnabled: env[STAGE_BROKER_LIVE_ENV_VAR] === "1",
       openAiApiKey: env.OPENAI_API_KEY,
@@ -117,6 +122,24 @@ async function handleStageBrokerRequest(
     return;
   }
 
+  if (
+    routeUrl.pathname === runtimeConfig.routePath &&
+    request.method?.toUpperCase() === "POST" &&
+    !requestHasLiveRealtimeApproval(request, runtimeConfig)
+  ) {
+    response.writeHead(403, {
+      "content-type": "application/json",
+      ...corsHeaders
+    });
+    response.end(
+      JSON.stringify({
+        ok: false,
+        errors: ["Live Realtime SDP exchange requires a matching local approval token."]
+      })
+    );
+    return;
+  }
+
   const body = await readRequestBody(request);
   const brokerResponse = await handleRealtimeUnifiedWebrtcBrokerRoute(
     {
@@ -173,10 +196,34 @@ function createCorsHeaders(
   return {
     "access-control-allow-origin": origin,
     "access-control-allow-methods": "GET, POST, OPTIONS",
-    "access-control-allow-headers": "accept, content-type",
+    "access-control-allow-headers": `accept, content-type, ${STAGE_BROKER_APPROVAL_HEADER}`,
     "access-control-max-age": "600",
     vary: "origin"
   };
+}
+
+function requestHasLiveRealtimeApproval(
+  request: IncomingMessage,
+  runtimeConfig: StageBrokerRuntimeConfig
+): boolean {
+  if (runtimeConfig.environment.liveModeEnabled !== true) {
+    return true;
+  }
+
+  const requiredPhrase = runtimeConfig.runApprovalToken?.trim();
+  const providedPhrase = readSingleHeader(request, STAGE_BROKER_APPROVAL_HEADER);
+
+  return Boolean(requiredPhrase) && providedPhrase === requiredPhrase;
+}
+
+function readSingleHeader(request: IncomingMessage, headerName: string): string | undefined {
+  const header = request.headers[headerName.toLowerCase()];
+
+  if (Array.isArray(header)) {
+    return undefined;
+  }
+
+  return header;
 }
 
 function normalizeHeaders(headers: IncomingMessage["headers"]): Record<string, string | undefined> {

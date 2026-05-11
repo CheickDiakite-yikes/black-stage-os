@@ -5,7 +5,10 @@ import { afterEach, describe, it } from "node:test";
 import {
   BLACKSTAGE_REALTIME_BROKER_ROUTE,
   OPENAI_REALTIME_CALLS_URL,
+  STAGE_BROKER_APPROVAL_HEADER,
+  STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR,
   createOpenAiRealtimeExchange,
+  createStageBrokerRuntimeConfig,
   createStageBrokerServer
 } from "../dist/index.js";
 
@@ -90,16 +93,16 @@ describe("Stage broker server", () => {
 
   it("exchanges SDP only through an injected live handler", async () => {
     const testRouteCredential = ["stage", "broker", "credential"].join("-");
+    const approvalPhrase = "approve-local-realtime";
     let exchangeCalls = 0;
     const server = await listen(
       createStageBrokerServer({
-        runtimeConfig: {
-          environment: {
-            liveModeEnabled: true,
-            openAiApiKey: testRouteCredential,
-            safetyIdentifier: "hashed-user-id"
-          }
-        },
+        runtimeConfig: createStageBrokerRuntimeConfig({
+          OPENAI_API_KEY: testRouteCredential,
+          BLACKSTAGE_REALTIME_LIVE: "1",
+          BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER: "hashed-user-id",
+          [STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR]: approvalPhrase
+        }),
         exchangeWithOpenAi: async (openAiRequest, exchangeContext) => {
           exchangeCalls += 1;
           assert.equal(exchangeContext.apiKey, testRouteCredential);
@@ -114,7 +117,8 @@ describe("Stage broker server", () => {
     const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
       method: "POST",
       headers: {
-        "content-type": "application/sdp"
+        "content-type": "application/sdp",
+        [STAGE_BROKER_APPROVAL_HEADER]: approvalPhrase
       },
       body: "v=0\r\no=- stage-broker-offer\r\n"
     });
@@ -125,6 +129,38 @@ describe("Stage broker server", () => {
     assert.equal(response.headers.get("content-type"), "application/sdp");
     assert.equal(text, "v=0\r\no=- stage-broker-answer\r\n");
     assert.doesNotMatch(text, new RegExp(testRouteCredential));
+  });
+
+  it("requires explicit local approval before live broker exchange", async () => {
+    const testRouteCredential = ["stage", "broker", "credential"].join("-");
+    let exchangeCalls = 0;
+    const server = await listen(
+      createStageBrokerServer({
+        runtimeConfig: createStageBrokerRuntimeConfig({
+          OPENAI_API_KEY: testRouteCredential,
+          BLACKSTAGE_REALTIME_LIVE: "1",
+          BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER: "hashed-user-id"
+        }),
+        exchangeWithOpenAi: async () => {
+          exchangeCalls += 1;
+          return {
+            answerSdp: "should-not-run"
+          };
+        }
+      })
+    );
+    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/sdp"
+      },
+      body: "v=0\r\no=- stage-broker-offer\r\n"
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 403);
+    assert.equal(exchangeCalls, 0);
+    assert.match(body.errors[0], /matching local approval token/);
   });
 
   it("adapts live broker requests to the OpenAI Realtime calls endpoint", async () => {
@@ -192,15 +228,15 @@ describe("Stage broker server", () => {
 
   it("returns a safe failure when the live OpenAI exchange fails", async () => {
     const dummyApiKey = ["test", "api", "credential"].join("-");
+    const approvalPhrase = "approve-local-realtime";
     const server = await listen(
       createStageBrokerServer({
-        runtimeConfig: {
-          environment: {
-            liveModeEnabled: true,
-            openAiApiKey: dummyApiKey,
-            safetyIdentifier: "hashed-user-id"
-          }
-        },
+        runtimeConfig: createStageBrokerRuntimeConfig({
+          OPENAI_API_KEY: dummyApiKey,
+          BLACKSTAGE_REALTIME_LIVE: "1",
+          BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER: "hashed-user-id",
+          [STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR]: approvalPhrase
+        }),
         exchangeWithOpenAi: async () => {
           throw new Error("upstream failed with secret-ish detail");
         }
@@ -209,7 +245,8 @@ describe("Stage broker server", () => {
     const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`, {
       method: "POST",
       headers: {
-        "content-type": "application/sdp"
+        "content-type": "application/sdp",
+        [STAGE_BROKER_APPROVAL_HEADER]: approvalPhrase
       },
       body: "v=0\r\no=- stage-broker-offer\r\n"
     });
