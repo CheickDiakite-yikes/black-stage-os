@@ -400,6 +400,20 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
   await expect(page.getByTestId("assistant-speech")).toContainText(
     "Prepared a harness action packet"
   );
+  await expect(page.getByTestId("artifact-stack")).toContainText(
+    "Harness Action Packet"
+  );
+  await expect(page.getByTestId("artifact-workbench")).toContainText("review");
+
+  const packetDownloadPromise = page.waitForEvent("download");
+  await page
+    .getByTestId("artifact-workbench")
+    .getByRole("button", { name: "Export markdown" })
+    .click({ force: true });
+  const packetDownload = await packetDownloadPromise;
+
+  expect(packetDownload.suggestedFilename()).toContain("harness-action-packet");
+  await expect(page.getByTestId("artifact-workbench")).toContainText("exported");
 
   const actionWasLogged = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
@@ -422,12 +436,19 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
       }>;
     };
 
-    return snapshot.stageEvents.some(
+    const approvalWasLogged = snapshot.stageEvents.some(
       (event) =>
         event.type === "approval.requested" &&
         event.payload?.actionType === "tool_call" &&
         event.payload?.title?.includes("Approve harness action")
     );
+    const packetArtifactWasLogged = snapshot.stageEvents.some(
+      (event) =>
+        event.type === "artifact.created" &&
+        event.payload?.title?.includes("Harness Action Packet")
+    );
+
+    return approvalWasLogged && packetArtifactWasLogged;
   });
 
   expect(actionWasLogged).toBe(true);

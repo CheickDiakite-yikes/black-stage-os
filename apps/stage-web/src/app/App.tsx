@@ -3,6 +3,7 @@ import {
   stageShellScenarios,
   type AgentEvent,
   type ApprovalRequest,
+  type Artifact,
   type ResearchEvent,
   type StageEvent,
   type StageObject,
@@ -1288,6 +1289,20 @@ export function App() {
 
       const preparedAt = new Date().toISOString();
       const actionId = `artifact_action_${Date.now().toString(36)}`;
+      const handoffSteps = [
+        {
+          label: "Review artifact",
+          value: "Human-approved content is the input."
+        },
+        {
+          label: "Prepare harness packet",
+          value: "Visible local task card and approval request only."
+        },
+        {
+          label: "Hold for approval",
+          value: "Execution remains blocked until the user approves a later live path."
+        }
+      ];
       const actionTaskObject: StageObject = {
         id: `${actionId}_task`,
         threadId: artifact.threadId,
@@ -1303,21 +1318,7 @@ export function App() {
           worker: "Agents SDK manager",
           status: "awaiting human approval",
           policy: "No browser-origin mutation. No external system touched.",
-          steps: [
-            {
-              label: "Review artifact",
-              value: "Human-approved content is the input."
-            },
-            {
-              label: "Prepare harness packet",
-              value: "Visible local task card and approval request only."
-            },
-            {
-              label: "Hold for approval",
-              value:
-                "Execution remains blocked until the user approves a later live path."
-            }
-          ]
+          steps: handoffSteps
         },
         position: {
           x: 22,
@@ -1347,10 +1348,39 @@ export function App() {
         status: "pending",
         createdAt: preparedAt
       };
+      const actionPacketArtifact: Artifact = {
+        id: `${actionId}_artifact`,
+        threadId: artifact.threadId,
+        type: "brief",
+        title: `Harness Action Packet: ${artifact.title}`,
+        status: "review",
+        content: {
+          actionId,
+          artifactId: artifact.id,
+          approvalId: approvalRequest.id,
+          controlPlane: "Symphony queue",
+          worker: "Agents SDK manager",
+          policy: "No browser-origin mutation. No external system touched.",
+          actions: handoffSteps.map((step) => `${step.label}: ${step.value}`)
+        },
+        provenance: [
+          {
+            id: `${actionId}_source_artifact`,
+            label: artifact.title,
+            sourceType: "artifact"
+          }
+        ],
+        createdAt: preparedAt,
+        updatedAt: preparedAt
+      };
 
       emitStageEvent({
         type: "object.created",
         payload: actionTaskObject
+      });
+      emitStageEvent({
+        type: "artifact.created",
+        payload: actionPacketArtifact
       });
       emitStageEvent({
         type: "agent.progress",
