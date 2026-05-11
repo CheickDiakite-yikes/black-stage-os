@@ -456,6 +456,7 @@ export function StageShell({
       <form
         className="intent-capture"
         aria-label="Intent capture"
+        data-testid="intent-capture"
         onSubmit={(event) => {
           event.preventDefault();
           submitIntent();

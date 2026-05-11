@@ -1,6 +1,5 @@
 import {
   createIdleIntentThread,
-  stageShellScenarios,
   type AgentEvent,
   type ApprovalRequest,
   type Artifact,
@@ -70,7 +69,8 @@ import {
   clearStageSession,
   createStageSession,
   loadStageSession,
-  saveStageSession
+  saveStageSession,
+  type StageSessionSnapshot
 } from "../state/stageSession";
 import {
   artifactToMarkdown,
@@ -79,6 +79,18 @@ import {
 
 const idleThread = createIdleIntentThread();
 const loadedSession = loadStageSession();
+const startupSession = createStartupStageSession(loadedSession);
+
+function createStartupStageSession(
+  savedSession: StageSessionSnapshot | undefined
+): Pick<StageSessionSnapshot, "sessionId" | "memoryRecords"> {
+  const nextSession = createStageSession();
+
+  return {
+    sessionId: nextSession.sessionId,
+    memoryRecords: [...(savedSession?.memoryRecords ?? [])]
+  };
+}
 
 type StageCommandAction =
   | "focus"
@@ -140,28 +152,15 @@ type BlackstageTestWindow = Window & {
 };
 
 export function App() {
-  const [sessionId, setSessionId] = useState(
-    () => loadedSession?.sessionId ?? createStageSession().sessionId
-  );
-  const [thread, setThread] = useState(
-    () => loadedSession?.currentThread ?? idleThread
-  );
+  const [sessionId, setSessionId] = useState(() => startupSession.sessionId);
+  const [thread, setThread] = useState(() => idleThread);
   const [activeScenario, setActiveScenario] = useState<StageShellScenario | undefined>(
-    () =>
-      loadedSession?.activeScenarioId
-        ? stageShellScenarios.find(
-            (scenario) => scenario.id === loadedSession.activeScenarioId
-          )
-        : undefined
+    undefined
   );
-  const [researchEvents, setResearchEvents] = useState<ResearchEvent[]>(
-    () => loadedSession?.researchEvents ?? []
-  );
-  const [stageEvents, setStageEvents] = useState<StageEvent[]>(
-    () => loadedSession?.stageEvents ?? []
-  );
+  const [researchEvents, setResearchEvents] = useState<ResearchEvent[]>([]);
+  const [stageEvents, setStageEvents] = useState<StageEvent[]>([]);
   const [memoryRecords, setMemoryRecords] = useState<MemoryVaultRecord[]>(
-    () => loadedSession?.memoryRecords ?? []
+    () => startupSession.memoryRecords
   );
   const [isRunning, setIsRunning] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);

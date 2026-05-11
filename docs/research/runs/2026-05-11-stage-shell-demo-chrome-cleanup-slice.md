@@ -18,6 +18,8 @@ The current UI has a weird demo look with buttons that show demos; clean that up
 - Replaced verbose object action text with compact icon affordances while preserving accessible labels for keyboard and test targeting.
 - Made the idle presence orb a real `Start speaking` button that enters the Web Speech capture path.
 - Cleared legacy `blackstage.stageShell.v0` fixture sessions so old browsers do not reopen into a populated demo state.
+- Stopped current saved fixture work from auto-opening on startup, so the first frame returns to the dormant orb instead of replaying the last demo scenario.
+- Removed pointer hover access to the idle capture bar; the visible startup speech control is now the orb.
 
 ## What Failed Or Needed Human Intervention
 

@@ -126,37 +126,58 @@ async function readObjectShift(locator: Locator): Promise<{ x: number; y: number
 }
 
 async function submitIntent(page: Page, intentText: string) {
-  await page.getByTestId("intent-input").fill(intentText);
-  await page.getByTestId("submit-intent").click();
+  await page.getByTestId("intent-input").fill(intentText, {
+    force: true
+  });
+  await page.getByTestId("submit-intent").click({
+    force: true
+  });
 }
 
-test("Stage Shell v0 ignores legacy fixture sessions on first load", async ({
+test("Stage Shell v0 opens to the idle orb instead of saved fixture work", async ({
   page
 }) => {
   await page.addInitScript(() => {
+    const savedAt = new Date().toISOString();
+    const fixtureThread = {
+      id: "legacy_thread",
+      title: "Acquisition analysis",
+      originalIntent: "Acquire a company?",
+      currentObjective: "Legacy fixture should not hydrate.",
+      status: "active",
+      inputMode: "text",
+      renderObjects: [],
+      agentEvents: [],
+      approvals: [],
+      artifacts: [],
+      memoryNotes: [],
+      decisions: [],
+      createdAt: savedAt,
+      updatedAt: savedAt
+    };
+
     localStorage.setItem(
       "blackstage.stageShell.v0",
       JSON.stringify({
         sessionId: "legacy_demo_session",
         activeScenarioId: "analyze_acquisition_target",
-        currentThread: {
-          id: "legacy_thread",
-          title: "Acquisition analysis",
-          originalIntent: "Acquire a company?",
-          currentObjective: "Legacy fixture should not hydrate.",
-          status: "active",
-          inputMode: "text",
-          renderObjects: [],
-          agentEvents: [],
-          approvals: [],
-          artifacts: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
+        currentThread: fixtureThread,
         stageEvents: [],
         researchEvents: [],
         memoryRecords: [],
-        savedAt: new Date().toISOString()
+        savedAt
+      })
+    );
+    localStorage.setItem(
+      "blackstage.stageShell.v0.1",
+      JSON.stringify({
+        sessionId: "current_demo_session",
+        activeScenarioId: "analyze_acquisition_target",
+        currentThread: fixtureThread,
+        stageEvents: [],
+        researchEvents: [],
+        memoryRecords: [],
+        savedAt
       })
     );
   });
@@ -168,15 +189,36 @@ test("Stage Shell v0 ignores legacy fixture sessions on first load", async ({
   await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
     "Start voice input"
   );
+  await expect(page.getByTestId("intent-capture")).toHaveCSS("opacity", "0");
+  await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "none");
   await expect(page.getByText("Acquisition analysis")).toHaveCount(0);
 
-  const storageState = await page.evaluate(() => ({
-    currentSnapshotExists: Boolean(localStorage.getItem("blackstage.stageShell.v0.1")),
-    legacySnapshotExists: Boolean(localStorage.getItem("blackstage.stageShell.v0"))
-  }));
+  const storageState = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          activeScenarioId?: string;
+          currentThread?: {
+            originalIntent?: string;
+            status?: string;
+          };
+        })
+      : undefined;
+
+    return {
+      activeScenarioId: snapshot?.activeScenarioId,
+      currentSnapshotExists: Boolean(rawSnapshot),
+      currentThreadOriginalIntent: snapshot?.currentThread?.originalIntent,
+      currentThreadStatus: snapshot?.currentThread?.status,
+      legacySnapshotExists: Boolean(localStorage.getItem("blackstage.stageShell.v0"))
+    };
+  });
 
   expect(storageState).toEqual({
+    activeScenarioId: undefined,
     currentSnapshotExists: true,
+    currentThreadOriginalIntent: "",
+    currentThreadStatus: "paused",
     legacySnapshotExists: false
   });
 });
@@ -1689,7 +1731,11 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
 
   await expect(page.getByTestId("realtime-broker-status")).toContainText("standby");
   await expect(page.getByTestId("harness-runner-status")).toContainText("standby");
-  await page.getByRole("button", { name: "Stage voice" }).click();
+  const stageVoiceButton = page.getByRole("button", { name: "Stage voice" });
+
+  await stageVoiceButton.focus();
+  await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "auto");
+  await stageVoiceButton.click();
   await expect(page.getByTestId("assistant-speech")).toContainText("Stage voice ready");
 
   await submitIntent(page, "Build BlackStage");
