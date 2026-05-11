@@ -45,6 +45,8 @@ export function researchEventFromStageEvent(
           modality: stageEvent.payload.modality,
           preview_available: stageEvent.payload.previewAvailable ?? false,
           image_dimensions: stageEvent.payload.imageDimensions,
+          structured_kind: stageEvent.payload.structuredKind,
+          structured_item_count: stageEvent.payload.structuredItemCount,
           local_only: stageEvent.payload.localOnly
         },
         stageEvent.payload.threadId

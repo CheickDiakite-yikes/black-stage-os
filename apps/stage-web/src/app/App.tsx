@@ -1394,6 +1394,7 @@ export function App() {
       const modality = readContextModality(file);
       const excerpt = await readContextExcerpt(file);
       const imagePreview = await readImageContextPreview(file);
+      const structuredPreview = await readStructuredContextPreview(file);
       const documentObject: StageObject = {
         id: `${attachmentId}_document`,
         threadId: thread.id,
@@ -1407,6 +1408,7 @@ export function App() {
           previewUrl: imagePreview?.previewUrl,
           previewKind: imagePreview?.previewKind,
           imageDimensions: imagePreview?.dimensions,
+          structuredPreview,
           sections: [
             {
               label: "File",
@@ -1420,6 +1422,14 @@ export function App() {
               label: "Boundary",
               value: "Local-only context object. No external upload."
             },
+            ...(structuredPreview
+              ? [
+                  {
+                    label: structuredPreview.label,
+                    value: structuredPreview.summary
+                  }
+                ]
+              : []),
             ...(imagePreview
               ? [
                   {
@@ -1473,6 +1483,8 @@ export function App() {
           previewAvailable: Boolean(imagePreview),
           previewKind: imagePreview?.previewKind,
           imageDimensions: imagePreview?.dimensions,
+          structuredKind: structuredPreview?.kind,
+          structuredItemCount: structuredPreview?.itemCount,
           attachedAt,
           localOnly: true
         }
@@ -2127,6 +2139,13 @@ type ImageContextPreview = {
   };
 };
 
+type StructuredContextPreview = {
+  kind: "csv" | "json";
+  label: "CSV structure" | "JSON structure";
+  summary: string;
+  itemCount: number;
+};
+
 async function readImageContextPreview(
   file: File
 ): Promise<ImageContextPreview | undefined> {
@@ -2180,6 +2199,132 @@ async function readContextExcerpt(file: File): Promise<string | undefined> {
   } catch {
     return undefined;
   }
+}
+
+async function readStructuredContextPreview(
+  file: File
+): Promise<StructuredContextPreview | undefined> {
+  if (!isTextContext(file) || file.size > 1_000_000) {
+    return undefined;
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase();
+
+  try {
+    const text = await file.text();
+
+    if (extension === "csv" || file.type === "text/csv") {
+      return createCsvContextPreview(text);
+    }
+
+    if (extension === "json" || file.type === "application/json") {
+      return createJsonContextPreview(text);
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function createCsvContextPreview(text: string): StructuredContextPreview | undefined {
+  const rows = text
+    .trim()
+    .split(/\r?\n/)
+    .map(parseCsvRow)
+    .filter((row) => row.some((cell) => cell.trim().length > 0));
+
+  if (rows.length === 0) {
+    return undefined;
+  }
+
+  const headers = rows[0].map((header) => header.trim()).filter(Boolean);
+  const dataRowCount = Math.max(rows.length - 1, 0);
+  const columnCount = headers.length || Math.max(...rows.map((row) => row.length));
+  const visibleHeaders = headers.slice(0, 5).join(", ");
+  const hiddenHeaderCount = Math.max(headers.length - 5, 0);
+  const headerSuffix = hiddenHeaderCount > 0 ? `, +${hiddenHeaderCount} more` : "";
+
+  return {
+    kind: "csv",
+    label: "CSV structure",
+    itemCount: dataRowCount,
+    summary: `${dataRowCount} rows · ${columnCount} columns${
+      visibleHeaders ? ` · ${visibleHeaders}${headerSuffix}` : ""
+    }`
+  };
+}
+
+function createJsonContextPreview(text: string): StructuredContextPreview | undefined {
+  const parsed = JSON.parse(text) as unknown;
+
+  if (Array.isArray(parsed)) {
+    const firstObject = parsed.find(isPlainObject);
+    const keys = firstObject ? Object.keys(firstObject).slice(0, 5) : [];
+
+    return {
+      kind: "json",
+      label: "JSON structure",
+      itemCount: parsed.length,
+      summary: `${parsed.length} array items${keys.length ? ` · keys: ${keys.join(", ")}` : ""}`
+    };
+  }
+
+  if (isPlainObject(parsed)) {
+    const keys = Object.keys(parsed);
+
+    return {
+      kind: "json",
+      label: "JSON structure",
+      itemCount: keys.length,
+      summary: `${keys.length} top-level keys${keys.length ? ` · ${keys.slice(0, 5).join(", ")}` : ""}`
+    };
+  }
+
+  return {
+    kind: "json",
+    label: "JSON structure",
+    itemCount: 1,
+    summary: `JSON ${typeof parsed}`
+  };
+}
+
+function parseCsvRow(line: string): string[] {
+  const cells: string[] = [];
+  let currentCell = "";
+  let insideQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const nextChar = line[index + 1];
+
+    if (char === '"' && nextChar === '"') {
+      currentCell += '"';
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      cells.push(currentCell);
+      currentCell = "";
+      continue;
+    }
+
+    currentCell += char;
+  }
+
+  cells.push(currentCell);
+
+  return cells;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function isTextContext(file: File): boolean {

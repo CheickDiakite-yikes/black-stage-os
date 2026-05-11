@@ -221,7 +221,7 @@ function DocumentPortalSurface({ payload }: { payload: unknown }) {
         </figure>
       ) : null}
       <dl>
-        {sections.slice(0, 4).map((section, index) => (
+        {sections.slice(0, 5).map((section, index) => (
           <div key={`${index}_${formatPayloadValue(section.label ?? "section")}`}>
             <dt>{formatPayloadValue(section.label ?? "Section")}</dt>
             <dd>

@@ -563,6 +563,52 @@ test("Stage Shell v0 attaches local context as a private document object", async
     "Local-only context object. No external upload."
   );
   await expect(page.getByTestId("research-capture")).toContainText("context attached");
+
+  await page.getByTestId("context-file-input").setInputFiles({
+    name: "investor-list.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "name,stage,check\nAster Capital,seed,250000\nNorthline Ventures,pre-seed,150000"
+    )
+  });
+
+  const latestDocumentPortal = page.getByTestId("document-portal-surface").last();
+
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Context: investor-list.csv"
+  );
+  await expect(latestDocumentPortal).toContainText("CSV structure");
+  await expect(latestDocumentPortal).toContainText("2 rows · 3 columns");
+  await expect(latestDocumentPortal).toContainText("name, stage, check");
+
+  const structuredContextWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      researchEvents: Array<{
+        eventType: string;
+        payload?: {
+          structured_kind?: string;
+          structured_item_count?: number;
+          local_only?: boolean;
+        };
+      }>;
+    };
+
+    return snapshot.researchEvents.some(
+      (event) =>
+        event.eventType === "context_attached" &&
+        event.payload?.structured_kind === "csv" &&
+        event.payload.structured_item_count === 2 &&
+        event.payload.local_only === true
+    );
+  });
+
+  expect(structuredContextWasLogged).toBe(true);
 });
 
 test("Stage Shell v0 renders local image context without uploading it", async ({
