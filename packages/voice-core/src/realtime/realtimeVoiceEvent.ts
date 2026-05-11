@@ -1,9 +1,12 @@
 export type RealtimeVoiceEvent =
+  | { type: "voice.session_created"; timestamp: string }
   | { type: "voice.capture_started"; timestamp: string }
   | { type: "voice.partial_transcript"; text: string; timestamp: string }
   | { type: "voice.final_transcript"; text: string; timestamp: string }
   | { type: "voice.assistant_delta"; textDelta: string; timestamp: string }
   | { type: "voice.assistant_speech"; text: string; timestamp: string }
+  | { type: "voice.response_started"; timestamp: string }
+  | { type: "voice.response_completed"; timestamp: string }
   | { type: "voice.output_audio_started"; timestamp: string }
   | { type: "voice.output_audio_stopped"; timestamp: string }
   | { type: "voice.output_audio_cleared"; timestamp: string }
@@ -26,6 +29,11 @@ export function parseRealtimeVoiceServerEvent(
   }
 
   switch (event.type) {
+    case "session.created":
+      return {
+        type: "voice.session_created",
+        timestamp
+      };
     case "input_audio_buffer.speech_started":
       return {
         type: "voice.capture_started",
@@ -77,6 +85,16 @@ export function parseRealtimeVoiceServerEvent(
             timestamp
           }
         : undefined;
+    case "response.created":
+      return {
+        type: "voice.response_started",
+        timestamp
+      };
+    case "response.done":
+      return {
+        type: "voice.response_completed",
+        timestamp
+      };
     case "output_audio_buffer.started":
       return {
         type: "voice.output_audio_started",

@@ -12,6 +12,22 @@ export function mapRealtimeVoiceEventToStageEvents(
   context: RealtimeVoiceStageMappingContext
 ): StageEvent[] {
   switch (event.type) {
+    case "voice.session_created":
+      return [
+        {
+          type: "agent.progress",
+          payload: {
+            id: createEventId(context, "session_created", event.timestamp),
+            threadId: context.threadId,
+            agentName: "Realtime voice broker",
+            type: "started",
+            summary: "Realtime session created.",
+            details:
+              "The Realtime server acknowledged the live session for this intent thread.",
+            timestamp: event.timestamp
+          }
+        }
+      ];
     case "voice.capture_started":
       return [
         {
@@ -57,6 +73,36 @@ export function mapRealtimeVoiceEventToStageEvents(
             text: event.text,
             spokenAt: event.timestamp,
             source: "stage_status"
+          }
+        }
+      ];
+    case "voice.response_started":
+      return [
+        {
+          type: "agent.progress",
+          payload: {
+            id: createEventId(context, "response_started", event.timestamp),
+            threadId: context.threadId,
+            agentName: "Realtime voice broker",
+            type: "started",
+            summary: "Realtime response started.",
+            details:
+              "The Realtime server started composing a response for the active stage session.",
+            timestamp: event.timestamp
+          }
+        }
+      ];
+    case "voice.response_completed":
+      return [
+        {
+          type: "agent.progress",
+          payload: {
+            id: createEventId(context, "response_completed", event.timestamp),
+            threadId: context.threadId,
+            agentName: "Realtime voice broker",
+            type: "completed",
+            summary: "Realtime response completed.",
+            timestamp: event.timestamp
           }
         }
       ];

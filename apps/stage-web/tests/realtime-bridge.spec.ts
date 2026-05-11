@@ -294,6 +294,42 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       }
     ).__blackstageEmitRealtimeServerEvent?.({
+      type: "session.created"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime session created."
+  );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "response.created"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime response started."
+  );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "response.done"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime response completed."
+  );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
       type: "conversation.item.input_audio_transcription.completed",
       transcript: "Draft the live session proof object."
     });

@@ -597,6 +597,49 @@ describe("Realtime voice session contracts", () => {
     assert.equal(stageEvent.payload.inputMode, "voice");
   });
 
+  it("maps realtime session and response lifecycle into visible agent events", () => {
+    const [sessionEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.session_created",
+        timestamp: "2026-05-10T23:52:00.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+    const [startedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.response_started",
+        timestamp: "2026-05-10T23:52:03.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+    const [completedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.response_completed",
+        timestamp: "2026-05-10T23:52:13.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.equal(sessionEvent?.type, "agent.progress");
+    assert.equal(sessionEvent.payload.type, "started");
+    assert.equal(sessionEvent.payload.summary, "Realtime session created.");
+    assert.equal(startedEvent?.type, "agent.progress");
+    assert.equal(startedEvent.payload.type, "started");
+    assert.equal(startedEvent.payload.summary, "Realtime response started.");
+    assert.equal(completedEvent?.type, "agent.progress");
+    assert.equal(completedEvent.payload.type, "completed");
+    assert.equal(completedEvent.payload.summary, "Realtime response completed.");
+  });
+
   it("maps realtime assistant speech without storing partial deltas", () => {
     const partialEvents = mapRealtimeVoiceEventToStageEvents(
       {
@@ -781,6 +824,40 @@ describe("Realtime voice session contracts", () => {
       type: "voice.assistant_speech",
       text: "The stage is ready.",
       timestamp: "2026-05-10T00:00:02.000Z"
+    });
+  });
+
+  it("parses realtime session and response lifecycle events", () => {
+    const sessionCreated = parseRealtimeVoiceServerEvent(
+      {
+        type: "session.created"
+      },
+      "2026-05-10T00:00:08.000Z"
+    );
+    const responseStarted = parseRealtimeVoiceServerEvent(
+      {
+        type: "response.created"
+      },
+      "2026-05-10T00:00:09.000Z"
+    );
+    const responseCompleted = parseRealtimeVoiceServerEvent(
+      {
+        type: "response.done"
+      },
+      "2026-05-10T00:00:10.000Z"
+    );
+
+    assert.deepEqual(sessionCreated, {
+      type: "voice.session_created",
+      timestamp: "2026-05-10T00:00:08.000Z"
+    });
+    assert.deepEqual(responseStarted, {
+      type: "voice.response_started",
+      timestamp: "2026-05-10T00:00:09.000Z"
+    });
+    assert.deepEqual(responseCompleted, {
+      type: "voice.response_completed",
+      timestamp: "2026-05-10T00:00:10.000Z"
     });
   });
 
