@@ -718,6 +718,58 @@ export function App() {
     [emitStageEvent, memoryRecords, thread.id]
   );
 
+  const startLocalHarnessRun = useCallback(
+    (
+      options: {
+        source?: IntentSubmissionSource;
+        commandText?: string;
+      } = {}
+    ) => {
+      const startedAt = new Date().toISOString();
+      const runId = Date.now().toString(36);
+      const source = options.source ?? "text";
+
+      emitStageEvent({
+        type: "user.intervention",
+        payload: {
+          interventionId: `intervention_harness_run_${runId}`,
+          threadId: thread.id,
+          interventionType: "redirect",
+          commandAction: "run_harness",
+          commandValue: "local_harness",
+          commandText: options.commandText ?? "Run harness",
+          commandInputMode: source === "voice" ? "voice" : "text",
+          timestamp: startedAt
+        }
+      });
+      scheduleTimedEvents(
+        createBuildBlackstageHarnessStageEvents(
+          thread.id,
+          startedAt,
+          120,
+          `live_harness_${runId}`,
+          "Live harness recorder"
+        )
+      );
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech(
+          "Starting the local harness. No external systems are touched.",
+          {
+            threadId: thread.id
+          }
+        );
+      }
+    },
+    [
+      emitAssistantSpeech,
+      emitStageEvent,
+      scheduleTimedEvents,
+      stageVoiceEnabled,
+      thread.id
+    ]
+  );
+
   const runIntent = useCallback(
     (
       intentText: string,
@@ -727,6 +779,14 @@ export function App() {
       } = {}
     ) => {
       const source = options.source ?? (scenarioId ? "scenario" : "text");
+
+      if (!scenarioId && parseRunHarnessCommand(intentText)) {
+        startLocalHarnessRun({
+          source,
+          commandText: intentText
+        });
+        return;
+      }
 
       if (!scenarioId && requestMemoryWrite(intentText)) {
         return;
@@ -811,6 +871,7 @@ export function App() {
       requestMemoryWrite,
       scheduleTimedEvents,
       sessionId,
+      startLocalHarnessRun,
       stageVoiceEnabled
     ]
   );
@@ -1130,30 +1191,6 @@ export function App() {
       scaleDelays: false
     });
   }, [activeScenario, emitStageEvent, pausedEvents, scheduleTimedEvents, thread.id]);
-
-  const startLocalHarnessRun = useCallback(() => {
-    const startedAt = new Date().toISOString();
-    const runId = Date.now().toString(36);
-
-    scheduleTimedEvents(
-      createBuildBlackstageHarnessStageEvents(
-        thread.id,
-        startedAt,
-        120,
-        `live_harness_${runId}`,
-        "Live harness recorder"
-      )
-    );
-
-    if (stageVoiceEnabled) {
-      emitAssistantSpeech(
-        "Starting the local harness. No external systems are touched.",
-        {
-          threadId: thread.id
-        }
-      );
-    }
-  }, [emitAssistantSpeech, scheduleTimedEvents, stageVoiceEnabled, thread.id]);
 
   const exportSession = useCallback(() => {
     const exportedAt = new Date().toISOString();
@@ -1947,6 +1984,19 @@ function parseMemoryRecallCommand(intentText: string): string | undefined {
 
 function parseMemoryReviewCommand(intentText: string): boolean {
   return REVIEW_MEMORY_COMMANDS.has(intentText.trim().toLowerCase());
+}
+
+function parseRunHarnessCommand(intentText: string): boolean {
+  const normalizedIntent = normalizeCommandText(intentText);
+
+  return (
+    normalizedIntent === "run harness" ||
+    normalizedIntent === "start harness" ||
+    normalizedIntent === "run local harness" ||
+    normalizedIntent === "start local harness" ||
+    normalizedIntent === "run background harness" ||
+    normalizedIntent === "start background harness"
+  );
 }
 
 function parseArtifactRevisionCommand(intentText: string): string | undefined {

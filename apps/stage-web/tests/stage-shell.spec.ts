@@ -1640,6 +1640,61 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
   expect(inputModeWasVoice).toBe(true);
 });
 
+test("Stage Shell v0 starts the local harness from a spoken command", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await installFakeSpeechRecognition(page);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
+
+  await emitFakeSpeechFinal(page, "run harness");
+
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Live harness recorder"
+  );
+
+  const harnessCommandEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              command_action?: string;
+              command_input_mode?: string;
+            };
+          }>;
+        })
+      : undefined;
+
+    return (
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "run_harness" &&
+          event.payload?.command_input_mode === "voice"
+      ) ?? false
+    );
+  });
+
+  expect(harnessCommandEvidence).toBe(true);
+});
+
 test("Stage Shell v0 applies spoken correction commands to stage objects", async ({
   page
 }) => {
