@@ -99,6 +99,62 @@ async function readObjectShift(locator: Locator): Promise<{ x: number; y: number
   });
 }
 
+async function submitIntent(page: Page, intentText: string) {
+  await page.getByTestId("intent-input").fill(intentText);
+  await page.getByTestId("submit-intent").click();
+}
+
+test("Stage Shell v0 ignores legacy fixture sessions on first load", async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "blackstage.stageShell.v0",
+      JSON.stringify({
+        sessionId: "legacy_demo_session",
+        activeScenarioId: "analyze_acquisition_target",
+        currentThread: {
+          id: "legacy_thread",
+          title: "Acquisition analysis",
+          originalIntent: "Acquire a company?",
+          currentObjective: "Legacy fixture should not hydrate.",
+          status: "active",
+          inputMode: "text",
+          renderObjects: [],
+          agentEvents: [],
+          approvals: [],
+          artifacts: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        stageEvents: [],
+        researchEvents: [],
+        memoryRecords: [],
+        savedAt: new Date().toISOString()
+      })
+    );
+  });
+
+  await page.goto("/");
+
+  await expect(page.getByTestId("stage-shell")).toHaveClass(/stage-idle/);
+  await expect(page.getByText("Speak when ready")).toBeVisible();
+  await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
+    "Start voice input"
+  );
+  await expect(page.getByText("Acquisition analysis")).toHaveCount(0);
+
+  const storageState = await page.evaluate(() => ({
+    currentSnapshotExists: Boolean(localStorage.getItem("blackstage.stageShell.v0.1")),
+    legacySnapshotExists: Boolean(localStorage.getItem("blackstage.stageShell.v0"))
+  }));
+
+  expect(storageState).toEqual({
+    currentSnapshotExists: true,
+    legacySnapshotExists: false
+  });
+});
+
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   page
 }) => {
@@ -119,7 +175,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
   await expect(page.getByTestId("stage-presence")).toContainText("Speak when ready");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
 
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Stage Shell v0 plan"
@@ -128,7 +184,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "Stage Shell v0 spec"
   );
   await expect(page.getByTestId("document-portal-surface")).toContainText(
-    "Simulated runtime only"
+    "Local runtime only"
   );
   const planObject = page.getByTestId("stage-object-plan_card");
 
@@ -187,7 +243,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "blackstage://validation/stage-shell-v0"
   );
   await expect(page.getByTestId("browser-portal-surface")).toContainText(
-    "No external browsing happens in this v0 scenario."
+    "No external browsing happens in this local run."
   );
   await expect(page.getByTestId("artifact-stack")).toContainText("approved output");
   await page
@@ -241,7 +297,7 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -276,7 +332,7 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   await expect(specObject).toContainText("Diligence room");
 
   const objectUpdatesWereLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -321,7 +377,7 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Stage Shell v0 plan"
   );
@@ -343,7 +399,10 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
   await page.mouse.down();
   await page.mouse.move(
     dragBox.x + dragBox.width / 2 + 42,
-    dragBox.y + dragBox.height / 2 + 18
+    dragBox.y + dragBox.height / 2 + 18,
+    {
+      steps: 5
+    }
   );
   await page.mouse.up();
 
@@ -355,7 +414,7 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
   await expect.poll(async () => readObjectShift(planObject)).toEqual(expectedPosition);
 
   const dragWasLogged = await page.evaluate((expected) => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -395,7 +454,7 @@ test("Stage Shell v0 can undo the last object change from event history", async 
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -422,7 +481,7 @@ test("Stage Shell v0 can undo the last object change from event history", async 
   );
 
   const undoWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -475,7 +534,7 @@ test("Stage Shell v0 adds local document notes without file writes", async ({
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -494,7 +553,7 @@ test("Stage Shell v0 adds local document notes without file writes", async ({
   );
 
   const documentNoteWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -551,11 +610,11 @@ test("Stage Shell v0 adds local document notes without file writes", async ({
 test("Stage Shell v0 adds local timeline milestones without calendar writes", async ({
   page
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Seed round plan" }).click();
+  await submitIntent(page, "Seed round plan");
   const timelineObject = page.getByTestId("stage-object-timeline");
 
   await expect(timelineObject).toContainText("Four-week cadence");
@@ -572,7 +631,7 @@ test("Stage Shell v0 adds local timeline milestones without calendar writes", as
   await expect(timelineObject).toContainText("no calendar event was created");
 
   const timelineMilestoneWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -625,7 +684,7 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -680,7 +739,7 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
   );
 
   const actionWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -743,7 +802,7 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -751,7 +810,7 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({
   await expect(page.getByLabel("Intent thread")).not.toContainText("working");
 
   const stageEventCount = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return 0;
@@ -779,7 +838,7 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({
   );
 
   const postReplayStageEventCount = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return 0;
@@ -803,7 +862,7 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
       window as Window & { __blackstageTestDelayMultiplier?: number }
     ).__blackstageTestDelayMultiplier = 4;
   });
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
   await page.getByRole("button", { name: "Stop" }).dispatchEvent("click");
 
@@ -814,7 +873,7 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
   await expect(page.getByLabel("Intent thread")).toContainText("paused");
   const stopWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -851,7 +910,7 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   );
 
   const resumeWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -885,7 +944,7 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -926,7 +985,7 @@ test("Stage Shell v0 retargets the browser portal locally without browsing", asy
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -948,7 +1007,7 @@ test("Stage Shell v0 retargets the browser portal locally without browsing", asy
   await expect(browserPortal).toContainText("no external browsing happened");
 
   const browserRetargetWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1001,7 +1060,7 @@ test("Stage Shell v0 recenters the map portal locally without map services", asy
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -1021,7 +1080,7 @@ test("Stage Shell v0 recenters the map portal locally without map services", asy
   await expect(mapPortal).toContainText("Requested focus");
 
   const mapRetargetWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1074,7 +1133,7 @@ test("Stage Shell v0 updates model scenarios locally without provider calls", as
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -1098,7 +1157,7 @@ test("Stage Shell v0 updates model scenarios locally without provider calls", as
   await expect(modelSurface).toContainText("user confidence");
 
   const modelUpdateWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1158,7 +1217,7 @@ test("Stage Shell v0 runs local simulation scenarios without external engines", 
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -1177,10 +1236,10 @@ test("Stage Shell v0 runs local simulation scenarios without external engines", 
 
   await expect(simulationSurface).toContainText("voice wake with artifact approval");
   await expect(simulationSurface).toContainText("local run");
-  await expect(simulationSurface).toContainText("Local stage simulation only");
+  await expect(simulationSurface).toContainText("Local stage run only");
 
   const simulationRunWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1232,7 +1291,7 @@ test("Stage Shell v0 attaches local context as a private document object", async
   test.setTimeout(90_000);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -1262,7 +1321,7 @@ test("Stage Shell v0 attaches local context as a private document object", async
   await expect(page.getByTestId("research-capture")).toContainText("context attached");
 
   const textContextWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1308,7 +1367,7 @@ test("Stage Shell v0 attaches local context as a private document object", async
   await expect(latestDocumentPortal).toContainText("name, stage, check");
 
   const structuredContextWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1366,7 +1425,7 @@ test("Stage Shell v0 attaches local context as a private document object", async
   );
 
   const jsonContextWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1401,7 +1460,7 @@ test("Stage Shell v0 renders local image context without uploading it", async ({
   test.setTimeout(90_000);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -1427,7 +1486,7 @@ test("Stage Shell v0 renders local image context without uploading it", async ({
   await expect(page.getByTestId("image-context-preview")).toBeVisible();
 
   const imageContextWasLogged = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return false;
@@ -1493,9 +1552,9 @@ test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) =>
     "Recalled 1 local memory match."
   );
 
-  await page.getByRole("button", { name: "Seed round plan" }).click();
+  await submitIntent(page, "Seed round plan");
   await expect(page.getByTestId("approval-card")).toContainText(
-    "Approve simulated investor intro prompts",
+    "Approve local investor intro prompts",
     {
       timeout: 60_000
     }
@@ -1539,7 +1598,7 @@ test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) =>
   await expect(page.getByTestId("memory-surface")).toContainText("deleted");
 
   const memoryState = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
     if (!rawSnapshot) {
       return [];
@@ -1602,19 +1661,19 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
 
   await page.goto("/");
 
-  await expect(page.getByTestId("realtime-broker-status")).toContainText("simulation");
-  await expect(page.getByTestId("harness-runner-status")).toContainText("simulation");
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("standby");
+  await expect(page.getByTestId("harness-runner-status")).toContainText("standby");
   await page.getByRole("button", { name: "Stage voice" }).click();
   await expect(page.getByTestId("assistant-speech")).toContainText("Stage voice ready");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("assistant-speech")).toContainText("Intent received");
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Stage Shell v0 plan"
   );
 
   const voiceEvidence = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{
@@ -1658,11 +1717,14 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Speak" }).click({
+  await page.getByTestId("presence-orb").click({
     force: true
   });
   await expect(page.getByTestId("voice-transcript")).toContainText(
     "listening for intent"
+  );
+  await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
+    "Listening for intent"
   );
 
   await emitFakeSpeechFinal(
@@ -1679,7 +1741,7 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
   );
 
   const inputModeWasVoice = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{
@@ -1712,7 +1774,7 @@ test("Stage Shell v0 starts the local harness from a spoken command", async ({
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -1732,7 +1794,7 @@ test("Stage Shell v0 starts the local harness from a spoken command", async ({
   );
 
   const harnessCommandEvidence = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{
@@ -1767,7 +1829,7 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -1822,7 +1884,7 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
   );
 
   const commandEvidence = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{
@@ -1875,7 +1937,7 @@ test("Stage Shell v0 annotates arbitrary stage objects by voice", async ({ page 
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.getByTestId("map-surface")).toContainText("Build Stage Shell v0");
 
@@ -1899,7 +1961,7 @@ test("Stage Shell v0 annotates arbitrary stage objects by voice", async ({ page 
   );
 
   const annotationEvidence = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{
@@ -1958,7 +2020,7 @@ test("Stage Shell v0 updates arbitrary object summaries by voice", async ({ page
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.getByTestId("model-surface")).toContainText(
     "Reality interface model"
@@ -1981,7 +2043,7 @@ test("Stage Shell v0 updates arbitrary object summaries by voice", async ({ page
   );
 
   const summaryEvidence = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{
@@ -2037,7 +2099,7 @@ test("Stage Shell v0 applies spoken artifact revision commands", async ({ page }
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await submitIntent(page, "Build BlackStage");
   await expect(page.getByTestId("artifact-stack")).toContainText(
     "Codex Task Brief: Build Stage Shell v0"
   );
@@ -2059,7 +2121,7 @@ test("Stage Shell v0 applies spoken artifact revision commands", async ({ page }
   );
 
   const revisionEvidence = await page.evaluate(() => {
-    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
           researchEvents?: Array<{

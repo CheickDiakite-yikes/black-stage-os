@@ -2,6 +2,16 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { loadLocalEnvFile } from "./local-env.mjs";
+import {
+  REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS,
+  REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR,
+  createRealtimeLiveSmokeCheapGuard
+} from "./realtime-live-smoke-cheap-guard.mjs";
+
+export {
+  REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS,
+  REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR
+} from "./realtime-live-smoke-cheap-guard.mjs";
 
 export const REALTIME_LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 export const REALTIME_SAFETY_IDENTIFIER_ENV_VAR =
@@ -9,10 +19,7 @@ export const REALTIME_SAFETY_IDENTIFIER_ENV_VAR =
 export const REALTIME_RUN_APPROVAL_TOKEN_ENV_VAR =
   "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN";
 export const REALTIME_SMOKE_PROOF_PATH_ENV_VAR = "BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH";
-export const REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR =
-  "BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS";
 export const OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY";
-export const REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS = 15_000;
 
 export function createRealtimeSmokeEnvPlan(options = {}) {
   const repoRoot = resolve(options.repoRoot ?? process.cwd());
@@ -40,11 +47,9 @@ export function createRealtimeSmokeEnvPlan(options = {}) {
       [REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR]: String(REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS)
     },
     command: "pnpm smoke:realtime",
-    cheapTestGuard: {
-      browserSendsAudio: false,
-      liveFlagMustBeShellExport: true,
-      timeoutCapMs: REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS
-    },
+    cheapTestGuard: createRealtimeLiveSmokeCheapGuard({
+      env: options.env ?? process.env
+    }),
     browserReceivesStandardApiKey: false,
     writesEnvFile: false,
     openAiNetworkCallWouldRunAfterExport: openAiApiKeyStatus === "set"

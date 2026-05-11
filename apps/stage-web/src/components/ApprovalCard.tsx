@@ -22,7 +22,11 @@ export function ApprovalCard({
   const isPending = approval.status === "pending";
 
   return (
-    <section className="approval-card" aria-label="Approval request" data-testid="approval-card">
+    <section
+      className="approval-card"
+      aria-label="Approval request"
+      data-testid="approval-card"
+    >
       <div className="panel-heading">
         <span>{isPending ? "Approval needed" : "Approval resolved"}</span>
         <strong>{approval.riskLevel}</strong>
@@ -49,8 +53,8 @@ export function ApprovalCard({
       </dl>
       {explanationVisible ? (
         <p className="approval-explanation">
-          This gate exists because the proposed action would matter outside the stage in a real
-          deployment. V0 keeps it simulated and local.
+          This gate exists because the proposed action would matter outside the stage in
+          a real deployment. V0 keeps it local and approval-gated.
         </p>
       ) : null}
       <div className="approval-actions">
@@ -60,7 +64,12 @@ export function ApprovalCard({
         <button type="button" onClick={onReject} disabled={!isPending}>
           Reject
         </button>
-        <button className="primary-action" type="button" onClick={onApprove} disabled={!isPending}>
+        <button
+          className="primary-action"
+          type="button"
+          onClick={onApprove}
+          disabled={!isPending}
+        >
           Approve
         </button>
       </div>

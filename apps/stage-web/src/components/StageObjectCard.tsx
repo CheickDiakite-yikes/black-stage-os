@@ -1,6 +1,6 @@
 import type { StageObject } from "@blackstage/stage-core";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type StageObjectCardProps = {
   object: StageObject;
@@ -33,7 +33,7 @@ const objectLabels: Record<StageObject["type"], string> = {
   plan_card: "Plan",
   research_note: "Research",
   risk_matrix: "Risk",
-  simulation_card: "Simulation",
+  simulation_card: "Rehearsal",
   table: "Table",
   timeline: "Timeline"
 };
@@ -54,6 +54,7 @@ export function StageObjectCard({
       }
     | undefined
   >(undefined);
+  const dragCleanupRef = useRef<(() => void) | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
   const objectStyle = {
     "--object-shift-x": `${object.position?.x ?? 0}px`,
@@ -61,18 +62,46 @@ export function StageObjectCard({
   } as CSSProperties;
 
   function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragStartRef.current = {
+    const dragStart = {
       pointerX: event.clientX,
       pointerY: event.clientY,
       objectX: object.position?.x ?? 0,
       objectY: object.position?.y ?? 0
     };
+    dragStartRef.current = dragStart;
     setIsDragging(true);
+
+    const moveWindowDrag = (moveEvent: PointerEvent) => {
+      const nextX = dragStart.objectX + moveEvent.clientX - dragStart.pointerX;
+      const nextY = dragStart.objectY + moveEvent.clientY - dragStart.pointerY;
+
+      onMove(object.id, {
+        x: Math.round(nextX),
+        y: Math.round(nextY),
+        z: object.position?.z
+      });
+    };
+    const endWindowDrag = () => {
+      setIsDragging(false);
+      dragStartRef.current = undefined;
+      cleanupWindowDrag();
+    };
+    const cleanupWindowDrag = () => {
+      window.removeEventListener("pointermove", moveWindowDrag);
+      window.removeEventListener("pointerup", endWindowDrag);
+      dragCleanupRef.current = undefined;
+    };
+
+    dragCleanupRef.current?.();
+    dragCleanupRef.current = cleanupWindowDrag;
+    window.addEventListener("pointermove", moveWindowDrag);
+    window.addEventListener("pointerup", endWindowDrag);
   }
 
   function moveDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!dragStartRef.current || !isDragging) {
+    if (!dragStartRef.current) {
       return;
     }
 
@@ -95,7 +124,15 @@ export function StageObjectCard({
 
     setIsDragging(false);
     dragStartRef.current = undefined;
+    dragCleanupRef.current?.();
   }
+
+  useEffect(
+    () => () => {
+      dragCleanupRef.current?.();
+    },
+    []
+  );
 
   function nudgeObject() {
     onMove(object.id, {
@@ -104,6 +141,12 @@ export function StageObjectCard({
       z: object.position?.z
     });
   }
+
+  const focusLabel = `Focus ${object.title}`;
+  const pinLabel = `${object.pinned ? "Unpin" : "Pin"} ${object.title}`;
+  const collapseLabel = `${object.state === "collapsed" ? "Expand" : "Collapse"} ${object.title}`;
+  const moveLabel = `Move ${object.title}`;
+  const dragLabel = `Drag ${object.title}`;
 
   return (
     <article
@@ -120,43 +163,48 @@ export function StageObjectCard({
       <div className="object-actions" aria-label={`Object actions for ${object.title}`}>
         <button
           type="button"
-          aria-label={`Focus ${object.title}`}
+          aria-label={focusLabel}
+          title={focusLabel}
           onClick={() => onFocus(object.id)}
         >
-          Focus
+          <span aria-hidden="true">⌖</span>
         </button>
         <button
           type="button"
-          aria-label={`Pin ${object.title}`}
+          aria-label={pinLabel}
+          title={pinLabel}
           onClick={() => onPinToggle(object.id)}
         >
-          {object.pinned ? "Unpin" : "Pin"}
+          <span aria-hidden="true">{object.pinned ? "◆" : "◇"}</span>
         </button>
         <button
           type="button"
-          aria-label={`${object.state === "collapsed" ? "Expand" : "Collapse"} ${object.title}`}
+          aria-label={collapseLabel}
+          title={collapseLabel}
           onClick={() => onCollapseToggle(object.id)}
         >
-          {object.state === "collapsed" ? "Expand" : "Collapse"}
+          <span aria-hidden="true">{object.state === "collapsed" ? "+" : "−"}</span>
         </button>
         <button
           className="object-drag-handle"
           type="button"
-          aria-label={`Move ${object.title}`}
+          aria-label={moveLabel}
+          title={moveLabel}
           onClick={nudgeObject}
         >
-          Move
+          <span aria-hidden="true">↘</span>
         </button>
         <button
           className="object-drag-handle"
           type="button"
-          aria-label={`Drag ${object.title}`}
+          aria-label={dragLabel}
+          title={dragLabel}
           onPointerDown={startDrag}
           onPointerMove={moveDrag}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
-          Drag
+          <span aria-hidden="true">⋮⋮</span>
         </button>
       </div>
       <h2>{object.title}</h2>
@@ -249,7 +297,7 @@ function BrowserPortalSurface({ payload }: { payload: unknown }) {
       className="portal-surface browser-portal-surface"
       data-testid="browser-portal-surface"
     >
-      <div className="browser-bar" aria-label="Simulated browser portal">
+      <div className="browser-bar" aria-label="Local browser portal">
         <span className="browser-dot" />
         <code>{formatPayloadValue(payload.url ?? "blackstage://stage")}</code>
         <span>{formatPayloadValue(payload.status ?? "ready")}</span>
@@ -312,9 +360,9 @@ function MapPortalSurface({ payload }: { payload: unknown }) {
     <div className="cognitive-surface map-surface" data-testid="map-surface">
       <div className="portal-strip">
         <span>map</span>
-        <span>{formatPayloadValue(payload.status ?? "simulated")}</span>
+        <span>{formatPayloadValue(payload.status ?? "local")}</span>
       </div>
-      <div className="map-field" aria-label="Simulated object map">
+      <div className="map-field" aria-label="Local object map">
         <span className="map-center">
           {formatPayloadValue(payload.center ?? "Intent")}
         </span>
@@ -354,10 +402,10 @@ function SimulationSurface({ payload }: { payload: unknown }) {
       data-testid="simulation-surface"
     >
       <div className="portal-strip">
-        <span>simulation</span>
+        <span>local run</span>
         <span>{formatPayloadValue(payload.status ?? "queued")}</span>
       </div>
-      <h3>{formatPayloadValue(payload.simulationTitle ?? "Simulation")}</h3>
+      <h3>{formatPayloadValue(payload.simulationTitle ?? "Rehearsal")}</h3>
       <ol>
         {steps.slice(0, 4).map((step, index) => (
           <li key={`${index}_${formatPayloadValue(step.label ?? "step")}`}>

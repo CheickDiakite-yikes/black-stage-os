@@ -1197,7 +1197,10 @@ export function App() {
         ? 0
         : performance.now() - activeRunStartedAtRef.current;
     const remainingEvents = activeTimedEventsRef.current
-      .filter((timedEvent) => timedEvent.delayMs > elapsedMs)
+      .filter(
+        (timedEvent) =>
+          timedEvent.delayMs > elapsedMs && timedEvent.event.type !== "thread.created"
+      )
       .map((timedEvent, index) => ({
         ...timedEvent,
         id: `${timedEvent.id}_resumable_${index}`,
@@ -1215,11 +1218,11 @@ export function App() {
       id: `agent_stop_${Date.now().toString(36)}`,
       threadId: thread.id,
       taskId: activeScenario ? `${activeScenario.id}_task` : undefined,
-      agentName: "Blackstage simulated operator",
+      agentName: "Blackstage local operator",
       type: "cancelled",
       summary: "Stopped by user.",
       details:
-        "Pending simulated work was cancelled and the existing work trace was preserved.",
+        "Pending local work was cancelled and the existing work trace was preserved.",
       timestamp: stoppedAt
     };
 
@@ -1257,10 +1260,10 @@ export function App() {
       id: `agent_resume_${Date.now().toString(36)}`,
       threadId: thread.id,
       taskId: activeScenario ? `${activeScenario.id}_task` : undefined,
-      agentName: "Blackstage simulated operator",
+      agentName: "Blackstage local operator",
       type: "started",
       summary: "Resumed by user.",
-      details: "Pending simulated work is continuing from the preserved event queue.",
+      details: "Pending local work is continuing from the preserved event queue.",
       timestamp: resumedAt
     };
 
@@ -1994,7 +1997,6 @@ export function App() {
       realtimeBrokerReadiness={realtimeBrokerReadiness}
       realtimeBrokerProofs={realtimeBrokerProofs}
       realtimeMicPreflight={realtimeMicPreflight}
-      scenarios={stageShellScenarios}
       stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}
       thread={thread}
@@ -2712,7 +2714,7 @@ function getStageObjectAliases(object: StageObject): string[] {
     case "research_note":
       return ["research", "research note"];
     case "simulation_card":
-      return ["simulation", "simulator", "demo simulator"];
+      return ["simulation", "simulator", "rehearsal"];
     case "codex_task_card":
       return ["task", "codex task", "prompt"];
     case "intent_card":
@@ -2987,11 +2989,11 @@ function applySimulationRunCommand(
         },
         {
           label: "Boundary",
-          value: "Local stage simulation only; no external engine was called."
+          value: "Local stage run only; no external engine was called."
         },
         ...steps
       ].slice(0, 5),
-      guardrail: "Simulation run is represented locally for audit and replay."
+      guardrail: "The run is represented locally for audit and replay."
     }
   };
 }

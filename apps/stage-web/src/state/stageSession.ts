@@ -10,7 +10,9 @@ import type {
 } from "@blackstage/stage-core";
 import type { MemoryVaultRecord } from "@blackstage/memory-core";
 
-const STORAGE_KEY = "blackstage.stageShell.v0";
+export const STAGE_SESSION_STORAGE_KEY = "blackstage.stageShell.v0.1";
+
+const LEGACY_STORAGE_KEYS = ["blackstage.stageShell.v0"];
 
 export type StageSessionSnapshot = {
   sessionId: string;
@@ -22,7 +24,9 @@ export type StageSessionSnapshot = {
   savedAt: string;
 };
 
-export function createStageSession(sessionId = createSessionId()): StageSessionSnapshot {
+export function createStageSession(
+  sessionId = createSessionId()
+): StageSessionSnapshot {
   return {
     sessionId,
     stageEvents: [],
@@ -34,7 +38,11 @@ export function createStageSession(sessionId = createSessionId()): StageSessionS
 
 export function loadStageSession(): StageSessionSnapshot | undefined {
   try {
-    const rawSnapshot = localStorage.getItem(STORAGE_KEY);
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
+      localStorage.removeItem(legacyKey);
+    }
+
+    const rawSnapshot = localStorage.getItem(STAGE_SESSION_STORAGE_KEY);
 
     if (!rawSnapshot) {
       return undefined;
@@ -48,7 +56,7 @@ export function loadStageSession(): StageSessionSnapshot | undefined {
 
 export function saveStageSession(snapshot: StageSessionSnapshot): void {
   localStorage.setItem(
-    STORAGE_KEY,
+    STAGE_SESSION_STORAGE_KEY,
     JSON.stringify({
       ...snapshot,
       savedAt: new Date().toISOString()
@@ -57,10 +65,17 @@ export function saveStageSession(snapshot: StageSessionSnapshot): void {
 }
 
 export function clearStageSession(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STAGE_SESSION_STORAGE_KEY);
+
+  for (const legacyKey of LEGACY_STORAGE_KEYS) {
+    localStorage.removeItem(legacyKey);
+  }
 }
 
-export function applyStageEventToThread(currentThread: IntentThread, stageEvent: StageEvent): IntentThread {
+export function applyStageEventToThread(
+  currentThread: IntentThread,
+  stageEvent: StageEvent
+): IntentThread {
   switch (stageEvent.type) {
     case "thread.created":
       return stageEvent.payload;

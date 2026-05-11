@@ -1,4 +1,5 @@
 import { loadLocalEnvFile, summarizeLocalEnvLoad } from "./local-env.mjs";
+import { createRealtimeLiveSmokeCheapGuard } from "./realtime-live-smoke-cheap-guard.mjs";
 
 export const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 export const REALTIME_REQUIRED_ENV_VARS = [
@@ -43,10 +44,7 @@ export function createRealtimeLivePreflight({
     missingEnv,
     openAiNetworkCallWouldRun: okToRun,
     browserReceivesStandardApiKey: false,
-    cheapTestGuard: {
-      liveCallRequiresExplicitArm: true,
-      browserSendsAudio: false
-    },
+    cheapTestGuard: createRealtimeLiveSmokeCheapGuard({ env }),
     notes
   };
 }

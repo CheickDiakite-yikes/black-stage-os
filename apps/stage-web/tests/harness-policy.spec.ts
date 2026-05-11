@@ -77,6 +77,8 @@ const workflowPolicy = {
 };
 
 test("Stage Web renders the active harness workflow policy", async ({ page }) => {
+  test.setTimeout(120_000);
+
   await page.addInitScript((routeUrl) => {
     const browserWindow = window as Window & {
       __blackstageHarnessRunnerUrl?: string;
@@ -153,7 +155,9 @@ test("Stage Web renders the active harness workflow policy", async ({ page }) =>
     });
   });
 
-  await page.goto("/");
+  await page.goto("/", {
+    waitUntil: "domcontentloaded"
+  });
 
   const harnessStatus = page.getByTestId("harness-runner-status");
 

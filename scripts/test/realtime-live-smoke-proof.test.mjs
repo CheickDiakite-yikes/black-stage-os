@@ -12,6 +12,12 @@ import {
   renderRealtimeSmokeEnvPlan
 } from "../prepare-realtime-smoke-env.mjs";
 import {
+  REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS,
+  assertRealtimeLiveSmokeOfferIsCheap,
+  createRealtimeLiveSmokeCheapGuard,
+  readRealtimeLiveSmokeTimeoutMs
+} from "../realtime-live-smoke-cheap-guard.mjs";
+import {
   REALTIME_SMOKE_PROOF_KIND,
   createRealtimeLiveSmokeProof,
   createRequiredEnvStatus,
@@ -42,6 +48,10 @@ describe("Realtime live smoke proof", () => {
       answerBytes: 2400,
       answerSha256Prefix: "abc123ef45ff",
       browserSendsAudio: false,
+      cheapTestGuard: createRealtimeLiveSmokeCheapGuard({
+        env: {},
+        offerSdp: "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+      }),
       localEnv: {
         loaded: true,
         envPath: ".env",
@@ -59,6 +69,13 @@ describe("Realtime live smoke proof", () => {
     assert.equal(proof.status, "passed");
     assert.equal(proof.browserReceivesStandardApiKey, false);
     assert.equal(proof.browserSendsAudio, false);
+    assert.equal(proof.cheapTestGuard.browserSendsAudio, false);
+    assert.equal(proof.cheapTestGuard.browserReceivesStandardApiKey, false);
+    assert.equal(proof.cheapTestGuard.offerMode, "data_channel_only");
+    assert.equal(proof.cheapTestGuard.maxProviderRequests, 1);
+    assert.equal(proof.cheapTestGuard.timeoutCapMs, 15_000);
+    assert.equal(proof.cheapTestGuard.offer.hasAudioMediaSection, false);
+    assert.equal(proof.cheapTestGuard.offer.hasDataChannelMediaSection, true);
     assert.equal(proof.openAiNetworkCallAttempted, true);
     assert.equal(proof.requiredEnv.OPENAI_API_KEY, "set");
     assert.deepEqual(proof.localEnv, {
@@ -227,7 +244,8 @@ describe("Realtime live smoke env plan", () => {
       createdAt: "2026-05-11T10:00:00.000Z",
       approvalToken: "token-demo",
       safetyIdentifier: "blackstage-local-demo",
-      openAiApiKeyStatus: "set"
+      openAiApiKeyStatus: "set",
+      env: {}
     });
     const rendered = renderRealtimeSmokeEnvPlan(plan);
 
@@ -236,8 +254,15 @@ describe("Realtime live smoke env plan", () => {
     assert.equal(plan.openAiNetworkCallWouldRunAfterExport, true);
     assert.deepEqual(plan.cheapTestGuard, {
       browserSendsAudio: false,
+      browserReceivesStandardApiKey: false,
       liveFlagMustBeShellExport: true,
-      timeoutCapMs: 15_000
+      liveCallRequiresExplicitArm: true,
+      offerMode: "data_channel_only",
+      dataChannelOnly: true,
+      rejectsAudioSdp: true,
+      maxProviderRequests: 1,
+      timeoutCapMs: 15_000,
+      effectiveTimeoutMs: 15_000
     });
     assert.match(rendered, /Cheap guard: SDP-only/);
     assert.match(rendered, /Safety guard: local env files/);
@@ -256,6 +281,46 @@ describe("Realtime live smoke env plan", () => {
     );
     assert.match(rendered, /export BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS='15000'/);
     assert.equal(rendered.includes(["OPENAI_API_KEY", "="].join("")), false);
+  });
+});
+
+describe("Realtime live smoke cheap guard", () => {
+  it("caps runner timeout requests to the cheap smoke limit", () => {
+    assert.equal(
+      readRealtimeLiveSmokeTimeoutMs({
+        BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS: "90000"
+      }),
+      REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS
+    );
+    assert.equal(
+      readRealtimeLiveSmokeTimeoutMs({
+        BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS: "5000"
+      }),
+      5_000
+    );
+    assert.equal(
+      readRealtimeLiveSmokeTimeoutMs({}),
+      REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS
+    );
+  });
+
+  it("accepts data-channel-only SDP offers", () => {
+    const summary = assertRealtimeLiveSmokeOfferIsCheap(
+      "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+    );
+
+    assert.equal(summary.hasAudioMediaSection, false);
+    assert.equal(summary.hasDataChannelMediaSection, true);
+    assert.equal(summary.hasVideoMediaSection, false);
+  });
+
+  it("rejects audio or non-data-channel SDP before provider exchange", () => {
+    assert.throws(() =>
+      assertRealtimeLiveSmokeOfferIsCheap("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n")
+    );
+    assert.throws(() =>
+      assertRealtimeLiveSmokeOfferIsCheap("v=0\r\no=- blackstage-empty\r\n")
+    );
   });
 });
 

@@ -46,6 +46,7 @@ The command:
 - starts a temporary local `apps/stage-broker` server on `127.0.0.1`;
 - launches headless Chromium through Playwright;
 - creates a data-channel-only WebRTC offer in the browser;
+- rejects any audio or non-data-channel SDP offer before the broker/provider exchange;
 - POSTs the SDP offer through the broker with `x-blackstage-realtime-approval`;
 - keeps the standard OpenAI API key server-side only;
 - sends no microphone/audio track;
@@ -60,7 +61,7 @@ To generate the non-API-key arming values for a controlled local shell, run:
 pnpm prepare:realtime-smoke
 ```
 
-The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, an ignored `.blackstage/` proof path, and the 15-second timeout request. It also prints comments stating the cheap guard: SDP-only, browser audio disabled, shell-only live arming. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
+The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, an ignored `.blackstage/` proof path, and the 15-second timeout request. It also prints comments stating the cheap guard: SDP-only, data-channel-only, browser audio disabled, shell-only live arming, and one provider request at most. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
 
 ## Redacted Proof File
 
@@ -71,7 +72,7 @@ BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH=.blackstage/realtime-smoke/latest.json \
 pnpm smoke:realtime
 ```
 
-The proof writer records only redacted metadata: pass/fail/skip status, set/unset env readiness, byte counts, a short answer digest, and safety booleans. It rejects proof paths outside `.blackstage/` and does not write raw SDP, API keys, approval phrases, or browser trace artifacts.
+The proof writer records only redacted metadata: pass/fail/skip status, set/unset env readiness, byte counts, a short answer digest, cheap-guard metadata, and safety booleans. It rejects proof paths outside `.blackstage/` and does not write raw SDP, API keys, approval phrases, or browser trace artifacts.
 
 The local broker also exposes read-only summaries at:
 

@@ -81,14 +81,14 @@ function createAgentEvent(
     id: `${scenarioId}_agent_${index}`,
     threadId,
     taskId: `${scenarioId}_task`,
-    agentName: "Blackstage simulated operator",
+    agentName: "Blackstage operator",
     type,
     summary,
     details,
     evidence: [
       {
         id: `${scenarioId}_evidence_${index}`,
-        label: "Simulated evidence trail",
+        label: "Local evidence trail",
         sourceType: "agent_log",
         excerpt: "Synthetic v0 event used to study the Stage Shell interaction model."
       }
@@ -115,7 +115,7 @@ function createArtifact(
     provenance: [
       {
         id: `${scenarioId}_artifact_provenance`,
-        label: "Generated from simulated Stage Shell run",
+        label: "Generated from local Stage Shell run",
         sourceType: "agent_log"
       }
     ],
@@ -142,10 +142,10 @@ function createApproval(
     title,
     summary,
     riskLevel,
-    proposedBy: "Blackstage simulated operator",
+    proposedBy: "Blackstage operator",
     scope,
     consequence,
-    undoPath: "This v0 approval is simulated. No external system will be touched.",
+    undoPath: "This v0 approval is local. No external system will be touched.",
     status: "pending",
     createdAt
   };
@@ -279,7 +279,7 @@ export const stageShellScenarios: StageShellScenario[] = [
     "Acquisition Diligence Thread",
     "Help me understand whether I should acquire this company and produce a diligence memo.",
     "Shape a buy-side diligence workspace with visible assumptions, risks, and a memo artifact.",
-    "The stage assembles a finance, market, risk, and approval surface around a simulated acquisition target.",
+    "The stage assembles a finance, market, risk, and approval surface around a local acquisition target.",
     "External outreach requires explicit approval.",
     [
       {
@@ -326,7 +326,7 @@ export const stageShellScenarios: StageShellScenario[] = [
           "A simple base/upside/downside acquisition model stays visible as assumptions move.",
         payload: {
           modelTitle: "Acquisition sensitivity model",
-          status: "simulated",
+          status: "local",
           scenarios: [
             { label: "Base", value: "4.2x ARR", confidence: "medium" },
             { label: "Upside", value: "5.1x ARR", confidence: "low" },
@@ -338,10 +338,10 @@ export const stageShellScenarios: StageShellScenario[] = [
         type: "map_portal",
         title: "Market map",
         summary:
-          "Competitors, customers, and diligence gaps are arranged as a simulated market surface.",
+          "Competitors, customers, and diligence gaps are arranged as a local market surface.",
         payload: {
           center: "TargetCo",
-          status: "simulated",
+          status: "local",
           nodes: [
             { label: "Enterprise buyers", angle: 18, distance: 42 },
             { label: "Vertical incumbents", angle: 132, distance: 54 },
@@ -352,7 +352,7 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "artifact_card",
         title: "Memo forming",
-        summary: "A draft acquisition memo is being assembled from simulated evidence.",
+        summary: "A draft acquisition memo is being assembled from local evidence.",
         payload: {
           status: "drafting",
           artifactTitle: "Acquisition Diligence Memo"
@@ -364,11 +364,11 @@ export const stageShellScenarios: StageShellScenario[] = [
         type: "planned",
         summary: "Mapped the acquisition question into diligence workstreams.",
         details:
-          "The simulated runtime separated strategic fit, financial quality, risk, and memo output."
+          "The local runtime separated strategic fit, financial quality, risk, and memo output."
       },
       {
         type: "started",
-        summary: "Started simulated evidence review.",
+        summary: "Started local evidence review.",
         details: "No external browsing or private files are used in v0."
       },
       {
@@ -379,17 +379,17 @@ export const stageShellScenarios: StageShellScenario[] = [
       },
       {
         type: "approval_requested",
-        summary: "Approval needed before simulated outreach.",
+        summary: "Approval needed before local outreach.",
         details:
           "External banker/customer outreach is consequence-bearing and remains gated."
       }
     ],
     {
       actionType: "external_message",
-      title: "Approve simulated outreach brief",
+      title: "Approve local outreach brief",
       summary:
         "Prepare a draft outreach note to request confirmatory diligence materials.",
-      scope: "One simulated note to a fictional seller representative.",
+      scope: "One local note to a fictional seller representative.",
       consequence:
         "In a real system, this would contact an external party. V0 will only create prompt cards.",
       riskLevel: "high"
@@ -423,8 +423,7 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "research_note",
         title: "Research note",
-        summary:
-          "Visible risk gating made the simulated external action feel governed.",
+        summary: "Visible risk gating made the local external action feel governed.",
         payload: {
           insight:
             "Approval clarity is part of the product surface, not a modal afterthought."
@@ -439,7 +438,7 @@ export const stageShellScenarios: StageShellScenario[] = [
     "Help me plan a seed round and produce the next five investor actions.",
     "Turn fundraising intent into investor workflow, narrative, approvals, and task artifacts.",
     "The stage creates a founder-facing fundraising workspace with narrative, investor segmentation, and governed outbound.",
-    "Investor outreach is simulated and approval-gated.",
+    "Investor outreach is local and approval-gated.",
     [
       {
         type: "intent_card",
@@ -480,10 +479,10 @@ export const stageShellScenarios: StageShellScenario[] = [
         type: "map_portal",
         title: "Investor map",
         summary:
-          "A simulated relationship map keeps warm paths separate from cold outbound.",
+          "A local relationship map keeps warm paths separate from cold outbound.",
         payload: {
           center: "Founder thesis",
-          status: "simulated",
+          status: "local",
           nodes: [
             { label: "Warm angels", angle: 28, distance: 44 },
             { label: "Seed specialists", angle: 155, distance: 56 },
@@ -506,11 +505,11 @@ export const stageShellScenarios: StageShellScenario[] = [
         type: "planned",
         summary: "Converted fundraising intent into a staged operating plan.",
         details:
-          "The simulated operator prioritized narrative clarity before outbound volume."
+          "The local operator prioritized narrative clarity before outbound volume."
       },
       {
         type: "started",
-        summary: "Started simulated investor segmentation.",
+        summary: "Started local investor segmentation.",
         details: "No real investor data or email accounts are used."
       },
       {
@@ -520,15 +519,15 @@ export const stageShellScenarios: StageShellScenario[] = [
       },
       {
         type: "approval_requested",
-        summary: "Approval needed before simulated intro outreach.",
+        summary: "Approval needed before local intro outreach.",
         details: "The system will only create outbound prompt cards after approval."
       }
     ],
     {
       actionType: "external_message",
-      title: "Approve simulated investor intro prompts",
+      title: "Approve local investor intro prompts",
       summary: "Create draft prompts for investor intro emails without sending them.",
-      scope: "Three simulated investor prompt cards.",
+      scope: "Three local investor prompt cards.",
       consequence:
         "In a real system, outbound investor communication would create external commitments.",
       riskLevel: "high"
@@ -576,7 +575,7 @@ export const stageShellScenarios: StageShellScenario[] = [
     "Help me turn Black Stage OS into an engineering plan and give Codex the next three tasks.",
     "Transform the product thesis into a Stage Shell plan, visible build labor, and Codex task briefs.",
     "The stage turns its own build into a self-instrumented product/research loop.",
-    "Creating task briefs is local and simulated in v0.",
+    "Creating task briefs stays local in v0.",
     [
       {
         type: "intent_card",
@@ -595,7 +594,7 @@ export const stageShellScenarios: StageShellScenario[] = [
           slices: [
             "Event model",
             "Render field",
-            "Simulated runtime",
+            "Local runtime",
             "Approval/artifact loop",
             "Research capture"
           ]
@@ -620,7 +619,7 @@ export const stageShellScenarios: StageShellScenario[] = [
             },
             {
               label: "Boundary",
-              value: "Simulated runtime only; no real external actions."
+              value: "Local runtime only; no real external actions."
             }
           ]
         }
@@ -641,7 +640,7 @@ export const stageShellScenarios: StageShellScenario[] = [
         type: "planned",
         summary: "Read the product thesis as an interface constraint.",
         details:
-          "The simulation keeps the black field central and treats dashboard sprawl as a product bug."
+          "The local rehearsal keeps the black field central and treats dashboard sprawl as a product bug."
       },
       {
         type: "started",
@@ -720,7 +719,7 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "codex_task_card",
         title: "Task 3: Research instrumentation",
-        summary: "Log local redacted events, export session JSON, and score the demo.",
+        summary: "Log local redacted events, export session JSON, and score the proof.",
         payload: {
           acceptance: [
             "Research events captured",
@@ -736,23 +735,23 @@ export const stageShellScenarios: StageShellScenario[] = [
           "Self-hosting the build as a stage scenario tests whether the product can explain itself.",
         payload: {
           insight:
-            "The demo is strongest when the system's own labor is visible and governable."
+            "The proof is strongest when the system's own labor is visible and governable."
         }
       },
       {
         type: "browser_portal",
         title: "Validation browser",
         summary:
-          "A simulated browser lane shows where live validation evidence belongs without browsing externally.",
+          "A local browser lane shows where live validation evidence belongs without browsing externally.",
         payload: {
           url: "blackstage://validation/stage-shell-v0",
-          status: "simulated",
+          status: "local",
           observations: [
             "Stage loads from local dev server.",
             "Approval creates task objects.",
             "Artifact edits remain inspectable."
           ],
-          guardrail: "No external browsing happens in this v0 scenario."
+          guardrail: "No external browsing happens in this local run."
         }
       },
       {
@@ -762,7 +761,7 @@ export const stageShellScenarios: StageShellScenario[] = [
           "A compact model shows how intent turns into objects, approvals, and artifacts.",
         payload: {
           modelTitle: "Reality interface model",
-          status: "simulated",
+          status: "local",
           scenarios: [
             { label: "Intent", value: "thread created", confidence: "high" },
             { label: "Objects", value: "workspace formed", confidence: "high" },
@@ -777,7 +776,7 @@ export const stageShellScenarios: StageShellScenario[] = [
           "The stage arranges object families around the current intent instead of opening apps.",
         payload: {
           center: "Build Stage Shell v0",
-          status: "simulated",
+          status: "local",
           nodes: [
             { label: "Documents", angle: 8, distance: 42 },
             { label: "Browser", angle: 86, distance: 49 },
@@ -788,12 +787,12 @@ export const stageShellScenarios: StageShellScenario[] = [
       },
       {
         type: "simulation_card",
-        title: "Demo simulator",
+        title: "Experience rehearsal",
         summary:
-          "The system rehearses the first five-second experience as a simulated timeline.",
+          "The system rehearses the first five-second experience as a local timeline.",
         payload: {
           simulationTitle: "First five seconds",
-          status: "simulated",
+          status: "local",
           steps: [
             { label: "0s", value: "black field waits" },
             { label: "2s", value: "intent forms a thread" },
@@ -853,7 +852,7 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "research_note",
         title: "Insight clusters",
-        summary: "Three simulated clusters: trust, control, and artifact usefulness.",
+        summary: "Three local clusters: trust, control, and artifact usefulness.",
         payload: {
           clusters: [
             "Trust from visibility",
@@ -866,10 +865,10 @@ export const stageShellScenarios: StageShellScenario[] = [
         type: "simulation_card",
         title: "Next-test simulator",
         summary:
-          "A small simulated experiment compares the stage flow against chat-only output.",
+          "A small local experiment compares the stage flow against chat-only output.",
         payload: {
           simulationTitle: "Research comparison",
-          status: "simulated",
+          status: "local",
           steps: [
             { label: "Variant A", value: "chat-only synthesis" },
             { label: "Variant B", value: "stage objects plus approval" },
@@ -897,7 +896,7 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "planned",
         summary: "Separated product claims from build observations.",
-        details: "The simulation keeps research ethics visible."
+        details: "The local rehearsal keeps research ethics visible."
       },
       {
         type: "started",
@@ -911,13 +910,13 @@ export const stageShellScenarios: StageShellScenario[] = [
       },
       {
         type: "approval_requested",
-        summary: "Approval needed before simulated sharing.",
+        summary: "Approval needed before local sharing.",
         details: "Research sharing may expose private findings, so it is gated."
       }
     ],
     {
       actionType: "data_share",
-      title: "Approve simulated research share",
+      title: "Approve local research share",
       summary: "Create a share-ready synthesis brief with private details redacted.",
       scope: "One local share-preview artifact.",
       consequence: "In a real system, this could expose product research externally.",

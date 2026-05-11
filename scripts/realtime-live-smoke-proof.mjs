@@ -23,6 +23,7 @@ export function createRealtimeLiveSmokeProof(input) {
     openAiNetworkCallAttempted: Boolean(input.openAiNetworkCallAttempted),
     browserReceivesStandardApiKey: false,
     browserSendsAudio: Boolean(input.browserSendsAudio),
+    cheapTestGuard: normalizeCheapTestGuard(input.cheapTestGuard),
     requiredEnv: normalizeRequiredEnv(input.requiredEnv ?? {}),
     localEnv: normalizeLocalEnv(input.localEnv),
     missingEnv: Array.isArray(input.missingEnv) ? input.missingEnv : [],
@@ -151,6 +152,46 @@ function normalizeDigest(value) {
   return typeof value === "string" && /^[a-f0-9]{8,64}$/i.test(value)
     ? value
     : undefined;
+}
+
+function normalizeCheapTestGuard(cheapTestGuard) {
+  if (!cheapTestGuard || typeof cheapTestGuard !== "object") {
+    return undefined;
+  }
+
+  const candidate = cheapTestGuard;
+
+  return compactObject({
+    browserSendsAudio: candidate.browserSendsAudio === false ? false : undefined,
+    browserReceivesStandardApiKey:
+      candidate.browserReceivesStandardApiKey === false ? false : undefined,
+    liveFlagMustBeShellExport:
+      candidate.liveFlagMustBeShellExport === true ? true : undefined,
+    liveCallRequiresExplicitArm:
+      candidate.liveCallRequiresExplicitArm === true ? true : undefined,
+    offerMode:
+      candidate.offerMode === "data_channel_only" ? "data_channel_only" : undefined,
+    dataChannelOnly: candidate.dataChannelOnly === true ? true : undefined,
+    rejectsAudioSdp: candidate.rejectsAudioSdp === true ? true : undefined,
+    maxProviderRequests: normalizeOptionalNumber(candidate.maxProviderRequests),
+    timeoutCapMs: normalizeOptionalNumber(candidate.timeoutCapMs),
+    effectiveTimeoutMs: normalizeOptionalNumber(candidate.effectiveTimeoutMs),
+    offer: normalizeOfferSummary(candidate.offer)
+  });
+}
+
+function normalizeOfferSummary(offer) {
+  if (!offer || typeof offer !== "object") {
+    return undefined;
+  }
+
+  return compactObject({
+    byteLength: normalizeOptionalNumber(offer.byteLength),
+    hasAudioMediaSection: offer.hasAudioMediaSection === false ? false : undefined,
+    hasDataChannelMediaSection:
+      offer.hasDataChannelMediaSection === true ? true : undefined,
+    hasVideoMediaSection: offer.hasVideoMediaSection === false ? false : undefined
+  });
 }
 
 function normalizeNotes(notes) {

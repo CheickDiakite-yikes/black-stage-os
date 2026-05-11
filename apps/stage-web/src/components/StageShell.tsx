@@ -12,7 +12,7 @@ import {
   type VoiceCapturePreflight,
   type VoiceCaptureState
 } from "@blackstage/voice-core";
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgentActivityFeed } from "./AgentActivityFeed";
 import { ApprovalCard } from "./ApprovalCard";
@@ -29,7 +29,6 @@ import type { StageWebRealtimeBridgeState } from "../voice/realtimeWebrtcBridge"
 type StageShellProps = {
   thread: IntentThread;
   accentColor: string;
-  scenarios: StageShellScenario[];
   activeScenario?: StageShellScenario;
   assistantSpeechText?: string;
   harnessRunnerProofs: StageWebHarnessRunnerProofs;
@@ -88,7 +87,6 @@ type StageShellProps = {
 export function StageShell({
   thread,
   accentColor,
-  scenarios,
   activeScenario,
   assistantSpeechText,
   harnessRunnerProofs,
@@ -140,10 +138,12 @@ export function StageShell({
   const [interimTranscript, setInterimTranscript] = useState("");
   const [voiceError, setVoiceError] = useState<string | undefined>();
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
+  const presenceOrbPointerStartedRef = useRef(false);
   const stageStyle = {
     "--stage-accent": accentColor
   } as CSSProperties;
   const latestApproval = thread.approvals.at(-1);
+  const isIdleStage = thread.status === "paused" && !thread.originalIntent;
   const visibleObjects = useMemo(
     () =>
       thread.renderObjects.filter(
@@ -241,6 +241,21 @@ export function StageShell({
     recognition.start();
   }
 
+  function activatePresenceOrb(event?: ReactPointerEvent<HTMLButtonElement>) {
+    event?.preventDefault();
+    presenceOrbPointerStartedRef.current = Boolean(event);
+    startVoiceCapture();
+  }
+
+  function activatePresenceOrbFromClick() {
+    if (presenceOrbPointerStartedRef.current) {
+      presenceOrbPointerStartedRef.current = false;
+      return;
+    }
+
+    startVoiceCapture();
+  }
+
   function attachContextFile(fileList: FileList | null) {
     const [file] = Array.from(fileList ?? []);
 
@@ -263,6 +278,12 @@ export function StageShell({
       : voiceCapture.status === "unavailable"
         ? "Voice standby"
         : "Speak";
+  const presenceOrbLabel =
+    voiceCapture.status === "listening"
+      ? "Listening for intent"
+      : voiceCapture.status === "unavailable"
+        ? "Voice unavailable"
+        : "Start voice input";
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
@@ -286,9 +307,12 @@ export function StageShell({
 
   return (
     <main
-      className={`stage-shell ${thread.status === "paused" ? "stage-idle" : "stage-active"} ${
-        voiceCapture.status === "listening" ? "stage-listening" : ""
-      } ${stageVoiceEnabled ? "stage-voice-enabled" : ""}`}
+      className={`stage-shell ${isIdleStage ? "stage-idle" : "stage-active"} ${
+        thread.status === "paused" && !isIdleStage ? "stage-paused" : ""
+      } ${voiceCapture.status === "listening" ? "stage-listening" : ""} ${
+        stageVoiceEnabled ? "stage-voice-enabled" : ""
+      }`}
+      data-testid="stage-shell"
       style={stageStyle}
     >
       <div className="stage-fluid-field" aria-hidden="true" />
@@ -348,13 +372,20 @@ export function StageShell({
         aria-labelledby="stage-title"
         data-testid="stage-presence"
       >
-        <div className="presence-orbit" aria-hidden="true">
+        <button
+          className="presence-orbit"
+          type="button"
+          aria-label={presenceOrbLabel}
+          aria-pressed={voiceCapture.status === "listening"}
+          data-testid="presence-orb"
+          disabled={voiceCapture.status === "unavailable"}
+          onClick={activatePresenceOrbFromClick}
+          onPointerDown={activatePresenceOrb}
+        >
           <div className="presence-core" />
-        </div>
+        </button>
         <div className="stage-copy">
-          <h1 id="stage-title">
-            {thread.status === "paused" ? "Speak when ready" : thread.title}
-          </h1>
+          <h1 id="stage-title">{isIdleStage ? "Speak when ready" : thread.title}</h1>
           <div className="prompt-rule" aria-hidden="true" />
           <p className="thread-objective">{thread.currentObjective}</p>
         </div>
@@ -367,20 +398,6 @@ export function StageShell({
         <p>
           {thread.originalIntent || "The stage is dormant until intent gives it shape."}
         </p>
-      </section>
-      <section className="scenario-rail" aria-label="Demo scenarios">
-        {scenarios.slice(0, 4).map((scenario) => (
-          <button
-            key={scenario.id}
-            className={
-              activeScenario?.id === scenario.id ? "scenario-active" : undefined
-            }
-            type="button"
-            onClick={() => submitIntent(scenario.intent, scenario.id, "scenario")}
-          >
-            {scenario.label}
-          </button>
-        ))}
       </section>
       <section
         className="stage-workspace"
@@ -601,7 +618,7 @@ function formatRealtimeBrokerReadiness(
     case "unreachable":
       return "offline";
     case "not_configured":
-      return "simulation";
+      return "standby";
   }
 }
 
@@ -665,7 +682,7 @@ function formatHarnessRunnerReadiness(
     case "unreachable":
       return "offline";
     case "not_configured":
-      return "simulation";
+      return "standby";
   }
 }
 

@@ -18,8 +18,10 @@ import {
 import { loadLocalEnvFile, summarizeLocalEnvLoad } from "./local-env.mjs";
 import {
   REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS,
-  REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR
-} from "./prepare-realtime-smoke-env.mjs";
+  assertRealtimeLiveSmokeOfferIsCheap,
+  createRealtimeLiveSmokeCheapGuard,
+  readRealtimeLiveSmokeTimeoutMs
+} from "./realtime-live-smoke-cheap-guard.mjs";
 
 const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 const REQUIRED_ENV_VARS = [
@@ -27,8 +29,8 @@ const REQUIRED_ENV_VARS = [
   "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER",
   STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR
 ];
-const DEFAULT_TIMEOUT_MS = 30_000;
 const shellLiveSmokeArmedAtStartup = process.env[LIVE_SMOKE_ENV_VAR] === "1";
+let openAiNetworkCallAttempted = false;
 
 async function main() {
   const localEnv = loadLocalEnvFile();
@@ -52,6 +54,7 @@ async function main() {
       missingEnv: missingEnvVars,
       openAiNetworkCallAttempted: false,
       browserSendsAudio: false,
+      cheapTestGuard: createRealtimeLiveSmokeCheapGuard(),
       notes: createSkippedNotes(localEnvIncludesLiveFlag)
     });
     return;
@@ -85,6 +88,9 @@ async function main() {
 
     const routeUrl = `http://${runtimeConfig.host}:${address.port}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`;
     const offerSdp = await createBrowserDataChannelOffer(browser);
+    const offerSummary = assertRealtimeLiveSmokeOfferIsCheap(offerSdp);
+    const timeoutMs = readRealtimeLiveSmokeTimeoutMs();
+    openAiNetworkCallAttempted = true;
     const response = await fetch(routeUrl, {
       method: "POST",
       headers: {
@@ -93,7 +99,7 @@ async function main() {
           process.env[STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR]
       },
       body: offerSdp,
-      signal: AbortSignal.timeout(readTimeoutMs())
+      signal: AbortSignal.timeout(timeoutMs)
     });
     const answerSdp = await response.text();
 
@@ -119,6 +125,9 @@ async function main() {
       answerBytes: Buffer.byteLength(answerSdp, "utf8"),
       answerSha256Prefix: answerDigest,
       browserSendsAudio: false,
+      cheapTestGuard: createRealtimeLiveSmokeCheapGuard({
+        offerSdp
+      }),
       localEnv: summarizeLocalEnvLoad(localEnv),
       notes: [
         "Live Realtime SDP exchange completed through the local broker.",
@@ -136,7 +145,9 @@ async function main() {
           answerSha256Prefix: answerDigest,
           browserReceivesStandardApiKey: false,
           browserSendsAudio: false,
-          timeoutMs: readTimeoutMs(),
+          timeoutMs,
+          offerSummary,
+          maxProviderRequests: 1,
           redactedProofPath: proofResult?.proofPath
         },
         null,
@@ -221,17 +232,6 @@ function closeServer(server) {
   });
 }
 
-function readTimeoutMs() {
-  const rawTimeoutMs = process.env[REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR];
-  const parsedTimeoutMs = rawTimeoutMs ? Number(rawTimeoutMs) : DEFAULT_TIMEOUT_MS;
-  const requestedTimeoutMs =
-    Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0
-      ? parsedTimeoutMs
-      : DEFAULT_TIMEOUT_MS;
-
-  return Math.min(requestedTimeoutMs, REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS);
-}
-
 function createSkippedNotes(localEnvIncludesLiveFlag) {
   if (localEnvIncludesLiveFlag) {
     return [
@@ -255,10 +255,9 @@ main().catch(async (error) => {
       requiredEnv: createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS),
       localEnv: summarizeLocalEnvLoad(loadLocalEnvFile()),
       missingEnv: REQUIRED_ENV_VARS.filter((envVar) => !process.env[envVar]?.trim()),
-      openAiNetworkCallAttempted:
-        shellLiveSmokeArmedAtStartup &&
-        REQUIRED_ENV_VARS.every((envVar) => process.env[envVar]?.trim()),
+      openAiNetworkCallAttempted,
       browserSendsAudio: false,
+      cheapTestGuard: createRealtimeLiveSmokeCheapGuard(),
       errorMessage: createSafeRealtimeSmokeErrorMessage(error)
     });
   } catch {
