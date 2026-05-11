@@ -21,7 +21,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 async function main() {
   if (process.env[LIVE_SMOKE_ENV_VAR] !== "1") {
     console.log(
-      `Skipped live Realtime smoke. Set ${LIVE_SMOKE_ENV_VAR}=1 with local broker/OpenAI env to run.`
+      `Skipped live Realtime smoke. Set ${LIVE_SMOKE_ENV_VAR}=1 with local broker/OpenAI env to run. Run pnpm preflight:realtime for redacted readiness.`
     );
     return;
   }

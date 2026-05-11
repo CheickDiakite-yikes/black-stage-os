@@ -21,6 +21,7 @@
     "check:workflow": "node scripts/check-workflow-policy.mjs",
     "lint": "eslint .",
     "scan:secrets": "node scripts/scan-secrets.mjs",
+    "preflight:realtime": "node scripts/preflight-realtime-live.mjs",
     "smoke:realtime": "pnpm --filter @blackstage/voice-core build && pnpm --filter @blackstage/stage-broker build && node scripts/smoke-realtime-live.mjs",
     "test": "pnpm check:workflow && pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @blackstage/stage-web test:e2e",

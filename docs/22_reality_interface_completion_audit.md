@@ -59,13 +59,16 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 ## Evidence From Current Gate
 
-Most recent validation after the artifact harness action handoff slice:
+Most recent validation after the Realtime preflight slice:
 
+- `pnpm preflight:realtime`: passed with redacted readiness; `OPENAI_API_KEY` was set, live smoke was unarmed, safety identifier and local approval token were unset, and `openAiNetworkCallWouldRun` was `false`.
+- `pnpm smoke:realtime`: passed in default skip-gated mode; no live OpenAI call was made.
+- `pnpm lint`: passed.
+- `pnpm exec prettier --check ...`: passed for the touched package, script, Realtime smoke runbook, audit, and research files.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 216 tracked files after final staging.
 - `pnpm --filter @blackstage/stage-web typecheck`: passed.
 - `pnpm --filter @blackstage/stage-web exec playwright test tests/stage-shell.spec.ts -g "approved artifacts"`: passed with one browser test and local action-packet trace.
 - `pnpm --filter @blackstage/stage-web test:e2e -- tests/stage-shell.spec.ts -g "approved artifacts"`: passed the Stage Shell browser file with 11 tests.
-- `pnpm exec prettier --check ...`: passed for the touched Stage Web, audit, and research files.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 214 tracked files after final staging.
 - `pnpm build`: passed across the sorted workspace.
 - `pnpm typecheck`: passed across 8 of 9 workspace projects.
 - `pnpm lint`: passed.
@@ -91,7 +94,7 @@ Browser validation note: the product keeps its cinematic motion in normal use. P
 
 The goal is not complete yet. The largest remaining gaps are:
 
-1. Live Realtime voice is not connected by default. The contract, trusted-server request envelope, route handler, local broker server mount, server-side OpenAI exchange adapter, browser-safe readiness client, disabled browser SDP exchange adapter, explicit Stage Web SDP bridge, visible Stage Web live arming approval, broker readiness approval-state reporting, local live-exchange approval header, skip-gated live smoke command, Realtime server-event parser, and Stage event mapper exist, and local browser-native assistant speech works, but no armed local OpenAI Realtime smoke or microphone stream has been run yet.
+1. Live Realtime voice is not connected by default. The contract, trusted-server request envelope, route handler, local broker server mount, server-side OpenAI exchange adapter, browser-safe readiness client, disabled browser SDP exchange adapter, explicit Stage Web SDP bridge, visible Stage Web live arming approval, broker readiness approval-state reporting, local live-exchange approval header, redacted live-smoke preflight, skip-gated live smoke command, Realtime server-event parser, and Stage event mapper exist, and local browser-native assistant speech works, but no armed local OpenAI Realtime smoke or microphone stream has been run yet.
 2. Live agentic work is not connected by default. Codex, Agents SDK, and Symphony-inspired orchestration are now represented by root `WORKFLOW.md`, typed local contracts, fixtures, a localhost runner service, a disabled Codex subprocess boundary, local approval-token arming, bounded workspace preparation, local run proof packets, read-only proof summaries, and Stage Web read-only proof counts, not default live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still local-only. The user can edit, approve, export, and prepare an approval-gated harness action packet, but cannot safely execute a real external workflow yet.

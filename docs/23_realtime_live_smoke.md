@@ -12,11 +12,13 @@ Date: 2026-05-11
 Running the command without live-smoke env is safe:
 
 ```bash
+pnpm preflight:realtime
 pnpm smoke:realtime
 ```
 
 Expected result:
 
+- `pnpm preflight:realtime` prints only redacted set/unset readiness.
 - `voice-core` builds.
 - `stage-broker` builds.
 - The script exits successfully with a skipped message.
@@ -43,6 +45,8 @@ The command:
 - keeps the standard OpenAI API key server-side only;
 - sends no microphone/audio track;
 - prints only safe proof metadata: byte counts, a short answer digest, and safety booleans.
+
+Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
 ## Do Not Commit
 
