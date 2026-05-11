@@ -654,8 +654,12 @@ function formatHarnessRunnerPolicy(
     policy.agentWorker === "openai_agents_sdk_manager"
       ? "Agents SDK manager"
       : policy.agentWorker;
+  const memoryPolicyLabel =
+    policy.agentMemoryAccessDefault === "stage_approval_required"
+      ? "Memory approvals"
+      : policy.agentMemoryAccessDefault;
 
-  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${agentWorkerLabel} · ${policy.voiceModel}`;
+  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${agentWorkerLabel} · ${memoryPolicyLabel} · ${policy.voiceModel}`;
 }
 
 function formatCodexTransportLabel(transports: readonly string[]): string {

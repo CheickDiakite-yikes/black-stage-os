@@ -16,7 +16,7 @@ This is not a replacement for Stage Shell v0. It is the path from simulation to 
 
 After the 2026-05-10 provider refresh, the stance is: yes, Blackstage should leverage open-source Codex, Symphony, and `gpt-realtime-2`, but only behind Blackstage-owned stage events, approval gates, and replayable traces. Codex/Symphony can power the background labor loop; they should not become the user-facing operating metaphor.
 
-After the 2026-05-11 workflow-policy slice, that stance is also codified in root `WORKFLOW.md` and exposed as typed `HarnessWorkflowPolicy` metadata from the Symphony-style control plane and local harness runner readiness. The policy remains read-only to the browser and keeps live execution disabled by default.
+After the 2026-05-11 workflow-policy slice, that stance is also codified in root `WORKFLOW.md` and exposed as typed `HarnessWorkflowPolicy` metadata from the Symphony-style control plane and local harness runner readiness. The policy remains read-only to the browser, keeps live execution disabled by default, and requires Stage approval before background agents inspect, write, or delete memory.
 
 ## Source-Verified Assumptions
 
@@ -152,8 +152,9 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - specialists exposed as tools
    - handoffs disabled by default
    - memory inspection approval-gated
+   - redacted memory summaries by default, with inspection/write/delete behind Stage approval
    - coding work refused so Codex remains the execution worker
-   - Status: implemented as local-only contracts and Node tests; no Agents SDK API call runs yet.
+   - Status: implemented as local-only contracts, typed memory-access policy, and Node tests; no Agents SDK API call runs yet.
 
 8. Mount the local harness runner service:
    - localhost HTTP server in `apps/stage-runner`

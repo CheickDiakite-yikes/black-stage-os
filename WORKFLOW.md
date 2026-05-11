@@ -24,6 +24,7 @@ This file is the repo-owned policy for Blackstage's background agentic harness. 
 - Live Codex subprocess execution is disabled by default.
 - Live Codex App Server execution is disabled by default.
 - Live Realtime SDP exchange is disabled unless local env, local approval phrase, and visible stage approval are all armed.
+- Agent memory inspection, writes, and deletes require Stage approval; background agents receive redacted memory summaries by default.
 - All external or high-impact actions require explicit human approval and later human review.
 
 ## Artifacts And Evidence

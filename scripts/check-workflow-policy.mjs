@@ -22,6 +22,11 @@ const checks = [
     pattern: /Browser-origin mutations remain disabled/
   },
   {
+    file: "WORKFLOW.md",
+    label: "root workflow gates agent memory access",
+    pattern: /Agent memory inspection, writes, and deletes require Stage approval/
+  },
+  {
     file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
     label: "typed policy points at the root workflow",
     pattern: /BLACKSTAGE_WORKFLOW_POLICY_SOURCE = "WORKFLOW\.md"/
@@ -40,6 +45,11 @@ const checks = [
     file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
     label: "typed policy keeps provider credentials out of the browser",
     pattern: /browserReceivesProviderCredentials: false/
+  },
+  {
+    file: "packages/agent-runtime/src/harness/workflowPolicy.ts",
+    label: "typed policy gates background-agent memory access",
+    pattern: /agentMemoryAccessDefault: "stage_approval_required"/
   },
   {
     file: "apps/stage-runner/src/server.ts",

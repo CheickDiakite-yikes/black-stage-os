@@ -51,7 +51,7 @@ The intended split is:
 - `agent-runtime` grows a Symphony-inspired scheduler and adapter contracts.
 - Root `WORKFLOW.md` owns the background harness policy, and `HarnessWorkflowPolicy` exposes that policy to the local runner and control-plane snapshot.
 - Codex handles coding execution in isolated workspaces.
-- OpenAI Agents SDK handles product/research agents that need handoffs, guardrails, human review, tracing, or voice workflows.
+- OpenAI Agents SDK handles product/research agents that need handoffs, guardrails, human review, tracing, or voice workflows; memory access defaults to redacted summaries and requires Stage approval for inspection, writes, or deletes.
 - All live work streams auditable stage events back into the render field.
 
 ## Monorepo structure

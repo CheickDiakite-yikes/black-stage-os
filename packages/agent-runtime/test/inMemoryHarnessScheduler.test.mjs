@@ -468,12 +468,50 @@ describe("Agents SDK adapter", () => {
     assert.equal(plan.handoffsAllowed, false);
     assert.equal(plan.humanReviewRequired, true);
     assert.equal(plan.tracing.redaction, "stage_event_summaries_only");
+    assert.deepEqual(plan.memoryAccessPolicy, {
+      inspection: "stage_approval_required",
+      retrieval: "redacted_summaries_only",
+      writes: "stage_approval_required",
+      deletes: "stage_approval_required",
+      rawMemoryAccess: "forbidden",
+      providerPersistence: "forbidden"
+    });
     assert.ok(
       plan.tools.some(
         (tool) => tool.name === "memory_inspector" && tool.requiresStageApproval
       )
     );
     assert.match(plan.managerInstructions, /Treat specialists as tools/);
+    assert.match(plan.managerInstructions, /redacted memory summaries/);
+  });
+
+  it("emits memory policy proof in dry-run manager events", async () => {
+    const scheduler = new InMemoryHarnessScheduler({
+      adapters: [createDryRunAgentsSdkAdapter()],
+      now
+    });
+
+    scheduler.enqueueTask({
+      id: "task_memory_policy",
+      threadId: "thread_build_blackstage",
+      title: "Prepare memory-aware research pass",
+      objective: "Plan a research pass without granting raw memory access.",
+      kind: "agent"
+    });
+    const run = await scheduler.runNext();
+    const snapshot = scheduler.getSnapshot();
+
+    assert.equal(run?.status, "completed");
+    assert.ok(
+      snapshot.events.some(
+        (event) =>
+          event.type === "task.progress" &&
+          event.payload?.memory_policy &&
+          event.payload.memory_policy.rawMemoryAccess === "forbidden" &&
+          event.payload.memory_policy.writes === "stage_approval_required" &&
+          event.payload.memory_policy.retrieval === "redacted_summaries_only"
+      )
+    );
   });
 
   it("refuses coding work so Codex remains the execution worker", () => {
@@ -513,6 +551,10 @@ describe("Symphony control plane", () => {
       "app_server"
     ]);
     assert.equal(controlPlane.workflowPolicy.voiceModel, "gpt-realtime-2");
+    assert.equal(
+      controlPlane.workflowPolicy.agentMemoryAccessDefault,
+      "stage_approval_required"
+    );
     assert.equal(controlPlane.workflowPolicy.browserMutationAllowed, false);
     assert.equal(controlPlane.workItems.length, 4);
     assert.equal(controlPlane.blockedCount, 1);
@@ -579,6 +621,10 @@ describe("Harness runner readiness client", () => {
     assert.equal(
       readiness.workflowPolicy?.controlPlane,
       "symphony_style_internal_queue"
+    );
+    assert.equal(
+      readiness.workflowPolicy?.agentMemoryAccessDefault,
+      "stage_approval_required"
     );
     assert.equal(readiness.browserCanEnqueueWork, false);
     assert.equal(readiness.browserCanRunCodex, false);

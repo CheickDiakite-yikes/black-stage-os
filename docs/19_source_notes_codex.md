@@ -13,7 +13,7 @@ The current Blackstage harness direction is source-aligned:
 - The Agents SDK remains the manager-agent path for non-coding research, artifact, memory, and analysis workflows where Blackstage owns tools, approvals, handoffs, state, and traces.
 - `gpt-realtime-2` remains the pinned Realtime voice model for the live voice path. It is the current target for speech-to-speech realtime sessions, with text, audio, and image input; text and audio output; tool use; and configurable reasoning effort.
 
-Implementation consequence: Blackstage should leverage these upstream pieces behind `WORKFLOW.md`, stage events, approval gates, proof packets, and replayable traces. None of them should replace the black living render field as the user's operating metaphor.
+Implementation consequence: Blackstage should leverage these upstream pieces behind `WORKFLOW.md`, stage events, approval gates, proof packets, and replayable traces. Background agents should receive redacted memory summaries by default, and any memory inspection, write, or delete should cross a Stage approval boundary. None of these upstream pieces should replace the black living render field as the user's operating metaphor.
 
 Sources:
 

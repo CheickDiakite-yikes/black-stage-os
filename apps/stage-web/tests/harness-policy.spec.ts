@@ -10,6 +10,7 @@ const workflowPolicy = {
   codexTransports: ["cli", "app_server"],
   agentWorker: "openai_agents_sdk_manager",
   voiceModel: "gpt-realtime-2",
+  agentMemoryAccessDefault: "stage_approval_required",
   workspaceRoot: ".blackstage/workspaces",
   browserMutationAllowed: false,
   browserReceivesProviderCredentials: false,
@@ -105,5 +106,6 @@ test("Stage Web renders the active harness workflow policy", async ({ page }) =>
   await expect(harnessStatus).toContainText("Symphony queue");
   await expect(harnessStatus).toContainText("Codex CLI/App Server");
   await expect(harnessStatus).toContainText("Agents SDK manager");
+  await expect(harnessStatus).toContainText("Memory approvals");
   await expect(harnessStatus).toContainText("gpt-realtime-2");
 });

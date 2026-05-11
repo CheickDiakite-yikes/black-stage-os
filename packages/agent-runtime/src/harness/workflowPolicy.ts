@@ -9,6 +9,7 @@ export type HarnessWorkflowPolicy = {
   codexTransports: readonly ["cli", "app_server"];
   agentWorker: "openai_agents_sdk_manager";
   voiceModel: "gpt-realtime-2";
+  agentMemoryAccessDefault: "stage_approval_required";
   workspaceRoot: ".blackstage/workspaces";
   browserMutationAllowed: false;
   browserReceivesProviderCredentials: false;
@@ -27,6 +28,7 @@ export function createBlackstageWorkflowPolicy(): HarnessWorkflowPolicy {
     codexTransports: ["cli", "app_server"],
     agentWorker: "openai_agents_sdk_manager",
     voiceModel: "gpt-realtime-2",
+    agentMemoryAccessDefault: "stage_approval_required",
     workspaceRoot: ".blackstage/workspaces",
     browserMutationAllowed: false,
     browserReceivesProviderCredentials: false,
@@ -57,6 +59,7 @@ export function isHarnessWorkflowPolicy(
     candidate.codexTransports[1] === "app_server" &&
     candidate.agentWorker === "openai_agents_sdk_manager" &&
     candidate.voiceModel === "gpt-realtime-2" &&
+    candidate.agentMemoryAccessDefault === "stage_approval_required" &&
     candidate.workspaceRoot === ".blackstage/workspaces" &&
     candidate.browserMutationAllowed === false &&
     candidate.browserReceivesProviderCredentials === false &&
