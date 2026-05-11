@@ -238,18 +238,23 @@ export function mapRealtimeDataChannelMessageToStageEvents(
   context: StageWebRealtimeBridgeMappingContext
 ): StageEvent[] {
   const parsedMessage = parseRealtimeDataChannelPayload(message);
-  const realtimeEvent = parseRealtimeVoiceServerEvent(
-    parsedMessage,
-    context.now?.() ?? new Date().toISOString()
-  );
+  const timestamp = context.now?.() ?? new Date().toISOString();
+  const realtimeEvent = parseRealtimeVoiceServerEvent(parsedMessage, timestamp);
 
-  return realtimeEvent
-    ? mapRealtimeVoiceEventToStageEvents(realtimeEvent, {
-        threadId: context.threadId,
-        sessionId: context.sessionId,
-        eventIdPrefix: "stage_web_realtime"
-      })
-    : [];
+  if (realtimeEvent) {
+    return mapRealtimeVoiceEventToStageEvents(realtimeEvent, {
+      threadId: context.threadId,
+      sessionId: context.sessionId,
+      eventIdPrefix: "stage_web_realtime"
+    });
+  }
+
+  const unmappedEvent = createUnmappedRealtimeServerEvent(parsedMessage, {
+    ...context,
+    timestamp
+  });
+
+  return unmappedEvent ? [unmappedEvent] : [];
 }
 
 export function readStageWebRealtimeWebrtcEnabled(
@@ -451,6 +456,43 @@ function parseRealtimeDataChannelPayload(message: unknown): unknown {
   } catch {
     return undefined;
   }
+}
+
+function createUnmappedRealtimeServerEvent(
+  message: unknown,
+  context: StageWebRealtimeBridgeMappingContext & { timestamp: string }
+): StageEvent | undefined {
+  if (!isRecord(message) || typeof message.type !== "string") {
+    return undefined;
+  }
+
+  const eventType = sanitizeRealtimeEventType(message.type);
+
+  if (!eventType) {
+    return undefined;
+  }
+
+  return {
+    type: "agent.progress",
+    payload: {
+      id: `realtime_unmapped_${stableHash(`${context.sessionId}:${context.threadId}:${context.timestamp}:${eventType}`)}`,
+      threadId: context.threadId,
+      taskId: "realtime_data_channel",
+      agentName: "Realtime voice broker",
+      type: "progress",
+      summary: "Realtime server event observed.",
+      details: `Unmapped server event: ${eventType}. Payload was not stored.`,
+      timestamp: context.timestamp
+    }
+  };
+}
+
+function sanitizeRealtimeEventType(eventType: string): string {
+  return eventType.replace(/[^a-zA-Z0-9_.:-]/g, "").slice(0, 96);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function createRealtimeBridgeStageEvents(

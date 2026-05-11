@@ -336,6 +336,47 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       }
     ).__blackstageEmitRealtimeServerEvent?.({
+      type: "rate_limits.updated",
+      ignoredPayload: "do-not-store-this-payload"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime server event observed."
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "rate_limits.updated"
+  );
+  const unmappedEventEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          stageEvents?: Array<{
+            payload?: {
+              details?: string;
+              summary?: string;
+            };
+            type?: string;
+          }>;
+        })
+      : undefined;
+
+    return (snapshot?.stageEvents ?? []).some(
+      (event) =>
+        event.type === "agent.progress" &&
+        event.payload?.summary === "Realtime server event observed." &&
+        event.payload?.details?.includes("rate_limits.updated") &&
+        event.payload.details.includes("Payload was not stored") &&
+        !event.payload.details.includes("do-not-store-this-payload")
+    );
+  });
+
+  expect(unmappedEventEvidence).toBe(true);
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
       type: "conversation.item.input_audio_transcription.completed",
       transcript: "Draft the live session proof object."
     });

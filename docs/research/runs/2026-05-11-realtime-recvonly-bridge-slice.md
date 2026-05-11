@@ -21,6 +21,7 @@ Continue the active Blackstage goal from the pushed Realtime smoke/proof state a
 - Made approved Realtime connecting/connected state wake the center presence into `Listening`, so the orb path feels like click-and-speak rather than an invisible network bridge.
 - Surfaced approved microphone-track attachment as visible Realtime broker labor before the SDP bridge connects.
 - Parsed Realtime session-created and response-created/done server events so connected sessions show lifecycle labor before and after content streams.
+- Added a redacted fallback for unmapped Realtime server events so real sessions do not silently drop unknown event types or store raw payloads.
 - Parsed Realtime speech-start/speech-stop lifecycle events and verified they surface as visible agent labor.
 - Parsed Realtime output-audio started/stopped/cleared server events and verified started/stopped events surface as visible assistant-audio labor in Stage Web.
 - Drove a fake Realtime server transcript through the retained data-channel listener and verified it became a normal voice intent run that shaped the Stage Shell plan.
@@ -54,6 +55,8 @@ When microphone audio is explicitly enabled, the mic handoff itself needs to bec
 Realtime output audio has its own lifecycle separate from final assistant transcript text. Mapping that lifecycle into broker labor gives the stage an audit trail for when the assistant starts, stops, or clears spoken output.
 
 Session and response lifecycle events are the spine of the live connection. They should be visible even before transcript, audio, or tool events arrive.
+
+Unknown Realtime event types are still evidence. Store the event type, not the payload, so the product can be audited safely as OpenAI expands the server-event surface.
 
 ## Evidence
 
