@@ -24,7 +24,10 @@ import type {
   StageWebHarnessRunnerSnapshot
 } from "../harness/harnessRunnerReadiness";
 import type { StageWebRealtimeBrokerProofs } from "../voice/realtimeBrokerReadiness";
-import type { StageWebRealtimeBridgeState } from "../voice/realtimeWebrtcBridge";
+import type {
+  StageWebRealtimeBridgeState,
+  StageWebRealtimeDebugSummary
+} from "../voice/realtimeWebrtcBridge";
 
 type StageShellProps = {
   thread: IntentThread;
@@ -41,6 +44,7 @@ type StageShellProps = {
   realtimeArmVisible: boolean;
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   realtimeBrokerProofs: StageWebRealtimeBrokerProofs;
+  realtimeDebugSummary?: StageWebRealtimeDebugSummary;
   realtimeMicPreflight: VoiceCapturePreflight;
   stageEventCount: number;
   stageVoiceEnabled: boolean;
@@ -60,6 +64,7 @@ type StageShellProps = {
   onAskWhy: () => void;
   onAttachContext: (file: File) => void;
   onExport: () => void;
+  onExportRealtimeDebug: () => void;
   onReset: () => void;
   onApproveArtifact: (artifactId: string) => void;
   onCollapseObject: (objectId: string) => void;
@@ -99,6 +104,7 @@ export function StageShell({
   realtimeArmVisible,
   realtimeBrokerReadiness,
   realtimeBrokerProofs,
+  realtimeDebugSummary,
   realtimeMicPreflight,
   stageEventCount,
   stageVoiceEnabled,
@@ -112,6 +118,7 @@ export function StageShell({
   onAskWhy,
   onAttachContext,
   onExport,
+  onExportRealtimeDebug,
   onReset,
   onApproveArtifact,
   onCollapseObject,
@@ -572,7 +579,9 @@ export function StageShell({
         events={researchEvents}
         isReplaying={isReplaying}
         stageEventCount={stageEventCount}
+        realtimeDebugSummary={realtimeDebugSummary}
         onExport={onExport}
+        onExportRealtimeDebug={onExportRealtimeDebug}
         onReplay={onReplayTrace}
         onReset={onReset}
       />

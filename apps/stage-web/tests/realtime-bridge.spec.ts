@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import fs from "node:fs/promises";
 
 const brokerProofsRoute = "http://127.0.0.1:8798/api/blackstage/realtime/proofs";
 
@@ -42,6 +43,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     browserWindow.__blackstageRealtimeClientEvents = [];
     browserWindow.__blackstageRealtimeTransceivers = [];
     window.localStorage.removeItem("blackstage.realtimeAudio.enabled");
+    window.localStorage.setItem("blackstage.realtimeDebug.enabled", "1");
     window.localStorage.setItem(
       "blackstage.realtime.approvalPhrase",
       "approve-local-realtime"
@@ -574,6 +576,15 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("agent-activity-feed")).toContainText(
     "Realtime tool output returned to the live model."
   );
+  await expect(page.getByTestId("realtime-debug-summary")).toContainText(
+    "Realtime debug"
+  );
+  await expect(page.getByTestId("realtime-debug-summary")).toContainText(
+    "tool call observed"
+  );
+  await expect(page.getByTestId("realtime-debug-summary")).toContainText(
+    "output returned"
+  );
 
   const toolResultEvidence = await page.evaluate(() => {
     const browserWindow = window as Window & {
@@ -652,6 +663,36 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     responseCreateSent: true,
     resultArtifactWasLogged: true
   });
+  const debugDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export debug" }).click({
+    force: true
+  });
+  const debugDownload = await debugDownloadPromise;
+  const debugDownloadPath = await debugDownload.path();
+
+  expect(debugDownload.suggestedFilename()).toContain("blackstage-realtime-debug");
+  expect(debugDownloadPath).toBeTruthy();
+
+  const debugExport = JSON.parse(
+    await fs.readFile(debugDownloadPath ?? "", "utf8")
+  ) as {
+    events?: Array<{ type?: string }>;
+    rawPayloadStored?: boolean;
+    summary?: {
+      rawPayloadStored?: boolean;
+      toolCallObserved?: boolean;
+      toolOutputReturned?: boolean;
+    };
+  };
+
+  expect(debugExport.rawPayloadStored).toBe(false);
+  expect(debugExport.summary?.rawPayloadStored).toBe(false);
+  expect(debugExport.summary?.toolCallObserved).toBe(true);
+  expect(debugExport.summary?.toolOutputReturned).toBe(true);
+  expect(JSON.stringify(debugExport)).not.toContain("do-not-store-this-payload");
+  expect(debugExport.events?.some((event) => event.type === "response.done")).toBe(
+    true
+  );
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(1);
   await page.evaluate(() => {
     (

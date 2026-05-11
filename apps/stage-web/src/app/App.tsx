@@ -42,12 +42,16 @@ import {
   createDefaultStageWebRealtimeBridgeState,
   createStageWebRealtimeBridgeConnectingState,
   createStageWebRealtimeAudioTrackStageEvent,
+  createStageWebRealtimeDebugSummary,
   prepareStageWebRealtimeAudioTrack,
   readStageWebRealtimeApprovalPhrase,
   readStageWebRealtimeAudioEnabled,
+  readStageWebRealtimeDebugEvents,
   shouldStartStageWebRealtimeBridge,
+  STAGE_WEB_REALTIME_DEBUG_STORAGE_KEY,
   startStageWebRealtimeBridge,
-  type StageWebRealtimeBridgeConnection
+  type StageWebRealtimeBridgeConnection,
+  type StageWebRealtimeDebugSummary
 } from "../voice/realtimeWebrtcBridge";
 import {
   checkStageWebRealtimeMicPreflight,
@@ -185,6 +189,9 @@ export function App() {
   const [realtimeMicPreflight, setRealtimeMicPreflight] = useState(
     createDefaultStageWebRealtimeMicPreflight
   );
+  const [realtimeDebugSummary, setRealtimeDebugSummary] = useState<
+    StageWebRealtimeDebugSummary | undefined
+  >(() => createStageWebRealtimeDebugSummary(readStageWebRealtimeDebugEvents()));
   const [realtimeMicGestureObserved, setRealtimeMicGestureObserved] = useState(false);
   const [harnessRunnerReadiness, setHarnessRunnerReadiness] = useState(
     createDefaultStageWebHarnessReadiness
@@ -218,6 +225,10 @@ export function App() {
       if (stageEvent.type === "assistant.speech") {
         setAssistantSpeechText(stageEvent.payload.text);
       }
+
+      setRealtimeDebugSummary(
+        createStageWebRealtimeDebugSummary(readStageWebRealtimeDebugEvents())
+      );
 
       setThread((currentThread) => applyStageEventToThread(currentThread, stageEvent));
       setStageEvents((currentEvents) => [...currentEvents, stageEvent]);
@@ -1497,6 +1508,43 @@ export function App() {
     thread
   ]);
 
+  const exportRealtimeDebug = useCallback(() => {
+    const exportedAt = new Date().toISOString();
+    const debugEvents = readStageWebRealtimeDebugEvents();
+    const summary = createStageWebRealtimeDebugSummary(debugEvents);
+    const snapshot = {
+      exportKind: "blackstage.realtime.debug",
+      exportedAt,
+      sessionId,
+      threadId: thread.id,
+      realtimeBridge,
+      realtimeMicPreflight,
+      summary,
+      events: debugEvents,
+      stageEventCount: stageEvents.length,
+      researchEventCount: researchEvents.length,
+      rawPayloadStored: false
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+      type: "application/json"
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+
+    anchor.href = objectUrl;
+    anchor.download = `blackstage-realtime-debug-${exportedAt.slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(objectUrl);
+    setRealtimeDebugSummary(summary);
+  }, [
+    realtimeBridge,
+    realtimeMicPreflight,
+    researchEvents.length,
+    sessionId,
+    stageEvents.length,
+    thread.id
+  ]);
+
   const updateStageObject = useCallback(
     (objectId: string, updater: (object: StageObject) => StageObject) => {
       const object = thread.renderObjects.find(
@@ -1953,6 +2001,8 @@ export function App() {
     realtimeBridgeConnectionRef.current?.close?.();
     realtimeBridgeConnectionRef.current = undefined;
     setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
+    setRealtimeDebugSummary(undefined);
+    localStorage.removeItem(STAGE_WEB_REALTIME_DEBUG_STORAGE_KEY);
     cancelStageSpeech();
   }, [clearTimers]);
 
@@ -1960,6 +2010,21 @@ export function App() {
     return () => {
       realtimeBridgeConnectionRef.current?.close?.();
       realtimeBridgeConnectionRef.current = undefined;
+    };
+  }, []);
+
+  useEffect(() => {
+    const refreshRealtimeDebugSummary = () => {
+      setRealtimeDebugSummary(
+        createStageWebRealtimeDebugSummary(readStageWebRealtimeDebugEvents())
+      );
+    };
+    const timer = window.setInterval(refreshRealtimeDebugSummary, 1_000);
+
+    refreshRealtimeDebugSummary();
+
+    return () => {
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -2166,6 +2231,7 @@ export function App() {
       realtimeArmVisible={realtimeArmVisible}
       realtimeBrokerReadiness={realtimeBrokerReadiness}
       realtimeBrokerProofs={realtimeBrokerProofs}
+      realtimeDebugSummary={realtimeDebugSummary}
       realtimeMicPreflight={realtimeMicPreflight}
       stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}
@@ -2174,6 +2240,7 @@ export function App() {
       onAskWhy={askWhy}
       onAttachContext={attachContext}
       onExport={exportSession}
+      onExportRealtimeDebug={exportRealtimeDebug}
       onReject={rejectCurrentRequest}
       onReset={resetSession}
       onArmRealtime={requestRealtimeArm}

@@ -933,6 +933,56 @@ export type StageWebRealtimeDebugEvent = {
   textLength?: number;
 };
 
+export type StageWebRealtimeDebugSummary = {
+  eventCount: number;
+  clientEventCount: number;
+  serverEventCount: number;
+  audioEventCount: number;
+  maxElapsedMs: number;
+  clientEventTypes: string[];
+  serverEventTypes: string[];
+  toolNames: string[];
+  textProofObserved: boolean;
+  toolCallObserved: boolean;
+  toolOutputReturned: boolean;
+  rawPayloadStored: false;
+};
+
+export function readStageWebRealtimeDebugEvents(): StageWebRealtimeDebugEvent[] {
+  return readStoredDebugEvents();
+}
+
+export function createStageWebRealtimeDebugSummary(
+  events: StageWebRealtimeDebugEvent[]
+): StageWebRealtimeDebugSummary | undefined {
+  if (events.length === 0) {
+    return undefined;
+  }
+
+  const clientEvents = events.filter((event) => event.direction === "client");
+  const serverEvents = events.filter((event) => event.direction === "server");
+  const toolNames = uniqueCompactStrings(events.map((event) => event.toolName));
+
+  return {
+    eventCount: events.length,
+    clientEventCount: clientEvents.length,
+    serverEventCount: serverEvents.length,
+    audioEventCount: events.filter((event) => event.type.includes("audio")).length,
+    maxElapsedMs: Math.max(...events.map((event) => event.elapsedMs)),
+    clientEventTypes: uniqueCompactStrings(clientEvents.map((event) => event.type)),
+    serverEventTypes: uniqueCompactStrings(serverEvents.map((event) => event.type)),
+    toolNames,
+    textProofObserved: serverEvents.some((event) => event.textLength !== undefined),
+    toolCallObserved: serverEvents.some(
+      (event) => event.type === "response.function_call_arguments.done"
+    ),
+    toolOutputReturned: clientEvents.some(
+      (event) => event.type === "conversation.item.create" && Boolean(event.callId)
+    ),
+    rawPayloadStored: false
+  };
+}
+
 export function createStageWebRealtimeTextProbeClientEvents(
   promptText: string,
   probeId = stableHash(`${promptText}:${Date.now().toString(36)}`)
@@ -1198,6 +1248,12 @@ function isStageWebRealtimeDebugEvent(
     typeof event.timestamp === "string" &&
     typeof event.elapsedMs === "number"
   );
+}
+
+function uniqueCompactStrings(values: Array<string | undefined>, limit = 16): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))]
+    .sort()
+    .slice(0, limit);
 }
 
 function stableHash(value: string): string {

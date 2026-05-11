@@ -1343,6 +1343,10 @@ button:disabled {
   margin-top: 0.7rem;
 }
 
+.trace-metrics-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .trace-metrics span {
   display: grid;
   gap: 0.14rem;
@@ -1387,6 +1391,22 @@ button:disabled {
   flex: 0 0 auto;
   color: rgba(216, 189, 133, 0.58);
   font-variant-numeric: tabular-nums;
+}
+
+.realtime-debug-summary {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+  border-top: 1px solid rgba(216, 189, 133, 0.12);
+  padding-top: 0.75rem;
+}
+
+.realtime-debug-summary p {
+  margin: 0;
+}
+
+.realtime-debug-summary button {
+  width: 100%;
 }
 
 .intent-capture {

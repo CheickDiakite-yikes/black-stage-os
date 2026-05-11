@@ -84,6 +84,14 @@ item back over the already-open data channel when it is writable. The local tool
 result records `externalSideEffects: false` and does not create another broker
 POST, start microphone capture, or store raw provider payloads.
 
+When `blackstage.realtimeDebug.enabled=1` or
+`VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED=1` is enabled, Stage Web also shows a
+quiet Realtime debug block in Research Trace after sanitized events exist. The
+debug export records summary counts, event types, elapsed timing, observed tool
+names, bridge status, mic preflight state, and `rawPayloadStored: false`. It does
+not include raw provider payloads, raw audio, transcripts, SDP, API keys, or
+approval phrases.
+
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
 To generate the non-API-key arming values for a controlled local shell, run:
