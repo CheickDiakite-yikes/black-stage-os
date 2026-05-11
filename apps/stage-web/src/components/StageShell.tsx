@@ -22,6 +22,7 @@ import type {
   StageWebHarnessRunnerProofs,
   StageWebHarnessRunnerSnapshot
 } from "../harness/harnessRunnerReadiness";
+import type { StageWebRealtimeBrokerProofs } from "../voice/realtimeBrokerReadiness";
 import type { StageWebRealtimeBridgeState } from "../voice/realtimeWebrtcBridge";
 
 type StageShellProps = {
@@ -39,6 +40,7 @@ type StageShellProps = {
   realtimeArmPending: boolean;
   realtimeArmVisible: boolean;
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
+  realtimeBrokerProofs: StageWebRealtimeBrokerProofs;
   stageEventCount: number;
   stageVoiceEnabled: boolean;
   isRunning: boolean;
@@ -96,6 +98,7 @@ export function StageShell({
   realtimeArmPending,
   realtimeArmVisible,
   realtimeBrokerReadiness,
+  realtimeBrokerProofs,
   stageEventCount,
   stageVoiceEnabled,
   isRunning,
@@ -268,7 +271,8 @@ export function StageShell({
   const harnessRunnerPolicyStatus = formatHarnessRunnerPolicy(harnessRunnerReadiness);
   const realtimeBrokerStatus = formatRealtimeBrokerReadiness(
     realtimeBrokerReadiness,
-    realtimeBridge
+    realtimeBridge,
+    realtimeBrokerProofs
   );
   const realtimeArmLabel = formatRealtimeArmLabel(
     realtimeBridge,
@@ -556,8 +560,11 @@ function formatRealtimeArmLabel(
 
 function formatRealtimeBrokerReadiness(
   readiness: RealtimeBrokerClientReadiness,
-  bridge: StageWebRealtimeBridgeState
+  bridge: StageWebRealtimeBridgeState,
+  proofs: StageWebRealtimeBrokerProofs
 ): string {
+  const proofSuffix = formatRealtimeProofSuffix(proofs);
+
   switch (readiness.status) {
     case "checking":
       return "checking";
@@ -569,24 +576,37 @@ function formatRealtimeBrokerReadiness(
 
         switch (bridge.status) {
           case "connecting":
-            return "SDP linking";
+            return `SDP linking${proofSuffix}`;
           case "connected":
-            return "live SDP";
+            return `live SDP${proofSuffix}`;
           case "failed":
-            return "SDP failed";
+            return `SDP failed${proofSuffix}`;
           case "blocked":
-            return "SDP blocked";
+            return `SDP blocked${proofSuffix}`;
           case "disabled":
-            return "live broker · SDP off";
+            return `live broker · SDP off${proofSuffix}`;
         }
       }
 
-      return readiness.liveModeEnabled ? "live broker" : "broker mounted";
+      return readiness.liveModeEnabled
+        ? `live broker${proofSuffix}`
+        : `broker mounted${proofSuffix}`;
     case "unreachable":
       return "offline";
     case "not_configured":
       return "simulation";
   }
+}
+
+function formatRealtimeProofSuffix(proofs: StageWebRealtimeBrokerProofs): string {
+  if (proofs.status !== "loaded") {
+    return "";
+  }
+
+  const proofCount = proofs.proofCount ?? 0;
+  const proofLabel = proofCount === 1 ? "proof" : "proofs";
+
+  return ` · ${proofCount} ${proofLabel}`;
 }
 
 function formatHarnessRunnerReadiness(

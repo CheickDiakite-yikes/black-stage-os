@@ -30,9 +30,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { StageShell } from "../components/StageShell";
 import { researchEventFromStageEvent } from "../instrumentation/researchLogger";
 import {
+  checkStageWebRealtimeBrokerProofs,
   checkStageWebRealtimeBrokerReadiness,
   createDefaultStageWebBrokerReadiness,
+  createDefaultStageWebRealtimeBrokerProofs,
   createStageWebBrokerCheckingReadiness,
+  createStageWebRealtimeBrokerProofsChecking,
   resolveStageWebRealtimeBrokerRouteUrl
 } from "../voice/realtimeBrokerReadiness";
 import {
@@ -144,6 +147,9 @@ export function App() {
   const [assistantSpeechText, setAssistantSpeechText] = useState<string | undefined>();
   const [realtimeBrokerReadiness, setRealtimeBrokerReadiness] = useState(
     createDefaultStageWebBrokerReadiness
+  );
+  const [realtimeBrokerProofs, setRealtimeBrokerProofs] = useState(
+    createDefaultStageWebRealtimeBrokerProofs
   );
   const [realtimeBridge, setRealtimeBridge] = useState(
     createDefaultStageWebRealtimeBridgeState
@@ -1558,6 +1564,7 @@ export function App() {
     if (!routeUrl) {
       realtimeBridgeStartedRef.current = false;
       setRealtimeBrokerReadiness(createDefaultStageWebBrokerReadiness());
+      setRealtimeBrokerProofs(createDefaultStageWebRealtimeBrokerProofs());
       setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
       return;
     }
@@ -1567,6 +1574,7 @@ export function App() {
     }
 
     setRealtimeBrokerReadiness(createStageWebBrokerCheckingReadiness(routeUrl));
+    setRealtimeBrokerProofs(createStageWebRealtimeBrokerProofsChecking(routeUrl));
     setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
 
     void checkStageWebRealtimeBrokerReadiness({
@@ -1577,6 +1585,28 @@ export function App() {
       }
 
       setRealtimeBrokerReadiness(readiness);
+
+      if (readiness.status !== "reachable") {
+        setRealtimeBrokerProofs({
+          status: "unavailable",
+          routeUrl,
+          checkedAt: readiness.checkedAt,
+          networkAttempted: readiness.networkAttempted,
+          errors: readiness.errors
+        });
+        realtimeBridgeStartedRef.current = false;
+        return;
+      }
+
+      const proofs = await checkStageWebRealtimeBrokerProofs({
+        routeUrl
+      });
+
+      if (cancelled) {
+        return;
+      }
+
+      setRealtimeBrokerProofs(proofs);
 
       realtimeBridgeStartedRef.current = false;
     });
@@ -1679,6 +1709,7 @@ export function App() {
       realtimeArmPending={realtimeArmPending}
       realtimeArmVisible={realtimeArmVisible}
       realtimeBrokerReadiness={realtimeBrokerReadiness}
+      realtimeBrokerProofs={realtimeBrokerProofs}
       scenarios={stageShellScenarios}
       stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}

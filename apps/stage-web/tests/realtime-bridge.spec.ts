@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const brokerRoute = "http://127.0.0.1:8798/api/blackstage/realtime/session";
+const brokerProofsRoute = "http://127.0.0.1:8798/api/blackstage/realtime/proofs";
 
 test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   page
@@ -61,48 +61,80 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     });
   });
 
-  await page.route(brokerRoute, async (route) => {
-    const request = route.request();
-    const method = request.method();
-    const body = method === "POST" ? (request.postData() ?? "") : undefined;
+  await page.route(
+    "http://127.0.0.1:8798/api/blackstage/realtime/**",
+    async (route) => {
+      const request = route.request();
+      const method = request.method();
+      const requestUrl = new URL(request.url());
+      const body = method === "POST" ? (request.postData() ?? "") : undefined;
 
-    brokerRequests.push({
-      method,
-      body,
-      approval: request.headers()["x-blackstage-realtime-approval"]
-    });
+      brokerRequests.push({
+        method,
+        body,
+        approval: request.headers()["x-blackstage-realtime-approval"]
+      });
 
-    if (method === "GET") {
+      if (requestUrl.href === brokerProofsRoute) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            route: "/api/blackstage/realtime/proofs",
+            proofRoot: ".blackstage/realtime-smoke",
+            proofs: [
+              {
+                proofVersion: 1,
+                kind: "blackstage.realtime.live_smoke",
+                status: "skipped",
+                proofPath: ".blackstage/realtime-smoke/skip-proof.json",
+                createdAt: "2026-05-11T10:00:00.000Z",
+                liveSmokeArmed: false,
+                openAiNetworkCallAttempted: false,
+                browserReceivesStandardApiKey: false,
+                browserSendsAudio: false,
+                missingEnv: ["BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"]
+              }
+            ]
+          })
+        });
+        return;
+      }
+
+      if (method === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            route: "/api/blackstage/realtime/session",
+            liveModeEnabled: true,
+            liveApprovalRequired: true,
+            liveApprovalConfigured: true,
+            accepts: "application/sdp",
+            browserSendsAudio: false,
+            browserReceivesStandardApiKey: false,
+            checkedAt: "2026-05-10T00:00:00.000Z"
+          })
+        });
+        return;
+      }
+
       await route.fulfill({
         status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          route: "/api/blackstage/realtime/session",
-          liveModeEnabled: true,
-          liveApprovalRequired: true,
-          liveApprovalConfigured: true,
-          accepts: "application/sdp",
-          browserSendsAudio: false,
-          browserReceivesStandardApiKey: false,
-          checkedAt: "2026-05-10T00:00:00.000Z"
-        })
+        contentType: "application/sdp",
+        body: "v=0\r\no=- blackstage-playwright-answer\r\n"
       });
-      return;
     }
-
-    await route.fulfill({
-      status: 200,
-      contentType: "application/sdp",
-      body: "v=0\r\no=- blackstage-playwright-answer\r\n"
-    });
-  });
+  );
 
   await page.goto("/");
 
   await expect(page.getByTestId("realtime-broker-status")).toContainText(
     "live broker · SDP off"
   );
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("1 proof");
   await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");
   await expect(page.getByTestId("realtime-arm-button")).toBeEnabled();
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(0);
