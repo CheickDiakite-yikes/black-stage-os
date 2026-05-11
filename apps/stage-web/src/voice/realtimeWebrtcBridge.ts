@@ -92,6 +92,11 @@ export type StageWebRealtimeAudioTrackOptions = {
   navigatorLike?: StageWebRealtimeAudioNavigator;
 };
 
+export type StageWebRealtimeAudioTrackStageEventInput = {
+  threadId: string;
+  timestamp: string;
+};
+
 type StageWebRealtimeAudioNavigator = {
   mediaDevices?: {
     getUserMedia?: (constraints: {
@@ -344,6 +349,47 @@ export async function prepareStageWebRealtimeAudioTrack(
       ]
     };
   }
+}
+
+export function createStageWebRealtimeAudioTrackStageEvent(
+  result: StageWebRealtimeAudioTrackResult,
+  input: StageWebRealtimeAudioTrackStageEventInput
+): StageEvent | undefined {
+  if (result.status === "disabled") {
+    return undefined;
+  }
+
+  const eventType =
+    result.status === "ready"
+      ? "completed"
+      : result.status === "failed"
+        ? "failed"
+        : "blocked";
+  const summary =
+    result.status === "ready"
+      ? "Realtime microphone stream attached."
+      : result.status === "failed"
+        ? "Realtime microphone stream failed."
+        : "Realtime microphone stream blocked.";
+  const details =
+    result.status === "ready"
+      ? "A local microphone track was attached only after Stage approval and browser permission; no standard API key was exposed to the browser."
+      : result.errors.join(" ") ||
+        "The Realtime bridge continued without attaching local microphone audio.";
+
+  return {
+    type: "agent.progress",
+    payload: {
+      id: `realtime_audio_${result.status}_${stableHash(`${input.threadId}:${input.timestamp}:${summary}`)}`,
+      threadId: input.threadId,
+      taskId: "realtime_audio_track",
+      agentName: "Realtime voice broker",
+      type: eventType,
+      summary,
+      details,
+      timestamp: input.timestamp
+    }
+  };
 }
 
 function createBrowserRealtimePeerConnection(

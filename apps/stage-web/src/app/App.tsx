@@ -41,6 +41,7 @@ import {
 import {
   createDefaultStageWebRealtimeBridgeState,
   createStageWebRealtimeBridgeConnectingState,
+  createStageWebRealtimeAudioTrackStageEvent,
   prepareStageWebRealtimeAudioTrack,
   readStageWebRealtimeApprovalPhrase,
   readStageWebRealtimeAudioEnabled,
@@ -402,6 +403,17 @@ export function App() {
           enabled: readStageWebRealtimeAudioEnabled(),
           preflight: freshMicPreflight
         });
+        const audioTrackEvent = createStageWebRealtimeAudioTrackStageEvent(
+          audioTrackResult,
+          {
+            threadId,
+            timestamp: new Date().toISOString()
+          }
+        );
+
+        if (audioTrackEvent) {
+          emitRealtimeStageEvent(audioTrackEvent);
+        }
 
         return startStageWebRealtimeBridge({
           readiness,

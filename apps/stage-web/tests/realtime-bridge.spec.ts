@@ -685,6 +685,9 @@ test("Stage Web attaches local audio only after Realtime approval and ready mic 
   );
   await page.getByRole("button", { name: "Approve" }).click({ force: true });
   await expect(page.getByTestId("realtime-broker-status")).toContainText("live SDP");
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime microphone stream attached."
+  );
 
   const audioEvidence = await page.evaluate(() => {
     const browserWindow = window as Window & {
@@ -714,6 +717,12 @@ test("Stage Web attaches local audio only after Realtime approval and ready mic 
           event.type === "agent.progress" &&
           event.payload?.summary === "Realtime SDP bridge connected." &&
           event.payload?.details?.includes("approved local audio track")
+      ),
+      audioTrackVisible: (snapshot?.stageEvents ?? []).some(
+        (event) =>
+          event.type === "agent.progress" &&
+          event.payload?.summary === "Realtime microphone stream attached." &&
+          event.payload?.details?.includes("Stage approval")
       )
     };
   });
@@ -727,6 +736,7 @@ test("Stage Web attaches local audio only after Realtime approval and ready mic 
   ]);
   expect(audioEvidence.attachedTracks).toEqual(["audio:fake_audio_track"]);
   expect(audioEvidence.audioBridgeConnected).toBe(true);
+  expect(audioEvidence.audioTrackVisible).toBe(true);
   expect(brokerRequests).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
