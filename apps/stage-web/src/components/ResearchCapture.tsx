@@ -24,6 +24,9 @@ export function ResearchCapture({
 }: ResearchCaptureProps) {
   const latestEvent = events.at(-1);
   const latestEvents = events.slice(-4).reverse();
+  const realtimeLatencyLine = realtimeDebugSummary
+    ? formatRealtimeLatencyLine(realtimeDebugSummary)
+    : undefined;
 
   return (
     <aside
@@ -93,6 +96,7 @@ export function ResearchCapture({
               ? "tool call observed"
               : "events only"}
             {realtimeDebugSummary.toolOutputReturned ? " · output returned" : ""}
+            {realtimeLatencyLine ? ` · ${realtimeLatencyLine}` : ""}
           </p>
           <button type="button" onClick={onExportRealtimeDebug}>
             Export debug
@@ -116,4 +120,22 @@ export function ResearchCapture({
       </div>
     </aside>
   );
+}
+
+function formatRealtimeLatencyLine(
+  summary: StageWebRealtimeDebugSummary
+): string | undefined {
+  const firstResponseMs =
+    summary.latenciesMs.firstAssistantTextMs ??
+    summary.latenciesMs.firstAssistantAudioMs;
+  const parts = [
+    formatLatency("first response", firstResponseMs),
+    formatLatency("tool output", summary.latenciesMs.toolOutputReturnedMs)
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+function formatLatency(label: string, value?: number): string | undefined {
+  return typeof value === "number" ? `${label} ${value}ms` : undefined;
 }

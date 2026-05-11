@@ -47,6 +47,7 @@ import {
   readStageWebRealtimeApprovalPhrase,
   readStageWebRealtimeAudioEnabled,
   readStageWebRealtimeDebugEvents,
+  recordStageWebRealtimeDebugMarker,
   shouldStartStageWebRealtimeBridge,
   STAGE_WEB_REALTIME_DEBUG_STORAGE_KEY,
   startStageWebRealtimeBridge,
@@ -407,6 +408,7 @@ export function App() {
       };
 
       void (async () => {
+        const realtimeDebugStartedAt = Date.now();
         const freshMicPreflight = await checkStageWebRealtimeMicPreflight({
           explicitUserGesture: true,
           realtimeApprovalArmed: true
@@ -418,6 +420,12 @@ export function App() {
           enabled: readStageWebRealtimeAudioEnabled(),
           preflight: freshMicPreflight
         });
+        recordStageWebRealtimeDebugMarker(
+          `blackstage.audio.${audioTrackResult.status}`,
+          {
+            startedAt: realtimeDebugStartedAt
+          }
+        );
         const audioTrackEvent = createStageWebRealtimeAudioTrackStageEvent(
           audioTrackResult,
           {
@@ -438,6 +446,7 @@ export function App() {
           approvedAudioTrack: audioTrackResult.track,
           audioTrackApproved: audioTrackResult.status === "ready",
           approvalPhrase: readStageWebRealtimeApprovalPhrase(),
+          debugStartedAt: realtimeDebugStartedAt,
           emitStageEvents: (events) => {
             events.forEach((event) => {
               emitRealtimeStageEvent(event);

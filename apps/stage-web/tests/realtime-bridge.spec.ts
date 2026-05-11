@@ -679,6 +679,13 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     events?: Array<{ type?: string }>;
     rawPayloadStored?: boolean;
     summary?: {
+      latenciesMs?: {
+        bridgeConnectedMs?: number;
+        dataChannelOpenMs?: number;
+        firstAssistantTextMs?: number;
+        firstToolCallMs?: number;
+        toolOutputReturnedMs?: number;
+      };
       rawPayloadStored?: boolean;
       toolCallObserved?: boolean;
       toolOutputReturned?: boolean;
@@ -689,7 +696,26 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   expect(debugExport.summary?.rawPayloadStored).toBe(false);
   expect(debugExport.summary?.toolCallObserved).toBe(true);
   expect(debugExport.summary?.toolOutputReturned).toBe(true);
+  expect(debugExport.summary?.latenciesMs?.bridgeConnectedMs).toEqual(
+    expect.any(Number)
+  );
+  expect(debugExport.summary?.latenciesMs?.dataChannelOpenMs).toEqual(
+    expect.any(Number)
+  );
+  expect(debugExport.summary?.latenciesMs?.firstAssistantTextMs).toEqual(
+    expect.any(Number)
+  );
+  expect(debugExport.summary?.latenciesMs?.firstToolCallMs).toEqual(expect.any(Number));
+  expect(debugExport.summary?.latenciesMs?.toolOutputReturnedMs).toEqual(
+    expect.any(Number)
+  );
   expect(JSON.stringify(debugExport)).not.toContain("do-not-store-this-payload");
+  expect(
+    debugExport.events?.some((event) => event.type === "blackstage.audio.disabled")
+  ).toBe(true);
+  expect(
+    debugExport.events?.some((event) => event.type === "blackstage.data_channel.open")
+  ).toBe(true);
   expect(debugExport.events?.some((event) => event.type === "response.done")).toBe(
     true
   );

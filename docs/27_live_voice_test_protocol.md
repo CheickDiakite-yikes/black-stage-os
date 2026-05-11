@@ -30,9 +30,9 @@ explicitly enabled and approved.
   review artifact, and sends a `function_call_output` item back over the
   existing data channel when it is writable.
 - The Research Trace can export a redacted Realtime debug packet with event
-  counts, tool-call/output evidence, audio lifecycle counts, elapsed timing, and
-  bridge/mic state. It does not store raw provider payloads, raw audio,
-  transcripts, SDP, API keys, or approval phrases.
+  counts, tool-call/output evidence, audio lifecycle counts, first-latency
+  markers, elapsed timing, and bridge/mic state. It does not store raw provider
+  payloads, raw audio, transcripts, SDP, API keys, or approval phrases.
 
 ## Cheap Baseline
 
@@ -176,7 +176,8 @@ The live test is a pass when:
 - provider speech or text appears on the stage without chat chrome;
 - at least one provider tool call becomes an approval;
 - approval creates visible local work and an artifact;
-- debug export records tool and audio timing evidence without raw payloads.
+- debug export records first-response, tool-call, tool-output, and audio timing
+  evidence without raw payloads.
 
 ## Known Gaps
 

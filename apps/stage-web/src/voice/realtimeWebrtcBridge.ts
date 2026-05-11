@@ -79,6 +79,7 @@ export type StageWebRealtimeBridgeOptions = {
   createPeerConnection?: RealtimeWebrtcPeerConnectionFactory;
   fetchImpl?: typeof fetch;
   approvalPhrase?: string;
+  debugStartedAt?: number;
   now?: () => string;
   emitStageEvents?: (events: StageEvent[]) => void;
 };
@@ -178,21 +179,27 @@ export async function startStageWebRealtimeBridge(
 ): Promise<StageWebRealtimeBridgeResult> {
   const timestamp = options.now?.() ?? new Date().toISOString();
   const emitStageEvents = options.emitStageEvents ?? (() => undefined);
+  const debugStartedAt = options.debugStartedAt ?? Date.now();
   let retainedConnection: StageWebRealtimeWritablePeerConnection | undefined;
   const createPeerConnection =
     options.createPeerConnection ??
     (() =>
-      createBrowserRealtimePeerConnection((message) => {
-        const events = mapRealtimeDataChannelMessageToStageEvents(message, {
-          threadId: options.threadId,
-          sessionId: options.sessionId,
-          now: options.now
-        });
+      createBrowserRealtimePeerConnection(
+        (message) => {
+          const events = mapRealtimeDataChannelMessageToStageEvents(message, {
+            threadId: options.threadId,
+            sessionId: options.sessionId,
+            now: options.now
+          });
 
-        if (events.length > 0) {
-          emitStageEvents(events);
+          if (events.length > 0) {
+            emitStageEvents(events);
+          }
+        },
+        {
+          debugStartedAt
         }
-      }));
+      ));
   const createRetainedPeerConnection = () => {
     retainedConnection =
       createPeerConnection() as StageWebRealtimeWritablePeerConnection;
@@ -233,6 +240,10 @@ export async function startStageWebRealtimeBridge(
     timestamp,
     browserSendsAudio: exchange.browserSendsAudio,
     errors: exchange.errors
+  });
+
+  recordStageWebRealtimeDebugMarker(`blackstage.bridge.${exchange.status}`, {
+    startedAt: debugStartedAt
   });
 
   return {
@@ -423,13 +434,16 @@ export function createStageWebRealtimeAudioTrackStageEvent(
 }
 
 function createBrowserRealtimePeerConnection(
-  onMessage: (message: unknown) => void
+  onMessage: (message: unknown) => void,
+  options: {
+    debugStartedAt?: number;
+  } = {}
 ): StageWebRealtimeWritablePeerConnection {
   const PeerConnection = globalThis.RTCPeerConnection;
   const textProbe = readStageWebRealtimeTextProbe();
   const toolProbe = readStageWebRealtimeToolProbe();
   const debugEnabled = readStageWebRealtimeDebugEnabled();
-  const debugStartedAt = Date.now();
+  const debugStartedAt = options.debugStartedAt ?? Date.now();
   let channel: RTCDataChannel | undefined;
   let toolProbeSent = false;
 
@@ -443,6 +457,11 @@ function createBrowserRealtimePeerConnection(
     createDataChannel(label) {
       const dataChannel = peerConnection.createDataChannel(label);
       channel = dataChannel;
+      const recordDataChannelOpen = () => {
+        recordStageWebRealtimeDebugMarker("blackstage.data_channel.open", {
+          startedAt: debugStartedAt
+        });
+      };
 
       dataChannel.addEventListener("message", (event) => {
         recordStageWebRealtimeDebugEvent("server", event.data, {
@@ -463,20 +482,40 @@ function createBrowserRealtimePeerConnection(
         }
       });
       if (textProbe) {
-        dataChannel.addEventListener("open", () => {
+        const handleOpen = () => {
+          recordDataChannelOpen();
           sendStageWebRealtimeTextProbe(dataChannel, textProbe, {
             enabled: debugEnabled,
             startedAt: debugStartedAt
           });
-        });
+        };
+
+        if (dataChannel.readyState === "open") {
+          handleOpen();
+        } else {
+          dataChannel.addEventListener("open", handleOpen);
+        }
       } else if (toolProbe) {
-        dataChannel.addEventListener("open", () => {
+        const handleOpen = () => {
+          recordDataChannelOpen();
           toolProbeSent = true;
           sendStageWebRealtimeToolProbe(dataChannel, toolProbe, {
             enabled: debugEnabled,
             startedAt: debugStartedAt
           });
-        });
+        };
+
+        if (dataChannel.readyState === "open") {
+          handleOpen();
+        } else {
+          dataChannel.addEventListener("open", handleOpen);
+        }
+      } else {
+        if (dataChannel.readyState === "open") {
+          recordDataChannelOpen();
+        } else {
+          dataChannel.addEventListener("open", recordDataChannelOpen);
+        }
       }
 
       return {
@@ -933,12 +972,25 @@ export type StageWebRealtimeDebugEvent = {
   textLength?: number;
 };
 
+export type StageWebRealtimeDebugLatencies = {
+  bridgeConnectedMs?: number;
+  dataChannelOpenMs?: number;
+  microphoneReadyMs?: number;
+  microphoneFailedMs?: number;
+  firstSpeechInputMs?: number;
+  firstAssistantTextMs?: number;
+  firstAssistantAudioMs?: number;
+  firstToolCallMs?: number;
+  toolOutputReturnedMs?: number;
+};
+
 export type StageWebRealtimeDebugSummary = {
   eventCount: number;
   clientEventCount: number;
   serverEventCount: number;
   audioEventCount: number;
   maxElapsedMs: number;
+  latenciesMs: StageWebRealtimeDebugLatencies;
   clientEventTypes: string[];
   serverEventTypes: string[];
   toolNames: string[];
@@ -969,6 +1021,7 @@ export function createStageWebRealtimeDebugSummary(
     serverEventCount: serverEvents.length,
     audioEventCount: events.filter((event) => event.type.includes("audio")).length,
     maxElapsedMs: Math.max(...events.map((event) => event.elapsedMs)),
+    latenciesMs: createStageWebRealtimeDebugLatencies(events),
     clientEventTypes: uniqueCompactStrings(clientEvents.map((event) => event.type)),
     serverEventTypes: uniqueCompactStrings(serverEvents.map((event) => event.type)),
     toolNames,
@@ -981,6 +1034,33 @@ export function createStageWebRealtimeDebugSummary(
     ),
     rawPayloadStored: false
   };
+}
+
+export function recordStageWebRealtimeDebugMarker(
+  type: string,
+  input: {
+    direction?: StageWebRealtimeDebugEvent["direction"];
+    startedAt?: number;
+    callId?: string;
+    toolName?: string;
+    textLength?: number;
+  } = {}
+) {
+  if (!readStageWebRealtimeDebugEnabled()) {
+    return;
+  }
+
+  const startedAt = input.startedAt ?? Date.now();
+
+  writeStageWebRealtimeDebugEvent({
+    direction: input.direction ?? "client",
+    type: sanitizeRealtimeEventType(type),
+    timestamp: new Date().toISOString(),
+    elapsedMs: Math.max(0, Date.now() - startedAt),
+    callId: input.callId ? sanitizeRealtimeEventType(input.callId) : undefined,
+    toolName: input.toolName ? sanitizeRealtimeEventType(input.toolName) : undefined,
+    textLength: input.textLength
+  });
 }
 
 export function createStageWebRealtimeTextProbeClientEvents(
@@ -1172,6 +1252,10 @@ function recordStageWebRealtimeDebugEvent(
     return;
   }
 
+  writeStageWebRealtimeDebugEvent(event);
+}
+
+function writeStageWebRealtimeDebugEvent(event: StageWebRealtimeDebugEvent) {
   const runtimeConfig = globalThis as typeof globalThis & {
     __blackstageRealtimeDebugEvents?: StageWebRealtimeDebugEvent[];
   };
@@ -1248,6 +1332,72 @@ function isStageWebRealtimeDebugEvent(
     typeof event.timestamp === "string" &&
     typeof event.elapsedMs === "number"
   );
+}
+
+function createStageWebRealtimeDebugLatencies(
+  events: StageWebRealtimeDebugEvent[]
+): StageWebRealtimeDebugLatencies {
+  return {
+    bridgeConnectedMs: firstElapsedMs(
+      events,
+      (event) => event.type === "blackstage.bridge.connected"
+    ),
+    dataChannelOpenMs: firstElapsedMs(
+      events,
+      (event) => event.type === "blackstage.data_channel.open"
+    ),
+    microphoneReadyMs: firstElapsedMs(
+      events,
+      (event) => event.type === "blackstage.audio.ready"
+    ),
+    microphoneFailedMs: firstElapsedMs(
+      events,
+      (event) => event.type === "blackstage.audio.failed"
+    ),
+    firstSpeechInputMs: firstElapsedMs(
+      events,
+      (event) =>
+        event.direction === "server" &&
+        (event.type === "input_audio_buffer.speech_started" ||
+          event.type === "input_audio_buffer.speech_stopped")
+    ),
+    firstAssistantTextMs: firstElapsedMs(
+      events,
+      (event) =>
+        event.direction === "server" &&
+        event.textLength !== undefined &&
+        (event.type.includes("output_text") ||
+          event.type.includes("audio_transcript") ||
+          event.type.includes("response.text"))
+    ),
+    firstAssistantAudioMs: firstElapsedMs(
+      events,
+      (event) =>
+        event.direction === "server" &&
+        (event.type === "output_audio_buffer.started" ||
+          event.type.includes("response.audio"))
+    ),
+    firstToolCallMs: firstElapsedMs(
+      events,
+      (event) =>
+        event.direction === "server" &&
+        event.type === "response.function_call_arguments.done"
+    ),
+    toolOutputReturnedMs: firstElapsedMs(
+      events,
+      (event) =>
+        event.direction === "client" &&
+        event.type === "conversation.item.create" &&
+        Boolean(event.callId)
+    )
+  };
+}
+
+function firstElapsedMs(
+  events: StageWebRealtimeDebugEvent[],
+  predicate: (event: StageWebRealtimeDebugEvent) => boolean
+): number | undefined {
+  return events.find(predicate)?.elapsedMs;
 }
 
 function uniqueCompactStrings(values: Array<string | undefined>, limit = 16): string[] {
