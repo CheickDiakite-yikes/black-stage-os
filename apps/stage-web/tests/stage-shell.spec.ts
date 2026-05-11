@@ -49,6 +49,20 @@ async function installFakeSpeechRecognition(page: Page) {
         this.onend?.();
       }
 
+      emitInterim(text: string) {
+        this.onresult?.({
+          resultIndex: 0,
+          results: [
+            {
+              0: {
+                transcript: text
+              },
+              isFinal: false
+            }
+          ]
+        });
+      }
+
       emitFinal(text: string) {
         this.onresult?.({
           resultIndex: 0,
@@ -85,6 +99,18 @@ async function emitFakeSpeechFinal(page: Page, text: string) {
     };
 
     browserWindow.__blackstageSpeechRecognition?.emitFinal(spokenText);
+  }, text);
+}
+
+async function emitFakeSpeechInterim(page: Page, text: string) {
+  await page.evaluate((spokenText) => {
+    const browserWindow = window as Window & {
+      __blackstageSpeechRecognition?: {
+        emitInterim: (text: string) => void;
+      };
+    };
+
+    browserWindow.__blackstageSpeechRecognition?.emitInterim(spokenText);
   }, text);
 }
 
@@ -1723,8 +1749,17 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
   await expect(page.getByTestId("voice-transcript")).toContainText(
     "listening for intent"
   );
+  await expect(page.getByTestId("stage-presence")).toContainText("Listening");
+  await expect(page.getByTestId("stage-presence")).toContainText(
+    "Say the intent. The stage will shape itself around it."
+  );
   await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
     "Listening for intent"
+  );
+
+  await emitFakeSpeechInterim(page, "Help me plan a seed round");
+  await expect(page.getByTestId("stage-presence")).toContainText(
+    "Help me plan a seed round"
   );
 
   await emitFakeSpeechFinal(

@@ -304,6 +304,18 @@ export function StageShell({
     realtimeArmPending
   );
   const realtimeMicPreflightStatus = formatRealtimeMicPreflight(realtimeMicPreflight);
+  const presenceTitle =
+    voiceCapture.status === "listening"
+      ? "Listening"
+      : isIdleStage
+        ? "Speak when ready"
+        : thread.title;
+  const presenceObjective =
+    voiceCapture.status === "listening"
+      ? interimTranscript || "Say the intent. The stage will shape itself around it."
+      : voiceError && isIdleStage
+        ? voiceError
+        : thread.currentObjective;
 
   return (
     <main
@@ -384,10 +396,10 @@ export function StageShell({
         >
           <div className="presence-core" />
         </button>
-        <div className="stage-copy">
-          <h1 id="stage-title">{isIdleStage ? "Speak when ready" : thread.title}</h1>
+        <div className="stage-copy" aria-live="polite">
+          <h1 id="stage-title">{presenceTitle}</h1>
           <div className="prompt-rule" aria-hidden="true" />
-          <p className="thread-objective">{thread.currentObjective}</p>
+          <p className="thread-objective">{presenceObjective}</p>
         </div>
       </section>
       <section className="thread-console" aria-label="Intent thread">

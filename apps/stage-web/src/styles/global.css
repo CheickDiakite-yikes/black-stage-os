@@ -348,6 +348,21 @@ button:disabled {
   animation-duration: 2.4s;
 }
 
+.stage-idle.stage-listening .stage-presence {
+  transform: translateY(-1.35rem) scale(1.015);
+}
+
+.stage-listening .stage-copy h1 {
+  color: rgba(255, 246, 228, 0.96);
+  text-shadow:
+    0 0 18px rgba(239, 228, 210, 0.2),
+    0 0 44px rgba(216, 189, 133, 0.16);
+}
+
+.stage-listening .thread-objective {
+  color: rgba(255, 246, 228, 0.82);
+}
+
 .presence-orbit {
   position: relative;
   width: 8.25rem;
