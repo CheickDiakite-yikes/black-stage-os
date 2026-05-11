@@ -889,6 +889,81 @@ test("Stage Shell v0 updates model scenarios locally without provider calls", as
   expect(modelUpdateWasLogged).toBe(true);
 });
 
+test("Stage Shell v0 runs local simulation scenarios without external engines", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+
+  const simulationSurface = page.getByTestId("simulation-surface");
+
+  await expect(simulationSurface).toContainText("First five seconds");
+
+  await page
+    .getByTestId("intent-input")
+    .fill("simulate voice wake with artifact approval");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(simulationSurface).toContainText("voice wake with artifact approval");
+  await expect(simulationSurface).toContainText("local run");
+  await expect(simulationSurface).toContainText("Local stage simulation only");
+
+  const simulationRunWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          payload?: {
+            simulationTitle?: string;
+          };
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          command_action?: string;
+          command_value_redacted?: string;
+        };
+      }>;
+    };
+
+    const commandWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "run_simulation" &&
+          event.payload.command_value_redacted === "voice wake with artifact approval"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "simulation_card" &&
+          event.payload.payload?.simulationTitle === "voice wake with artifact approval"
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(simulationRunWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 attaches local context as a private document object", async ({
   page
 }) => {

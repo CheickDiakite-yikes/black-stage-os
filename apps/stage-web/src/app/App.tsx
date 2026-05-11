@@ -82,7 +82,8 @@ type StageCommandAction =
   | "rename"
   | "set_url"
   | "set_map"
-  | "set_model";
+  | "set_model"
+  | "run_simulation";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
@@ -1995,6 +1996,12 @@ function parseStageCommand(
     return modelScenarioCommand;
   }
 
+  const simulationRunCommand = parseSimulationRunCommand(intentText, objects);
+
+  if (simulationRunCommand) {
+    return simulationRunCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -2130,6 +2137,36 @@ function parseModelScenarioCommand(
     target,
     field: scenarioLabel,
     value: scenarioValue
+  };
+}
+
+function parseSimulationRunCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:simulate|run simulation|run the simulation|set simulation to)\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:show)\s+(.+?)\s+(?:in|inside)\s+(?:the\s+)?simulation(?:\s+card)?\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const target = objects.find((object) => object.type === "simulation_card");
+  const simulationTitle = sanitizeStageObjectTitle(match[1] ?? "");
+
+  if (!target || !simulationTitle) {
+    return undefined;
+  }
+
+  return {
+    action: "run_simulation",
+    target,
+    value: simulationTitle
   };
 }
 
@@ -2296,6 +2333,8 @@ function applyStageCommandToObject(
       return applyMapPortalFocusCommand(object, command.value);
     case "set_model":
       return applyModelScenarioCommand(object, command.field, command.value);
+    case "run_simulation":
+      return applySimulationRunCommand(object, command.value);
   }
 }
 
@@ -2321,6 +2360,8 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Centered ${targetTitle} on ${command.value ?? "the requested focus"}.`;
     case "set_model":
       return `Updated ${targetTitle} ${command.field ?? "scenario"} to ${command.value ?? "the requested value"}.`;
+    case "run_simulation":
+      return `Ran ${targetTitle} for ${command.value ?? "the requested scenario"}.`;
   }
 }
 
@@ -2463,6 +2504,40 @@ function applyModelScenarioCommand(
       scenarios: nextScenarios.slice(0, 5),
       guardrail:
         "Model scenario is stored locally; no external model provider was called."
+    }
+  };
+}
+
+function applySimulationRunCommand(
+  object: StageObject,
+  simulationTitle: string | undefined
+): StageObject {
+  if (object.type !== "simulation_card" || !simulationTitle) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const steps = Array.isArray(payload.steps) ? payload.steps : [];
+
+  return {
+    ...object,
+    state: "expanded",
+    payload: {
+      ...payload,
+      simulationTitle,
+      status: "local run",
+      steps: [
+        {
+          label: "Requested scenario",
+          value: simulationTitle
+        },
+        {
+          label: "Boundary",
+          value: "Local stage simulation only; no external engine was called."
+        },
+        ...steps
+      ].slice(0, 5),
+      guardrail: "Simulation run is represented locally for audit and replay."
     }
   };
 }
