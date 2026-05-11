@@ -1223,6 +1223,7 @@ export function App() {
       const attachmentId = `context_${Date.now().toString(36)}`;
       const modality = readContextModality(file);
       const excerpt = await readContextExcerpt(file);
+      const imagePreview = await readImageContextPreview(file);
       const documentObject: StageObject = {
         id: `${attachmentId}_document`,
         threadId: thread.id,
@@ -1233,6 +1234,9 @@ export function App() {
           documentTitle: file.name,
           status: "local",
           modality,
+          previewUrl: imagePreview?.previewUrl,
+          previewKind: imagePreview?.previewKind,
+          imageDimensions: imagePreview?.dimensions,
           sections: [
             {
               label: "File",
@@ -1246,6 +1250,22 @@ export function App() {
               label: "Boundary",
               value: "Local-only context object. No external upload."
             },
+            ...(imagePreview
+              ? [
+                  {
+                    label: "Preview",
+                    value: "Session-only local image preview. Not uploaded."
+                  },
+                  ...(imagePreview.dimensions
+                    ? [
+                        {
+                          label: "Dimensions",
+                          value: `${imagePreview.dimensions.width} x ${imagePreview.dimensions.height}`
+                        }
+                      ]
+                    : [])
+                ]
+              : []),
             ...(excerpt
               ? [
                   {
@@ -1280,6 +1300,9 @@ export function App() {
           mimeType: file.type || "unknown",
           fileSize: file.size,
           modality,
+          previewAvailable: Boolean(imagePreview),
+          previewKind: imagePreview?.previewKind,
+          imageDimensions: imagePreview?.dimensions,
           attachedAt,
           localOnly: true
         }
@@ -1824,6 +1847,53 @@ function readContextModality(file: File): "text" | "image" | "file" {
   }
 
   return "file";
+}
+
+type ImageContextPreview = {
+  previewUrl: string;
+  previewKind: "session_object_url";
+  dimensions?: {
+    width: number;
+    height: number;
+  };
+};
+
+async function readImageContextPreview(
+  file: File
+): Promise<ImageContextPreview | undefined> {
+  if (!file.type.startsWith("image/") || file.size > 5_000_000) {
+    return undefined;
+  }
+
+  const previewUrl = URL.createObjectURL(file);
+
+  return {
+    previewUrl,
+    previewKind: "session_object_url",
+    dimensions: await readImageDimensions(previewUrl)
+  };
+}
+
+function readImageDimensions(
+  imageUrl: string
+): Promise<ImageContextPreview["dimensions"]> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const timeout = window.setTimeout(() => resolve(undefined), 1_500);
+
+    image.onload = () => {
+      window.clearTimeout(timeout);
+      resolve({
+        width: image.naturalWidth,
+        height: image.naturalHeight
+      });
+    };
+    image.onerror = () => {
+      window.clearTimeout(timeout);
+      resolve(undefined);
+    };
+    image.src = imageUrl;
+  });
 }
 
 async function readContextExcerpt(file: File): Promise<string | undefined> {

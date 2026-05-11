@@ -565,6 +565,67 @@ test("Stage Shell v0 attaches local context as a private document object", async
   await expect(page.getByTestId("research-capture")).toContainText("context attached");
 });
 
+test("Stage Shell v0 renders local image context without uploading it", async ({
+  page
+}) => {
+  test.setTimeout(90_000);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("document-portal-surface")).toContainText(
+    "Stage Shell v0 spec"
+  );
+
+  await page.getByTestId("context-file-input").setInputFiles({
+    name: "stage-card.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR4nGP8z8Dwn4GBgYERJgwMAJ73A/0yDRC7AAAAAElFTkSuQmCC",
+      "base64"
+    )
+  });
+
+  const latestDocumentPortal = page.getByTestId("document-portal-surface").last();
+
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Context: stage-card.png"
+  );
+  await expect(latestDocumentPortal).toContainText("Session-only local image preview");
+  await expect(latestDocumentPortal).toContainText(
+    "Local-only context object. No external upload."
+  );
+  await expect(page.getByTestId("image-context-preview")).toBeVisible();
+
+  const imageContextWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      researchEvents: Array<{
+        eventType: string;
+        payload?: {
+          modality?: string;
+          preview_available?: boolean;
+          local_only?: boolean;
+        };
+      }>;
+    };
+
+    return snapshot.researchEvents.some(
+      (event) =>
+        event.eventType === "context_attached" &&
+        event.payload?.modality === "image" &&
+        event.payload.preview_available === true &&
+        event.payload.local_only === true
+    );
+  });
+
+  expect(imageContextWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) => {
   test.setTimeout(180_000);
 

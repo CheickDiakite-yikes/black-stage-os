@@ -43,6 +43,8 @@ export function researchEventFromStageEvent(
           mime_type: stageEvent.payload.mimeType,
           file_size: stageEvent.payload.fileSize,
           modality: stageEvent.payload.modality,
+          preview_available: stageEvent.payload.previewAvailable ?? false,
+          image_dimensions: stageEvent.payload.imageDimensions,
           local_only: stageEvent.payload.localOnly
         },
         stageEvent.payload.threadId

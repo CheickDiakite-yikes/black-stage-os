@@ -76,8 +76,10 @@ export function StageObjectCard({
       return;
     }
 
-    const nextX = dragStartRef.current.objectX + event.clientX - dragStartRef.current.pointerX;
-    const nextY = dragStartRef.current.objectY + event.clientY - dragStartRef.current.pointerY;
+    const nextX =
+      dragStartRef.current.objectX + event.clientX - dragStartRef.current.pointerX;
+    const nextY =
+      dragStartRef.current.objectY + event.clientY - dragStartRef.current.pointerY;
 
     onMove(object.id, {
       x: Math.round(nextX),
@@ -123,7 +125,11 @@ export function StageObjectCard({
         >
           Focus
         </button>
-        <button type="button" aria-label={`Pin ${object.title}`} onClick={() => onPinToggle(object.id)}>
+        <button
+          type="button"
+          aria-label={`Pin ${object.title}`}
+          onClick={() => onPinToggle(object.id)}
+        >
           {object.pinned ? "Unpin" : "Pin"}
         </button>
         <button
@@ -188,20 +194,41 @@ function DocumentPortalSurface({ payload }: { payload: unknown }) {
     return <PayloadPreview payload={payload} />;
   }
 
-  const sections = Array.isArray(payload.sections) ? payload.sections.filter(isRecord) : [];
+  const sections = Array.isArray(payload.sections)
+    ? payload.sections.filter(isRecord)
+    : [];
+  const isImageContext =
+    payload.modality === "image" && typeof payload.previewUrl === "string";
 
   return (
-    <div className="portal-surface document-portal-surface" data-testid="document-portal-surface">
+    <div
+      className="portal-surface document-portal-surface"
+      data-testid="document-portal-surface"
+    >
       <div className="portal-strip">
         <span>document</span>
         <span>{formatPayloadValue(payload.status ?? "open")}</span>
       </div>
       <h3>{formatPayloadValue(payload.documentTitle ?? "Stage document")}</h3>
+      {isImageContext ? (
+        <figure className="image-context-preview">
+          <img
+            alt=""
+            data-testid="image-context-preview"
+            src={formatPayloadValue(payload.previewUrl)}
+          />
+          <figcaption>Session-only local preview</figcaption>
+        </figure>
+      ) : null}
       <dl>
         {sections.slice(0, 4).map((section, index) => (
           <div key={`${index}_${formatPayloadValue(section.label ?? "section")}`}>
             <dt>{formatPayloadValue(section.label ?? "Section")}</dt>
-            <dd>{formatPayloadValue(section.value ?? section.summary ?? "Ready for inspection")}</dd>
+            <dd>
+              {formatPayloadValue(
+                section.value ?? section.summary ?? "Ready for inspection"
+              )}
+            </dd>
           </div>
         ))}
       </dl>
@@ -217,7 +244,10 @@ function BrowserPortalSurface({ payload }: { payload: unknown }) {
   const observations = Array.isArray(payload.observations) ? payload.observations : [];
 
   return (
-    <div className="portal-surface browser-portal-surface" data-testid="browser-portal-surface">
+    <div
+      className="portal-surface browser-portal-surface"
+      data-testid="browser-portal-surface"
+    >
       <div className="browser-bar" aria-label="Simulated browser portal">
         <span className="browser-dot" />
         <code>{formatPayloadValue(payload.url ?? "blackstage://stage")}</code>
@@ -242,7 +272,9 @@ function ModelSurface({ payload }: { payload: unknown }) {
     return <PayloadPreview payload={payload} />;
   }
 
-  const scenarios = Array.isArray(payload.scenarios) ? payload.scenarios.filter(isRecord) : [];
+  const scenarios = Array.isArray(payload.scenarios)
+    ? payload.scenarios.filter(isRecord)
+    : [];
 
   return (
     <div className="cognitive-surface model-surface" data-testid="model-surface">
@@ -255,8 +287,12 @@ function ModelSurface({ payload }: { payload: unknown }) {
         {scenarios.slice(0, 4).map((scenario, index) => (
           <div key={`${index}_${formatPayloadValue(scenario.label ?? "scenario")}`}>
             <span>{formatPayloadValue(scenario.label ?? "Scenario")}</span>
-            <strong>{formatPayloadValue(scenario.value ?? scenario.output ?? "Pending")}</strong>
-            {scenario.confidence ? <em>{formatPayloadValue(scenario.confidence)} confidence</em> : null}
+            <strong>
+              {formatPayloadValue(scenario.value ?? scenario.output ?? "Pending")}
+            </strong>
+            {scenario.confidence ? (
+              <em>{formatPayloadValue(scenario.confidence)} confidence</em>
+            ) : null}
           </div>
         ))}
       </div>
@@ -278,7 +314,9 @@ function MapPortalSurface({ payload }: { payload: unknown }) {
         <span>{formatPayloadValue(payload.status ?? "simulated")}</span>
       </div>
       <div className="map-field" aria-label="Simulated object map">
-        <span className="map-center">{formatPayloadValue(payload.center ?? "Intent")}</span>
+        <span className="map-center">
+          {formatPayloadValue(payload.center ?? "Intent")}
+        </span>
         {nodes.slice(0, 5).map((node, index) => {
           const angle = typeof node.angle === "number" ? node.angle : index * 72;
           const distance = typeof node.distance === "number" ? node.distance : 46;
@@ -288,7 +326,11 @@ function MapPortalSurface({ payload }: { payload: unknown }) {
           } as CSSProperties;
 
           return (
-            <span className="map-node" key={`${index}_${formatPayloadValue(node.label)}`} style={nodeStyle}>
+            <span
+              className="map-node"
+              key={`${index}_${formatPayloadValue(node.label)}`}
+              style={nodeStyle}
+            >
               {formatPayloadValue(node.label ?? "Node")}
             </span>
           );
@@ -306,7 +348,10 @@ function SimulationSurface({ payload }: { payload: unknown }) {
   const steps = Array.isArray(payload.steps) ? payload.steps.filter(isRecord) : [];
 
   return (
-    <div className="cognitive-surface simulation-surface" data-testid="simulation-surface">
+    <div
+      className="cognitive-surface simulation-surface"
+      data-testid="simulation-surface"
+    >
       <div className="portal-strip">
         <span>simulation</span>
         <span>{formatPayloadValue(payload.status ?? "queued")}</span>
@@ -316,7 +361,9 @@ function SimulationSurface({ payload }: { payload: unknown }) {
         {steps.slice(0, 4).map((step, index) => (
           <li key={`${index}_${formatPayloadValue(step.label ?? "step")}`}>
             <span>{formatPayloadValue(step.label ?? `Step ${index + 1}`)}</span>
-            <strong>{formatPayloadValue(step.value ?? step.outcome ?? "Pending")}</strong>
+            <strong>
+              {formatPayloadValue(step.value ?? step.outcome ?? "Pending")}
+            </strong>
           </li>
         ))}
       </ol>
@@ -330,7 +377,9 @@ function MemorySurface({ payload }: { payload: unknown }) {
   }
 
   const notes = Array.isArray(payload.notes) ? payload.notes : [];
-  const records = Array.isArray(payload.records) ? payload.records.filter(isRecord) : [];
+  const records = Array.isArray(payload.records)
+    ? payload.records.filter(isRecord)
+    : [];
 
   return (
     <div className="cognitive-surface memory-surface" data-testid="memory-surface">
@@ -351,7 +400,9 @@ function MemorySurface({ payload }: { payload: unknown }) {
       ) : null}
       <ul>
         {notes.slice(0, 4).map((note, index) => (
-          <li key={`${index}_${formatPayloadValue(note)}`}>{formatPayloadValue(note)}</li>
+          <li key={`${index}_${formatPayloadValue(note)}`}>
+            {formatPayloadValue(note)}
+          </li>
         ))}
       </ul>
     </div>
@@ -369,7 +420,9 @@ function PayloadPreview({ payload }: { payload: unknown }) {
     return (
       <ul className="object-list">
         {preferredList.slice(0, 5).map((item, index) => (
-          <li key={`${index}_${formatPayloadValue(item)}`}>{formatPayloadValue(item)}</li>
+          <li key={`${index}_${formatPayloadValue(item)}`}>
+            {formatPayloadValue(item)}
+          </li>
         ))}
       </ul>
     );
@@ -390,7 +443,15 @@ function PayloadPreview({ payload }: { payload: unknown }) {
 }
 
 function findPreferredList(payload: Record<string, unknown>): unknown[] | undefined {
-  const listKeys = ["steps", "risks", "weeks", "slices", "clusters", "acceptance", "notes"];
+  const listKeys = [
+    "steps",
+    "risks",
+    "weeks",
+    "slices",
+    "clusters",
+    "acceptance",
+    "notes"
+  ];
 
   for (const key of listKeys) {
     const value = payload[key];
@@ -413,7 +474,8 @@ function formatPayloadValue(value: unknown): string {
   }
 
   if (isRecord(value)) {
-    const label = value.label ?? value.objective ?? value.recommendation ?? value.status;
+    const label =
+      value.label ?? value.objective ?? value.recommendation ?? value.status;
     return typeof label === "string" ? label : JSON.stringify(value);
   }
 
@@ -425,7 +487,10 @@ function formatPayloadValue(value: unknown): string {
 }
 
 function formatPayloadKey(key: string): string {
-  return key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").toLowerCase();
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/_/g, " ")
+    .toLowerCase();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

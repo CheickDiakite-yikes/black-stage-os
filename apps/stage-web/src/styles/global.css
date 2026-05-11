@@ -819,6 +819,26 @@ button:disabled {
   margin: 0;
 }
 
+.image-context-preview {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.25rem 0 0.85rem;
+}
+
+.image-context-preview img {
+  width: min(100%, 17rem);
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border: 1px solid rgba(219, 255, 245, 0.18);
+  background: rgba(2, 10, 12, 0.72);
+}
+
+.image-context-preview figcaption {
+  color: rgba(219, 255, 245, 0.6);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
 .document-portal-surface div {
   display: grid;
   gap: 0.16rem;

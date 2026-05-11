@@ -19,6 +19,12 @@ export type ContextAttachmentPayload = {
   mimeType: string;
   fileSize: number;
   modality: "text" | "image" | "file";
+  previewAvailable?: boolean;
+  previewKind?: "session_object_url";
+  imageDimensions?: {
+    width: number;
+    height: number;
+  };
   attachedAt: string;
   localOnly: true;
 };
