@@ -48,6 +48,17 @@ The command:
 
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
+## Redacted Proof File
+
+If you want a local proof packet for the run, set an ignored `.blackstage/` path:
+
+```bash
+BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH=.blackstage/realtime-smoke/latest.json \
+pnpm smoke:realtime
+```
+
+The proof writer records only redacted metadata: pass/fail/skip status, set/unset env readiness, byte counts, a short answer digest, and safety booleans. It rejects proof paths outside `.blackstage/` and does not write raw SDP, API keys, approval phrases, or browser trace artifacts.
+
 ## Do Not Commit
 
-Do not commit API keys, approval phrases, raw SDP answers, trace zips, browser artifacts, or local `.env` files. The live smoke output should stay as console evidence unless a later task creates a redacted proof format.
+Do not commit API keys, approval phrases, raw SDP answers, trace zips, browser artifacts, `.blackstage/` proof files, or local `.env` files.

@@ -9,6 +9,12 @@ import {
   createStageBrokerRuntimeConfig,
   createStageBrokerServer
 } from "../apps/stage-broker/dist/index.js";
+import {
+  createRealtimeLiveSmokeProof,
+  createRequiredEnvStatus,
+  createSafeRealtimeSmokeErrorMessage,
+  writeRealtimeLiveSmokeProof
+} from "./realtime-live-smoke-proof.mjs";
 
 const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 const REQUIRED_ENV_VARS = [
@@ -19,16 +25,26 @@ const REQUIRED_ENV_VARS = [
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 async function main() {
+  const requiredEnv = createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS);
+  const missingEnvVars = REQUIRED_ENV_VARS.filter(
+    (envVar) => !process.env[envVar]?.trim()
+  );
+
   if (process.env[LIVE_SMOKE_ENV_VAR] !== "1") {
     console.log(
       `Skipped live Realtime smoke. Set ${LIVE_SMOKE_ENV_VAR}=1 with local broker/OpenAI env to run. Run pnpm preflight:realtime for redacted readiness.`
     );
+    await writeProof({
+      status: "skipped",
+      liveSmokeArmed: false,
+      requiredEnv,
+      missingEnv: missingEnvVars,
+      openAiNetworkCallAttempted: false,
+      browserSendsAudio: false,
+      notes: ["Live Realtime smoke was not armed; no OpenAI network call ran."]
+    });
     return;
   }
-
-  const missingEnvVars = REQUIRED_ENV_VARS.filter(
-    (envVar) => !process.env[envVar]?.trim()
-  );
 
   if (missingEnvVars.length > 0) {
     throw new Error(
@@ -81,6 +97,20 @@ async function main() {
       .digest("hex")
       .slice(0, 12);
 
+    const proofResult = await writeProof({
+      status: "passed",
+      route: BLACKSTAGE_REALTIME_BROKER_ROUTE,
+      liveSmokeArmed: true,
+      requiredEnv,
+      missingEnv: [],
+      openAiNetworkCallAttempted: true,
+      offerBytes: Buffer.byteLength(offerSdp, "utf8"),
+      answerBytes: Buffer.byteLength(answerSdp, "utf8"),
+      answerSha256Prefix: answerDigest,
+      browserSendsAudio: false,
+      notes: ["Live Realtime SDP exchange completed through the local broker."]
+    });
+
     console.log(
       JSON.stringify(
         {
@@ -90,7 +120,8 @@ async function main() {
           answerBytes: Buffer.byteLength(answerSdp, "utf8"),
           answerSha256Prefix: answerDigest,
           browserReceivesStandardApiKey: false,
-          browserSendsAudio: false
+          browserSendsAudio: false,
+          redactedProofPath: proofResult?.proofPath
         },
         null,
         2
@@ -100,6 +131,17 @@ async function main() {
     await browser.close();
     await closeServer(server);
   }
+}
+
+async function writeProof(input) {
+  const proof = createRealtimeLiveSmokeProof(input);
+  const proofResult = await writeRealtimeLiveSmokeProof(proof);
+
+  if (proofResult && input.status !== "passed") {
+    console.log(`Redacted Realtime smoke proof written to ${proofResult.proofPath}`);
+  }
+
+  return proofResult;
 }
 
 async function createBrowserDataChannelOffer(browser) {
@@ -172,7 +214,23 @@ function readTimeoutMs() {
     : DEFAULT_TIMEOUT_MS;
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "Live Realtime smoke failed.");
+main().catch(async (error) => {
+  try {
+    await writeProof({
+      status: "failed",
+      liveSmokeArmed: process.env[LIVE_SMOKE_ENV_VAR] === "1",
+      requiredEnv: createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS),
+      missingEnv: REQUIRED_ENV_VARS.filter((envVar) => !process.env[envVar]?.trim()),
+      openAiNetworkCallAttempted:
+        process.env[LIVE_SMOKE_ENV_VAR] === "1" &&
+        REQUIRED_ENV_VARS.every((envVar) => process.env[envVar]?.trim()),
+      browserSendsAudio: false,
+      errorMessage: createSafeRealtimeSmokeErrorMessage(error)
+    });
+  } catch {
+    // Preserve the original failure; proof writing is helpful but secondary.
+  }
+
+  console.error(createSafeRealtimeSmokeErrorMessage(error));
   process.exitCode = 1;
 });
