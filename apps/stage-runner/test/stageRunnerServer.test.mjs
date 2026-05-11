@@ -282,6 +282,19 @@ describe("Stage runner server", () => {
     assert.equal(proof.policy.externalActionTaken, false);
     assert.equal(proof.policy.humanReviewRequired, true);
     assert.ok(proof.eventCount >= 3);
+
+    const proofsResponse = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/proofs`);
+    const proofsBody = await proofsResponse.json();
+
+    assert.equal(proofsResponse.status, 200);
+    assert.equal(proofsBody.ok, true);
+    assert.equal(proofsBody.proofs.length, 1);
+    assert.equal(proofsBody.proofs[0].taskId, "task_prepare_workspace");
+    assert.equal(proofsBody.proofs[0].status, "completed");
+    assert.equal(
+      proofsBody.proofs[0].proofPath,
+      ".blackstage/workspaces/task_prepare_workspace/blackstage-run.json"
+    );
   });
 
   it("rejects workspace preparation outside the approved Blackstage boundary", async () => {

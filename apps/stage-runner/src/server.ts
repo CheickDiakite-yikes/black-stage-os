@@ -31,6 +31,7 @@ import { createNodeCodexCommandExecutor } from "./codexCliExecutor.js";
 import {
   DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT,
   prepareStageRunnerTaskWorkspace,
+  readStageRunnerProofIndex,
   writeStageRunnerRunProof
 } from "./workspaceManager.js";
 
@@ -168,6 +169,7 @@ async function handleStageRunnerRequest(
   const method = request.method?.toUpperCase() ?? "GET";
   const corsHeaders = createCorsHeaders(request, runtimeConfig);
   const snapshotPath = `${runtimeConfig.routePath}/snapshot`;
+  const proofsPath = `${runtimeConfig.routePath}/proofs`;
   const tasksPath = `${runtimeConfig.routePath}/tasks`;
   const runNextPath = `${runtimeConfig.routePath}/run-next`;
 
@@ -186,6 +188,25 @@ async function handleStageRunnerRequest(
 
   if (routeUrl.pathname === snapshotPath && method === "GET") {
     writeJson(response, 200, createSnapshotResponse(scheduler, new Date().toISOString()), corsHeaders);
+    return;
+  }
+
+  if (routeUrl.pathname === proofsPath && method === "GET") {
+    const proofs = await readStageRunnerProofIndex({
+      repoRoot: runtimeConfig.repoRoot,
+      workspaceRoot: runtimeConfig.workspaceRoot
+    });
+
+    writeJson(
+      response,
+      200,
+      {
+        ok: true,
+        proofs,
+        checkedAt: new Date().toISOString()
+      },
+      corsHeaders
+    );
     return;
   }
 

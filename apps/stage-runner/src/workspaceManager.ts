@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import {
   isApprovedHarnessWorkspace
@@ -53,6 +53,17 @@ export type StageRunnerRunProof = {
     browserMutationAllowed: false;
     externalActionTaken: false;
   };
+};
+
+export type StageRunnerProofSummary = {
+  taskId: string;
+  runId: string;
+  adapterId: string;
+  status: HarnessRun["status"];
+  summary?: string;
+  eventCount: number;
+  proofPath: string;
+  writtenAt: string;
 };
 
 export type StageRunnerWorkspaceManagerOptions = {
@@ -171,6 +182,50 @@ export async function writeStageRunnerRunProof(
   };
 }
 
+export async function readStageRunnerProofIndex(
+  options: StageRunnerWorkspaceManagerOptions = {}
+): Promise<StageRunnerProofSummary[]> {
+  const repoRoot = resolve(options.repoRoot ?? process.cwd());
+  const workspaceRoot = options.workspaceRoot ?? DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT;
+  const absoluteWorkspaceRoot = resolve(repoRoot, workspaceRoot);
+  let entries;
+
+  try {
+    entries = await readdir(absoluteWorkspaceRoot, {
+      withFileTypes: true
+    });
+  } catch (error) {
+    if (isNoEntryError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const proofs = await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory())
+      .map(async (entry) => {
+        const proofPath = `${workspaceRoot.replace(/\/+$/, "")}/${entry.name}/${STAGE_RUNNER_RUN_PROOF}`;
+        const absoluteProofPath = join(absoluteWorkspaceRoot, entry.name, STAGE_RUNNER_RUN_PROOF);
+
+        try {
+          return parseRunProofSummary(await readFile(absoluteProofPath, "utf8"), proofPath);
+        } catch (error) {
+          if (isNoEntryError(error)) {
+            return undefined;
+          }
+
+          throw error;
+        }
+      })
+  );
+
+  return proofs
+    .filter((proof): proof is StageRunnerProofSummary => proof !== undefined)
+    .sort((left, right) => right.writtenAt.localeCompare(left.writtenAt));
+}
+
 export function createHarnessWorkspaceForTask(
   taskId: string,
   workspaceRoot = DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT
@@ -208,6 +263,55 @@ function assertWorkspaceWithinRoot(
   ) {
     throw new Error("Codex task workspace escaped the configured workspace root.");
   }
+}
+
+function parseRunProofSummary(
+  rawProof: string,
+  proofPath: string
+): StageRunnerProofSummary | undefined {
+  const candidate = JSON.parse(rawProof) as Partial<StageRunnerRunProof>;
+
+  if (
+    candidate.proofVersion !== 1 ||
+    typeof candidate.taskId !== "string" ||
+    typeof candidate.runId !== "string" ||
+    typeof candidate.adapterId !== "string" ||
+    !isRunStatus(candidate.status) ||
+    typeof candidate.eventCount !== "number" ||
+    typeof candidate.writtenAt !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    taskId: candidate.taskId,
+    runId: candidate.runId,
+    adapterId: candidate.adapterId,
+    status: candidate.status,
+    summary: typeof candidate.summary === "string" ? candidate.summary : undefined,
+    eventCount: candidate.eventCount,
+    proofPath,
+    writtenAt: candidate.writtenAt
+  };
+}
+
+function isRunStatus(value: unknown): value is HarnessRun["status"] {
+  return (
+    value === "running" ||
+    value === "blocked" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "cancelled"
+  );
+}
+
+function isNoEntryError(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: string }).code === "ENOENT"
+  );
 }
 
 function slugify(value: string): string {

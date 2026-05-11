@@ -184,6 +184,12 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - keeps external-action status explicit
     - Status: implemented with temp-directory tests; no live Codex subprocess ran during validation.
 
+12. Expose proof summaries read-only:
+    - `GET /api/blackstage/harness/proofs`
+    - scans prepared `.blackstage/workspaces/*/blackstage-run.json` packets
+    - returns sanitized proof summaries, not raw workspace files
+    - Status: implemented with temp-directory tests; browser mutation and execution rights remain blocked.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.
