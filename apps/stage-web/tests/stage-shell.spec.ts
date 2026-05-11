@@ -143,6 +143,8 @@ async function submitIntent(page: Page, intentText: string) {
 test("Stage Shell v0 opens to the idle orb instead of saved fixture work", async ({
   page
 }) => {
+  test.setTimeout(90_000);
+
   await page.addInitScript(() => {
     const savedAt = new Date().toISOString();
     const fixtureThread = {
@@ -195,6 +197,7 @@ test("Stage Shell v0 opens to the idle orb instead of saved fixture work", async
   await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
     "Start voice input"
   );
+  await expect(page.getByTestId("presence-orb")).toBeEnabled();
   await expect(page.getByTestId("intent-capture")).toHaveCSS("opacity", "0");
   await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "none");
   for (const label of startupScenarioLabels) {

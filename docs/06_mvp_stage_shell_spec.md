@@ -20,6 +20,11 @@ A user can speak or type a complex intention, and the stage transforms from a ca
 
 The viewer sees a black field with a subtle center presence.
 
+Startup contract: no demo selector, fixture shortcut, or control dock is visible as
+the first interaction. When the user is ready, they click the center orb and start
+speaking. Text remains available for precision, but it is secondary to the orb on
+the first frame.
+
 ### Step 2: User submits intent
 
 Example:
