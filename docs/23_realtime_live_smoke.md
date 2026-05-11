@@ -49,6 +49,7 @@ The command:
 - POSTs the SDP offer through the broker with `x-blackstage-realtime-approval`;
 - keeps the standard OpenAI API key server-side only;
 - sends no microphone/audio track;
+- caps the live-smoke timeout at 15 seconds;
 - prints only safe proof metadata: byte counts, a short answer digest, and safety booleans.
 
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
@@ -59,7 +60,7 @@ To generate the non-API-key arming values for a controlled local shell, run:
 pnpm prepare:realtime-smoke
 ```
 
-The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, and an ignored `.blackstage/` proof path. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
+The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, an ignored `.blackstage/` proof path, and the 15-second timeout request. It also prints comments stating the cheap guard: SDP-only, browser audio disabled, shell-only live arming. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
 
 ## Redacted Proof File
 

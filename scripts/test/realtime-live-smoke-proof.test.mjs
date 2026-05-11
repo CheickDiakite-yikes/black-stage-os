@@ -234,6 +234,13 @@ describe("Realtime live smoke env plan", () => {
     assert.equal(plan.writesEnvFile, false);
     assert.equal(plan.browserReceivesStandardApiKey, false);
     assert.equal(plan.openAiNetworkCallWouldRunAfterExport, true);
+    assert.deepEqual(plan.cheapTestGuard, {
+      browserSendsAudio: false,
+      liveFlagMustBeShellExport: true,
+      timeoutCapMs: 15_000
+    });
+    assert.match(rendered, /Cheap guard: SDP-only/);
+    assert.match(rendered, /Safety guard: local env files/);
     assert.match(rendered, /export BLACKSTAGE_REALTIME_LIVE_SMOKE='1'/);
     assert.match(
       rendered,
@@ -247,6 +254,7 @@ describe("Realtime live smoke env plan", () => {
       rendered,
       /export BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH='.blackstage\/realtime-smoke\/live-2026-05-11T10-00-00-000Z.json'/
     );
+    assert.match(rendered, /export BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS='15000'/);
     assert.equal(rendered.includes(["OPENAI_API_KEY", "="].join("")), false);
   });
 });

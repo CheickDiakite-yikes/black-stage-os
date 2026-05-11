@@ -63,10 +63,11 @@ Most recent validation after the root validation gate:
 
 - `git check-ignore -v .env .env.local`: confirmed local env files are ignored by the root `.gitignore`.
 - `pnpm test:scripts`: passed after adding the local `.env` / `.env.local` loader, redacted env/proof tests, and a regression proving `.env.local` cannot arm a paid live smoke by itself; no secret values were emitted.
+- `pnpm prepare:realtime-smoke`: prints a shell-only arming plan with no API key value, no env-file writes, explicit no-audio guidance, and a 15-second live-smoke timeout request.
 - `pnpm preflight:realtime`: passed with redacted env readiness; `.env.local` was detected, `OPENAI_API_KEY` was set/skipped without printing a value, and live smoke stayed unarmed unless the live flag is exported by the shell and the safety identifier plus local approval token are set.
 - `BLACKSTAGE_REALTIME_LIVE_SMOKE=0 pnpm smoke:realtime`: passed in skip-gated mode with no OpenAI network call, no browser audio, and a redacted proof path when configured.
 - `pnpm exec prettier --check ... && git diff --check`: passed for the touched Realtime smoke scripts, tests, audit, and research files.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 266 tracked files.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 267 tracked files.
 - `pnpm --filter @blackstage/stage-web typecheck`: passed after wiring the disabled-by-default local-audio handoff flag into the Realtime bridge.
 - `pnpm --filter @blackstage/stage-web exec playwright test tests/realtime-bridge.spec.ts`: passed with two browser tests: default Realtime SDP bridge still makes zero `getUserMedia` calls, and explicitly armed local audio calls `getUserMedia` once, attaches one fake audio track, and records an approved audio-track SDP bridge event.
 - `pnpm exec prettier --check ... && git diff --check`: passed for the touched Stage Web, Realtime bridge test, audit, and research files.

@@ -16,6 +16,10 @@ import {
   writeRealtimeLiveSmokeProof
 } from "./realtime-live-smoke-proof.mjs";
 import { loadLocalEnvFile, summarizeLocalEnvLoad } from "./local-env.mjs";
+import {
+  REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS,
+  REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR
+} from "./prepare-realtime-smoke-env.mjs";
 
 const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 const REQUIRED_ENV_VARS = [
@@ -24,7 +28,6 @@ const REQUIRED_ENV_VARS = [
   STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR
 ];
 const DEFAULT_TIMEOUT_MS = 30_000;
-const CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS = 15_000;
 const shellLiveSmokeArmedAtStartup = process.env[LIVE_SMOKE_ENV_VAR] === "1";
 
 async function main() {
@@ -119,7 +122,7 @@ async function main() {
       localEnv: summarizeLocalEnvLoad(localEnv),
       notes: [
         "Live Realtime SDP exchange completed through the local broker.",
-        `Cheap-test guard: timeout capped at ${CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio disabled.`
+        `Cheap-test guard: timeout capped at ${REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio disabled.`
       ]
     });
 
@@ -219,14 +222,14 @@ function closeServer(server) {
 }
 
 function readTimeoutMs() {
-  const rawTimeoutMs = process.env.BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS;
+  const rawTimeoutMs = process.env[REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR];
   const parsedTimeoutMs = rawTimeoutMs ? Number(rawTimeoutMs) : DEFAULT_TIMEOUT_MS;
   const requestedTimeoutMs =
     Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0
       ? parsedTimeoutMs
       : DEFAULT_TIMEOUT_MS;
 
-  return Math.min(requestedTimeoutMs, CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS);
+  return Math.min(requestedTimeoutMs, REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS);
 }
 
 function createSkippedNotes(localEnvIncludesLiveFlag) {

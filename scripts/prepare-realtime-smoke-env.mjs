@@ -9,7 +9,10 @@ export const REALTIME_SAFETY_IDENTIFIER_ENV_VAR =
 export const REALTIME_RUN_APPROVAL_TOKEN_ENV_VAR =
   "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN";
 export const REALTIME_SMOKE_PROOF_PATH_ENV_VAR = "BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH";
+export const REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR =
+  "BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS";
 export const OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY";
+export const REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS = 15_000;
 
 export function createRealtimeSmokeEnvPlan(options = {}) {
   const repoRoot = resolve(options.repoRoot ?? process.cwd());
@@ -33,9 +36,15 @@ export function createRealtimeSmokeEnvPlan(options = {}) {
       [REALTIME_LIVE_SMOKE_ENV_VAR]: "1",
       [REALTIME_SAFETY_IDENTIFIER_ENV_VAR]: safetyIdentifier,
       [REALTIME_RUN_APPROVAL_TOKEN_ENV_VAR]: approvalToken,
-      [REALTIME_SMOKE_PROOF_PATH_ENV_VAR]: proofPath
+      [REALTIME_SMOKE_PROOF_PATH_ENV_VAR]: proofPath,
+      [REALTIME_LIVE_SMOKE_TIMEOUT_ENV_VAR]: String(REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS)
     },
     command: "pnpm smoke:realtime",
+    cheapTestGuard: {
+      browserSendsAudio: false,
+      liveFlagMustBeShellExport: true,
+      timeoutCapMs: REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS
+    },
     browserReceivesStandardApiKey: false,
     writesEnvFile: false,
     openAiNetworkCallWouldRunAfterExport: openAiApiKeyStatus === "set"
@@ -55,6 +64,8 @@ export function renderRealtimeSmokeEnvPlan(plan) {
   const lines = [
     "# Realtime live-smoke arming values for this shell only.",
     "# Review these before running; no env file was written.",
+    "# Cheap guard: SDP-only, browser audio disabled, timeout capped at 15000 ms.",
+    "# Safety guard: local env files may hold credentials but cannot arm live smoke by themselves.",
     plan.openAiApiKeyStatus === "set"
       ? "# OPENAI_API_KEY is already set in this shell."
       : "# OPENAI_API_KEY is unset; export it in this shell before running.",
