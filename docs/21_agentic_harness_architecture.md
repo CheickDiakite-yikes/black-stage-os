@@ -159,7 +159,8 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - memory inspection approval-gated
    - redacted memory summaries by default, with inspection/write/delete behind Stage approval
    - coding work refused so Codex remains the execution worker
-   - Status: implemented as local-only contracts, typed memory-access policy, and Node tests; no Agents SDK API call runs yet.
+   - `pnpm preflight:agents-sdk` reports redacted shell/runtime readiness without starting agents, tools, traces, handoffs, or memory actions
+   - Status: implemented as local-only contracts, typed memory-access policy, redacted preflight, and Node tests; no Agents SDK API call runs yet.
 
 8. Mount the local harness runner service:
    - localhost HTTP server in `apps/stage-runner`
