@@ -170,6 +170,9 @@ export function researchEventFromStageEvent(
           command_text_redacted: stageEvent.payload.commandText
             ? redactIntentText(stageEvent.payload.commandText)
             : undefined,
+          command_value_redacted: stageEvent.payload.commandValue
+            ? redactIntentText(stageEvent.payload.commandValue)
+            : undefined,
           target_object_id: stageEvent.payload.targetObjectId
         },
         stageEvent.payload.threadId

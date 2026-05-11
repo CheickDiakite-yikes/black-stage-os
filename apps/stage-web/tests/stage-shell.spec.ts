@@ -264,6 +264,15 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
+
+  await page
+    .getByTestId("intent-input")
+    .fill("rename the spec portal to Diligence room");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+  await expect(specObject).toContainText("Diligence room");
+
   const objectUpdatesWereLogged = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
 
@@ -275,18 +284,29 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
       researchEvents?: Array<{
         eventType?: string;
         payload?: {
+          command_action?: string;
           object_type?: string;
+          title?: string;
         };
       }>;
     };
 
-    return (
+    const objectUpdates =
       snapshot.researchEvents?.filter(
         (event) =>
           event.eventType === "render_object_updated" &&
           event.payload?.object_type === "document_portal"
-      ).length >= 2
+      ) ?? [];
+    const renameWasLogged = snapshot.researchEvents?.some(
+      (event) =>
+        event.eventType === "user_intervention" &&
+        event.payload?.command_action === "rename"
     );
+    const renamedObjectWasLogged = objectUpdates.some(
+      (event) => event.payload?.title === "Diligence room"
+    );
+
+    return objectUpdates.length >= 3 && renameWasLogged && renamedObjectWasLogged;
   });
 
   expect(objectUpdatesWereLogged).toBe(true);
@@ -1117,6 +1137,20 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
     "Collapsed Spec portal."
   );
 
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
+
+  await emitFakeSpeechFinal(page, "rename the spec portal to Signal room");
+
+  await expect(specObject).toContainText("Signal room");
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Renamed Spec portal to Signal room."
+  );
+
   const commandEvidence = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
     const snapshot = rawSnapshot
@@ -1132,15 +1166,25 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
         })
       : undefined;
 
-    return (
+    const collapseWasLogged =
       snapshot?.researchEvents?.some(
         (event) =>
           event.eventType === "user_intervention" &&
           event.payload?.command_action === "collapse" &&
           event.payload?.command_input_mode === "voice" &&
           event.payload?.command_text_redacted === "collapse the spec portal"
-      ) ?? false
-    );
+      ) ?? false;
+    const renameWasLogged =
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "rename" &&
+          event.payload?.command_input_mode === "voice" &&
+          event.payload?.command_text_redacted ===
+            "rename the spec portal to Signal room"
+      ) ?? false;
+
+    return collapseWasLogged && renameWasLogged;
   });
 
   expect(commandEvidence).toBe(true);

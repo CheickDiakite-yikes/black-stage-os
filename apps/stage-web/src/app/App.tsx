@@ -73,12 +73,13 @@ import {
 const idleThread = createIdleIntentThread();
 const loadedSession = loadStageSession();
 
-type StageCommandAction = "focus" | "pin" | "unpin" | "collapse" | "expand";
+type StageCommandAction = "focus" | "pin" | "unpin" | "collapse" | "expand" | "rename";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
   action: StageCommandAction;
   target: StageObject;
+  value?: string;
 };
 
 const commandFillerWords = new Set([
@@ -421,6 +422,7 @@ export function App() {
           threadId: command.target.threadId,
           interventionType: "redirect",
           commandAction: command.action,
+          commandValue: command.value,
           commandInputMode: source === "voice" ? "voice" : "text",
           commandText: intentText,
           targetObjectId: command.target.id,
@@ -430,7 +432,7 @@ export function App() {
       emitStageEvent({
         type: "object.updated",
         payload: {
-          ...applyStageCommandToObject(command.target, command.action),
+          ...applyStageCommandToObject(command.target, command),
           updatedAt: timestamp
         }
       });
@@ -1959,6 +1961,12 @@ function parseStageCommand(
     return undefined;
   }
 
+  const renameCommand = parseRenameStageCommand(intentText, objects);
+
+  if (renameCommand) {
+    return renameCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -1980,6 +1988,31 @@ function parseStageCommand(
   return {
     action,
     target
+  };
+}
+
+function parseRenameStageCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match = /^\s*(?:rename|retitle)\s+(.+?)\s+to\s+(.+?)\s*$/i.exec(intentText);
+
+  if (!match) {
+    return undefined;
+  }
+
+  const targetText = normalizeStageCommandTarget(match[1] ?? "");
+  const target = findStageCommandTarget(objects, targetText);
+  const nextTitle = sanitizeStageObjectTitle(match[2] ?? "");
+
+  if (!target || !nextTitle) {
+    return undefined;
+  }
+
+  return {
+    action: "rename",
+    target,
+    value: nextTitle
   };
 }
 
@@ -2033,6 +2066,13 @@ function findStageCommandTarget(
   }
 
   return bestMatch && bestMatch.score > 0 ? bestMatch.object : undefined;
+}
+
+function normalizeStageCommandTarget(text: string): string {
+  return normalizeCommandText(text)
+    .split(" ")
+    .filter((word) => !commandFillerWords.has(word))
+    .join(" ");
 }
 
 function scoreObjectTargetMatch(object: StageObject, targetText: string): number {
@@ -2100,9 +2140,9 @@ function getStageObjectAliases(object: StageObject): string[] {
 
 function applyStageCommandToObject(
   object: StageObject,
-  action: StageCommandAction
+  command: StageCommand
 ): StageObject {
-  switch (action) {
+  switch (command.action) {
     case "focus":
       return {
         ...object,
@@ -2128,6 +2168,11 @@ function applyStageCommandToObject(
         ...object,
         state: "expanded"
       };
+    case "rename":
+      return {
+        ...object,
+        title: command.value ?? object.title
+      };
   }
 }
 
@@ -2145,7 +2190,15 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Collapsed ${targetTitle}.`;
     case "expand":
       return `Opened ${targetTitle}.`;
+    case "rename":
+      return `Renamed ${targetTitle} to ${command.value ?? targetTitle}.`;
   }
+}
+
+function sanitizeStageObjectTitle(title: string): string | undefined {
+  const normalizedTitle = title.trim().replace(/\s+/g, " ");
+
+  return normalizedTitle.length > 0 ? normalizedTitle.slice(0, 80) : undefined;
 }
 
 function readContextModality(file: File): "text" | "image" | "file" {
