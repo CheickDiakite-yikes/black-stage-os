@@ -170,6 +170,14 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - browser still cannot enqueue work, run Codex, or receive provider credentials
    - Status: implemented with fake-process tests; not enabled by default, and no live Codex subprocess ran during validation.
 
+10. Prepare bounded Codex workspaces:
+    - deterministic `.blackstage/workspaces/*` paths
+    - local `blackstage-task.json` manifest packets
+    - workspace preparation only when explicitly enabled or live Codex subprocess mode is enabled
+    - workspace escape rejection
+    - `.blackstage/` ignored by git
+    - Status: implemented with temp-directory tests; no live Codex subprocess ran during validation.
+
 ## Risks
 
 - Realtime voice can become expensive or noisy if every stage status becomes speech. Default to sparse, high-signal spoken confirmations.

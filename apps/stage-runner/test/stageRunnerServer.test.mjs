@@ -2,6 +2,9 @@
 
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import {
   BLACKSTAGE_HARNESS_RUNNER_ROUTE,
@@ -13,6 +16,7 @@ import {
 } from "../dist/index.js";
 
 const servers = [];
+const tempDirs = [];
 
 afterEach(async () => {
   await Promise.all(
@@ -23,6 +27,10 @@ afterEach(async () => {
         })
     )
   );
+  await Promise.all(tempDirs.splice(0).map((directory) => rm(directory, {
+    force: true,
+    recursive: true
+  })));
 });
 
 describe("Stage runner server", () => {
@@ -211,6 +219,82 @@ describe("Stage runner server", () => {
     assert.equal(body.ok, false);
     assert.match(body.errors[0], /requires threadId/);
   });
+
+  it("prepares approved Codex task workspaces with a local manifest when enabled", async () => {
+    const repoRoot = await createTempRepoRoot();
+    const server = await listen(
+      createStageRunnerServer({
+        runtimeConfig: {
+          repoRoot,
+          workspacePreparationEnabled: true
+        }
+      })
+    );
+    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        id: "task_prepare_workspace",
+        threadId: "thread_build_blackstage",
+        title: "Prepare workspace",
+        objective: "Create the bounded Codex workspace manifest.",
+        kind: "codex"
+      })
+    });
+    const body = await response.json();
+    const manifestPath = join(
+      repoRoot,
+      ".blackstage/workspaces/task_prepare_workspace/blackstage-task.json"
+    );
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+
+    assert.equal(response.status, 202);
+    assert.equal(body.task.workspace.path, ".blackstage/workspaces/task_prepare_workspace");
+    assert.equal(
+      body.workspacePreparation.manifestPath,
+      ".blackstage/workspaces/task_prepare_workspace/blackstage-task.json"
+    );
+    assert.equal(manifest.taskId, "task_prepare_workspace");
+    assert.equal(manifest.policy.browserMutationAllowed, false);
+    assert.equal(manifest.policy.humanReviewRequired, true);
+    assert.equal(manifest.validationStatus, "pending");
+  });
+
+  it("rejects workspace preparation outside the approved Blackstage boundary", async () => {
+    const repoRoot = await createTempRepoRoot();
+    const server = await listen(
+      createStageRunnerServer({
+        runtimeConfig: {
+          repoRoot,
+          workspacePreparationEnabled: true
+        }
+      })
+    );
+    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        id: "task_escape_workspace",
+        threadId: "thread_build_blackstage",
+        title: "Escape workspace",
+        objective: "Should be rejected.",
+        kind: "codex",
+        workspace: {
+          kind: "local",
+          path: "../outside"
+        }
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(body.ok, false);
+    assert.match(body.errors[0], /workspace must stay inside/);
+  });
 });
 
 describe("Node Codex command executor", () => {
@@ -277,6 +361,14 @@ function baseUrl(server) {
   }
 
   return `http://127.0.0.1:${address.port}`;
+}
+
+async function createTempRepoRoot() {
+  const directory = await mkdtemp(join(tmpdir(), "blackstage-runner-"));
+
+  tempDirs.push(directory);
+
+  return directory;
 }
 
 function createFakeChildProcess() {

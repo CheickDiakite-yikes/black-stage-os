@@ -4,6 +4,7 @@ coverage/
 .turbo/
 .vite/
 .cache/
+.blackstage/
 .next/
 out/
 .DS_Store

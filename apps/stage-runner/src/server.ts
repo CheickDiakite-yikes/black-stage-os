@@ -28,6 +28,10 @@ import type {
   HarnessTaskKind
 } from "../../../packages/agent-runtime/dist/harness/harnessTypes.js";
 import { createNodeCodexCommandExecutor } from "./codexCliExecutor.js";
+import {
+  DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT,
+  prepareStageRunnerTaskWorkspace
+} from "./workspaceManager.js";
 
 export { BLACKSTAGE_HARNESS_RUNNER_ROUTE } from "../../../packages/agent-runtime/dist/harness/harnessRunnerClient.js";
 
@@ -39,6 +43,9 @@ export const DEFAULT_STAGE_RUNNER_ALLOWED_ORIGINS = [
 ];
 export const STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_RUNNER_ALLOWED_ORIGINS";
 export const STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR = "BLACKSTAGE_CODEX_SUBPROCESS_ENABLED";
+export const STAGE_RUNNER_WORKSPACE_PREP_ENV_VAR = "BLACKSTAGE_PREPARE_WORKSPACES";
+export const STAGE_RUNNER_REPO_ROOT_ENV_VAR = "BLACKSTAGE_RUNNER_REPO_ROOT";
+export const STAGE_RUNNER_WORKSPACE_ROOT_ENV_VAR = "BLACKSTAGE_RUNNER_WORKSPACE_ROOT";
 
 export type StageRunnerRuntimeConfig = {
   host: string;
@@ -46,6 +53,9 @@ export type StageRunnerRuntimeConfig = {
   routePath: string;
   allowedOrigins: string[];
   codexSubprocessEnabled: boolean;
+  workspacePreparationEnabled: boolean;
+  repoRoot: string;
+  workspaceRoot: string;
 };
 
 export type StageRunnerServerOptions = {
@@ -72,12 +82,18 @@ const harnessTaskKinds = new Set<HarnessTaskKind>([
 export function createStageRunnerRuntimeConfig(
   env: Record<string, string | undefined> = process.env
 ): StageRunnerRuntimeConfig {
+  const codexSubprocessEnabled = env[STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR] === "1";
+
   return {
     host: env.BLACKSTAGE_RUNNER_HOST ?? DEFAULT_STAGE_RUNNER_HOST,
     port: Number(env.BLACKSTAGE_RUNNER_PORT ?? DEFAULT_STAGE_RUNNER_PORT),
     routePath: env.BLACKSTAGE_HARNESS_RUNNER_ROUTE ?? BLACKSTAGE_HARNESS_RUNNER_ROUTE,
     allowedOrigins: parseAllowedOrigins(env[STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR]),
-    codexSubprocessEnabled: env[STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR] === "1"
+    codexSubprocessEnabled,
+    workspacePreparationEnabled:
+      codexSubprocessEnabled || env[STAGE_RUNNER_WORKSPACE_PREP_ENV_VAR] === "1",
+    repoRoot: env[STAGE_RUNNER_REPO_ROOT_ENV_VAR] ?? process.cwd(),
+    workspaceRoot: env[STAGE_RUNNER_WORKSPACE_ROOT_ENV_VAR] ?? DEFAULT_STAGE_RUNNER_WORKSPACE_ROOT
   };
 }
 
@@ -193,7 +209,24 @@ async function handleStageRunnerRequest(
       return;
     }
 
-    const task = scheduler.enqueueTask(parsed.task);
+    let prepared;
+
+    try {
+      prepared = await prepareTaskForRunner(parsed.task, runtimeConfig);
+    } catch (error) {
+      writeJson(
+        response,
+        400,
+        {
+          ok: false,
+          errors: [error instanceof Error ? error.message : "Could not prepare harness workspace."]
+        },
+        corsHeaders
+      );
+      return;
+    }
+
+    const task = scheduler.enqueueTask(prepared.taskInput);
 
     writeJson(
       response,
@@ -201,6 +234,7 @@ async function handleStageRunnerRequest(
       {
         ok: true,
         task,
+        workspacePreparation: prepared.workspacePreparation,
         snapshot: scheduler.getSnapshot()
       },
       corsHeaders
@@ -232,6 +266,43 @@ async function handleStageRunnerRequest(
     },
     corsHeaders
   );
+}
+
+async function prepareTaskForRunner(
+  taskInput: HarnessTaskInput,
+  runtimeConfig: StageRunnerRuntimeConfig
+): Promise<{
+  taskInput: HarnessTaskInput;
+  workspacePreparation?: {
+    manifestPath?: string;
+  };
+}> {
+  if (!runtimeConfig.workspacePreparationEnabled) {
+    return {
+      taskInput
+    };
+  }
+
+  try {
+    const preparation = await prepareStageRunnerTaskWorkspace(taskInput, {
+      repoRoot: runtimeConfig.repoRoot,
+      workspaceRoot: runtimeConfig.workspaceRoot
+    });
+
+    return {
+      taskInput: preparation.taskInput,
+      workspacePreparation: {
+        manifestPath: preparation.manifestPath
+      }
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Could not prepare harness workspace.",
+      {
+        cause: error
+      }
+    );
+  }
 }
 
 function createReadinessResponse(

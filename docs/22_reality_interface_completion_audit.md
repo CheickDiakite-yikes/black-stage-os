@@ -51,8 +51,8 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Gesture/direct manipulation | Focus, pin, collapse, nudge, drag handle | Partial |
 | Non-chatbot aesthetics | Screenshot, layout, object field, no chat bubbles/sidebar-dominant shell | Covered for v0 |
 | Instrumentation | `researchLogger`, redaction, research trace, run logs under `docs/research/runs/` | Covered locally |
-| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, dry-run Agents SDK manager plan, internal Symphony control-plane projection, local `apps/stage-runner` readiness/snapshot/run service, disabled Codex subprocess executor boundary, Stage Web read-only harness snapshot probe, architecture doc | Local service/contracts only |
-| Live Codex worker | Dry-run envelope, disabled-by-default local `codex exec` command plan, and explicit Node subprocess executor boundary exist; no real Codex subprocess/App Server execution ran during validation | Gated adapter only |
+| Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, dry-run Agents SDK manager plan, internal Symphony control-plane projection, local `apps/stage-runner` readiness/snapshot/run service, disabled Codex subprocess executor boundary, bounded workspace preparation, Stage Web read-only harness snapshot probe, architecture doc | Local service/contracts only |
+| Live Codex worker | Dry-run envelope, disabled-by-default local `codex exec` command plan, explicit Node subprocess executor boundary, and `.blackstage/workspaces/*` manifest preparation exist; no real Codex subprocess/App Server execution ran during validation | Gated adapter only |
 | Live Agents SDK worker | Dry-run manager-agent plan exists with specialists as tools and approval-gated memory inspection; no live Agents SDK execution yet | Contract only |
 | Live Realtime session | Trusted-server WebRTC request envelope, route handler, local broker server mount, server-side OpenAI Realtime exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, and event mapper exist, but Stage Web does not invoke the exchange and no default live API session runs yet | Live adapter gated |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
@@ -66,11 +66,11 @@ Most recent validation after the local Stage Runner service:
 - `pnpm --filter @blackstage/voice-core test`: passed with 21 Realtime subtests.
 - `pnpm --filter @blackstage/agent-runtime test`: passed with 15 harness subtests.
 - `pnpm --filter @blackstage/stage-broker test`: passed with 7 local server/exchange subtests.
-- `pnpm --filter @blackstage/stage-runner test`: passed with 9 local server/snapshot/run/subprocess-boundary subtests.
-- `pnpm test`: passed with 21 `voice-core` subtests, 4 `memory-core` subtests, 15 `agent-runtime` subtests, 7 `stage-broker` server/exchange subtests, and 9 `stage-runner` server/snapshot/run/subprocess-boundary subtests.
+- `pnpm --filter @blackstage/stage-runner test`: passed with 11 local server/snapshot/run/subprocess-boundary/workspace-preparation subtests.
+- `pnpm test`: passed with 21 `voice-core` subtests, 4 `memory-core` subtests, 15 `agent-runtime` subtests, 7 `stage-broker` server/exchange subtests, and 11 `stage-runner` server/snapshot/run/subprocess-boundary/workspace-preparation subtests.
 - `pnpm build`: passed across the sorted workspace build.
 - `pnpm test:e2e`: passed with 9 browser tests in the reduced-motion validation context.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 188 tracked files after final staging.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 190 tracked files after final staging.
 
 Browser validation note: the product keeps its cinematic motion in normal use. Playwright now requests `prefers-reduced-motion: reduce` so the long living-field scenario validates behavior instead of timing out on animation/actionability waits.
 
@@ -79,7 +79,7 @@ Browser validation note: the product keeps its cinematic motion in normal use. P
 The goal is not complete yet. The largest remaining gaps are:
 
 1. Live Realtime voice is not connected to Stage Web beyond readiness and disabled SDP contracts. The contract, trusted-server request envelope, route handler, local broker server mount, server-side OpenAI exchange adapter, browser-safe readiness client, disabled browser SDP exchange adapter, and Stage event mapper exist, and local browser-native assistant speech works, but Stage Web does not invoke SDP exchange and no default live Realtime session runs.
-2. Live agentic work is not connected by default. Codex, Agents SDK, and Symphony-inspired orchestration are now represented by local contracts, fixtures, a localhost runner service, and a disabled Codex subprocess boundary, not default live workers.
+2. Live agentic work is not connected by default. Codex, Agents SDK, and Symphony-inspired orchestration are now represented by local contracts, fixtures, a localhost runner service, a disabled Codex subprocess boundary, and bounded workspace preparation, not default live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
 5. Multimodal context is shallow. Attachments become local document objects, but image understanding and richer context parsing are not implemented.
@@ -98,4 +98,4 @@ Build the first Stage Web to Realtime SDP bridge while keeping simulation as the
 
 This moves the prototype toward real directed intelligence without putting long-lived API keys in the browser or letting external tools bypass the stage.
 
-Status: Not started. The local `apps/stage-broker` route mount, server-side OpenAI exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, local `apps/stage-runner` harness service, disabled Codex subprocess boundary, Stage Web `Harness edge` readiness/snapshot client, and local `Run harness` control are implemented; Stage Web live exchange invocation, default-live Codex, live Agents SDK, external Symphony-backed scheduling, and full client Realtime session wiring remain incomplete.
+Status: Not started. The local `apps/stage-broker` route mount, server-side OpenAI exchange adapter, Stage Web readiness client, disabled browser SDP exchange adapter, local `apps/stage-runner` harness service, disabled Codex subprocess boundary, bounded workspace preparation, Stage Web `Harness edge` readiness/snapshot client, and local `Run harness` control are implemented; Stage Web live exchange invocation, default-live Codex, live Agents SDK, external Symphony-backed scheduling, and full client Realtime session wiring remain incomplete.
