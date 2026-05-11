@@ -335,6 +335,128 @@ describe("Realtime voice session contracts", () => {
     ]);
   });
 
+  it("blocks WebRTC audio tracks without explicit Stage approval", async () => {
+    const readiness = interpretRealtimeBrokerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      status: 200,
+      body: {
+        ok: true,
+        route: "/api/blackstage/realtime/session",
+        liveModeEnabled: true,
+        liveApprovalRequired: true,
+        liveApprovalConfigured: true,
+        accepts: "application/sdp",
+        browserSendsAudio: false,
+        browserReceivesStandardApiKey: false,
+        checkedAt: "2026-05-10T00:00:00.000Z"
+      }
+    });
+    let peerCalls = 0;
+    let fetchCalls = 0;
+    const exchange = await exchangeRealtimeWebrtcSdp({
+      enabled: true,
+      readiness,
+      approvedAudioTrack: {
+        kind: "audio",
+        id: "local_microphone_track"
+      },
+      createPeerConnection: () => {
+        peerCalls += 1;
+        throw new Error("should not create peer before approval");
+      },
+      fetchBrokerAnswer: async () => {
+        fetchCalls += 1;
+        throw new Error("should not fetch before approval");
+      }
+    });
+
+    assert.equal(exchange.status, "blocked");
+    assert.equal(exchange.networkAttempted, false);
+    assert.equal(exchange.peerConnectionCreated, false);
+    assert.equal(exchange.browserSendsAudio, false);
+    assert.equal(peerCalls, 0);
+    assert.equal(fetchCalls, 0);
+    assert.ok(
+      exchange.errors.some((error) =>
+        error.includes("requires explicit Stage approval")
+      )
+    );
+  });
+
+  it("attaches approved WebRTC audio tracks before creating an offer", async () => {
+    const readiness = interpretRealtimeBrokerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      status: 200,
+      body: {
+        ok: true,
+        route: "/api/blackstage/realtime/session",
+        liveModeEnabled: true,
+        liveApprovalRequired: true,
+        liveApprovalConfigured: true,
+        accepts: "application/sdp",
+        browserSendsAudio: false,
+        browserReceivesStandardApiKey: false,
+        checkedAt: "2026-05-10T00:00:00.000Z"
+      }
+    });
+    const peerEvents = [];
+    const exchange = await exchangeRealtimeWebrtcSdp({
+      enabled: true,
+      readiness,
+      audioTrackApproved: true,
+      approvedAudioTrack: {
+        kind: "audio",
+        enabled: true,
+        id: "local_microphone_track"
+      },
+      createPeerConnection: () => ({
+        addTrack(track) {
+          peerEvents.push(`track:${track.kind}:${track.id}`);
+        },
+        createDataChannel(label) {
+          peerEvents.push(`data:${label}`);
+          return {
+            label
+          };
+        },
+        async createOffer() {
+          peerEvents.push("offer");
+          return {
+            type: "offer",
+            sdp: "v=0\r\no=- blackstage-browser-audio-offer\r\n"
+          };
+        },
+        async setLocalDescription(description) {
+          peerEvents.push(`local:${description.type}`);
+        },
+        async setRemoteDescription(description) {
+          peerEvents.push(`remote:${description.type}`);
+        }
+      }),
+      fetchBrokerAnswer: async (request) => {
+        assert.equal(request.offerSdp, "v=0\r\no=- blackstage-browser-audio-offer\r\n");
+
+        return {
+          status: 200,
+          answerSdp: "v=0\r\no=- blackstage-browser-audio-answer\r\n"
+        };
+      }
+    });
+
+    assert.equal(exchange.status, "connected");
+    assert.equal(exchange.networkAttempted, true);
+    assert.equal(exchange.peerConnectionCreated, true);
+    assert.equal(exchange.browserSendsAudio, true);
+    assert.equal(exchange.browserReceivesStandardApiKey, false);
+    assert.deepEqual(peerEvents, [
+      "track:audio:local_microphone_track",
+      "data:oai-events",
+      "offer",
+      "local:offer",
+      "remote:answer"
+    ]);
+  });
+
   it("requires a reachable broker before browser SDP exchange can start", () => {
     const blockers = inspectRealtimeWebrtcClientExchangeBlockers({
       enabled: true,

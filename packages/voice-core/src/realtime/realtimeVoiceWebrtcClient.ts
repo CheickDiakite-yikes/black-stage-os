@@ -11,11 +11,20 @@ export type RealtimeWebrtcDataChannel = {
   label: string;
 };
 
+export type RealtimeWebrtcAudioTrack = {
+  kind: "audio";
+  enabled?: boolean;
+  id?: string;
+};
+
 export type RealtimeWebrtcPeerConnection = {
+  addTrack?: (track: RealtimeWebrtcAudioTrack) => void;
   createDataChannel?: (label: "oai-events") => RealtimeWebrtcDataChannel;
   createOffer: () => Promise<RealtimeWebrtcSessionDescription>;
   setLocalDescription: (description: RealtimeWebrtcSessionDescription) => Promise<void>;
-  setRemoteDescription: (description: RealtimeWebrtcSessionDescription) => Promise<void>;
+  setRemoteDescription: (
+    description: RealtimeWebrtcSessionDescription
+  ) => Promise<void>;
   close?: () => void;
 };
 
@@ -34,6 +43,8 @@ export type RealtimeWebrtcBrokerFetch = (request: {
 
 export type RealtimeWebrtcClientExchangeInput = {
   enabled?: boolean;
+  approvedAudioTrack?: RealtimeWebrtcAudioTrack;
+  audioTrackApproved?: boolean;
   readiness: RealtimeBrokerClientReadiness;
   createPeerConnection: RealtimeWebrtcPeerConnectionFactory;
   fetchBrokerAnswer: RealtimeWebrtcBrokerFetch;
@@ -45,7 +56,7 @@ export type RealtimeWebrtcClientExchangeResult = {
   networkAttempted: boolean;
   peerConnectionCreated: boolean;
   dataChannelName: "oai-events";
-  browserSendsAudio: false;
+  browserSendsAudio: boolean;
   browserReceivesStandardApiKey: false;
   offerSdp?: string;
   answerSdp?: string;
@@ -72,6 +83,22 @@ export async function exchangeRealtimeWebrtcSdp(
 
   const routeUrl = input.readiness.routeUrl ?? "";
   const peerConnection = input.createPeerConnection();
+  const browserSendsAudio = Boolean(input.approvedAudioTrack);
+
+  if (input.approvedAudioTrack) {
+    if (!peerConnection.addTrack) {
+      peerConnection.close?.();
+
+      return failedResult(
+        routeUrl,
+        false,
+        "Browser WebRTC peer connection cannot attach an approved audio track."
+      );
+    }
+
+    peerConnection.addTrack(input.approvedAudioTrack);
+  }
+
   peerConnection.createDataChannel?.("oai-events");
 
   try {
@@ -112,7 +139,7 @@ export async function exchangeRealtimeWebrtcSdp(
       networkAttempted: true,
       peerConnectionCreated: true,
       dataChannelName: "oai-events",
-      browserSendsAudio: false,
+      browserSendsAudio,
       browserReceivesStandardApiKey: false,
       offerSdp: offer.sdp,
       answerSdp: brokerResponse.answerSdp,
@@ -129,7 +156,10 @@ export async function exchangeRealtimeWebrtcSdp(
 }
 
 export function inspectRealtimeWebrtcClientExchangeBlockers(
-  input: Pick<RealtimeWebrtcClientExchangeInput, "enabled" | "readiness">
+  input: Pick<
+    RealtimeWebrtcClientExchangeInput,
+    "enabled" | "readiness" | "approvedAudioTrack" | "audioTrackApproved"
+  >
 ): string[] {
   const blockedReasons: string[] = [];
 
@@ -143,6 +173,18 @@ export function inspectRealtimeWebrtcClientExchangeBlockers(
 
   if (!input.readiness.routeUrl) {
     blockedReasons.push("Realtime broker route URL is not configured.");
+  }
+
+  if (input.approvedAudioTrack) {
+    if (input.audioTrackApproved !== true) {
+      blockedReasons.push(
+        "Realtime audio track requires explicit Stage approval before SDP exchange."
+      );
+    }
+
+    if (input.approvedAudioTrack.kind !== "audio") {
+      blockedReasons.push("Realtime WebRTC track must be an audio track.");
+    }
   }
 
   return blockedReasons;

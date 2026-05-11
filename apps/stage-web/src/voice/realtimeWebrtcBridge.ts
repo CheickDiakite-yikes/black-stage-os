@@ -28,7 +28,7 @@ export type StageWebRealtimeBridgeState = {
   networkAttempted: boolean;
   peerConnectionCreated: boolean;
   dataChannelName: "oai-events";
-  browserSendsAudio: false;
+  browserSendsAudio: boolean;
   browserReceivesStandardApiKey: false;
   errors: string[];
 };
@@ -92,7 +92,11 @@ export function shouldStartStageWebRealtimeBridge(
   readiness: RealtimeBrokerClientReadiness,
   enabled = readStageWebRealtimeWebrtcEnabled()
 ): boolean {
-  return enabled === true && readiness.status === "reachable" && readiness.liveModeEnabled === true;
+  return (
+    enabled === true &&
+    readiness.status === "reachable" &&
+    readiness.liveModeEnabled === true
+  );
 }
 
 export async function startStageWebRealtimeBridge(
@@ -235,6 +239,9 @@ function createBrowserRealtimePeerConnection(
     },
     close() {
       peerConnection.close();
+    },
+    addTrack(track) {
+      peerConnection.addTrack(track as MediaStreamTrack);
     }
   };
 }
@@ -260,7 +267,10 @@ function createRealtimeBridgeStageEvents(
     errors: string[];
   }
 ): StageEvent[] {
-  if (status === "blocked" && input.errors.some((error) => error.includes("disabled by default"))) {
+  if (
+    status === "blocked" &&
+    input.errors.some((error) => error.includes("disabled by default"))
+  ) {
     return [];
   }
 
