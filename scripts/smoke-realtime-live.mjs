@@ -87,7 +87,7 @@ async function main() {
     }
 
     const routeUrl = `http://${runtimeConfig.host}:${address.port}${BLACKSTAGE_REALTIME_BROKER_ROUTE}`;
-    const offerSdp = await createBrowserDataChannelOffer(browser);
+    const offerSdp = await createBrowserNoMicRealtimeOffer(browser);
     const offerSummary = assertRealtimeLiveSmokeOfferIsCheap(offerSdp);
     const timeoutMs = readRealtimeLiveSmokeTimeoutMs();
     openAiNetworkCallAttempted = true;
@@ -131,7 +131,7 @@ async function main() {
       localEnv: summarizeLocalEnvLoad(localEnv),
       notes: [
         "Live Realtime SDP exchange completed through the local broker.",
-        `Cheap-test guard: timeout capped at ${REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio disabled.`
+        `Cheap-test guard: timeout capped at ${REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and no microphone track is attached.`
       ]
     });
 
@@ -171,7 +171,7 @@ async function writeProof(input) {
   return proofResult;
 }
 
-async function createBrowserDataChannelOffer(browser) {
+async function createBrowserNoMicRealtimeOffer(browser) {
   const page = await browser.newPage();
 
   try {
@@ -195,6 +195,9 @@ async function createBrowserDataChannelOffer(browser) {
       };
 
       try {
+        peerConnection.addTransceiver("audio", {
+          direction: "recvonly"
+        });
         peerConnection.createDataChannel("oai-events");
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
@@ -237,13 +240,13 @@ function createSkippedNotes(localEnvIncludesLiveFlag) {
     return [
       "Live Realtime smoke was not armed because the live flag must be exported in the shell before this script starts.",
       "Local env files may provide credentials, but they cannot arm a paid OpenAI call by themselves.",
-      "Cheap-test guard: SDP-only, no browser audio."
+      "Cheap-test guard: SDP-only, recvonly audio section, no microphone track."
     ];
   }
 
   return [
     "Live Realtime smoke was not armed; no OpenAI network call ran.",
-    "Cheap-test guard: SDP-only, no browser audio."
+    "Cheap-test guard: SDP-only, recvonly audio section, no microphone track."
   ];
 }
 

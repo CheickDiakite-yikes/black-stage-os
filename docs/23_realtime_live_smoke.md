@@ -45,13 +45,27 @@ The command:
 
 - starts a temporary local `apps/stage-broker` server on `127.0.0.1`;
 - launches headless Chromium through Playwright;
-- creates a data-channel-only WebRTC offer in the browser;
-- rejects any audio or non-data-channel SDP offer before the broker/provider exchange;
+- creates a WebRTC offer with an events data channel plus a `recvonly` audio media section;
+- rejects any offer that can send browser audio or lacks the required data channel / `recvonly` audio section before the broker/provider exchange;
 - POSTs the SDP offer through the broker with `x-blackstage-realtime-approval`;
 - keeps the standard OpenAI API key server-side only;
 - sends no microphone/audio track;
 - caps the live-smoke timeout at 15 seconds;
 - prints only safe proof metadata: byte counts, a short answer digest, and safety booleans.
+
+## Current Local Result
+
+The first passing armed smoke used a shell-provided safety identifier and approval token plus the local `.env.local` API key. It completed one brokered OpenAI Realtime SDP exchange with:
+
+- `browserReceivesStandardApiKey: false`
+- `browserSendsAudio: false`
+- `offerMode: data_channel_plus_recvonly_audio`
+- `audioDirections: ["recvonly"]`
+- `maxProviderRequests: 1`
+- `timeoutMs: 15000`
+- redacted proof path under `.blackstage/realtime-smoke/`
+
+Earlier armed attempts returned upstream HTTP 400 until the smoke offer included a `recvonly` audio media section and the server session omitted unsupported `metadata`. The broker now preserves only safe upstream diagnostics: HTTP status, request id when present, and sanitized OpenAI error fields.
 
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
@@ -61,7 +75,7 @@ To generate the non-API-key arming values for a controlled local shell, run:
 pnpm prepare:realtime-smoke
 ```
 
-The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, an ignored `.blackstage/` proof path, and the 15-second timeout request. It also prints comments stating the cheap guard: SDP-only, data-channel-only, browser audio disabled, shell-only live arming, and one provider request at most. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
+The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, an ignored `.blackstage/` proof path, and the 15-second timeout request. It also prints comments stating the cheap guard: SDP-only, data channel plus `recvonly` audio, no microphone track, shell-only live arming, and one provider request at most. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
 
 ## Redacted Proof File
 

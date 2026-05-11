@@ -29,6 +29,17 @@ export type RealtimeBrokerOpenAiExchangeResult = {
   responseHeaders?: Record<string, string>;
 };
 
+export type RealtimeBrokerOpenAiExchangeError = Error & {
+  upstreamStatus?: number;
+  upstreamRequestId?: string;
+  upstreamError?: {
+    code?: string;
+    message?: string;
+    param?: string;
+    type?: string;
+  };
+};
+
 export type RealtimeBrokerOpenAiExchange = (
   request: RealtimeUnifiedWebrtcOpenAiRequest,
   context: RealtimeBrokerOpenAiExchangeContext
@@ -65,7 +76,12 @@ export async function handleRealtimeUnifiedWebrtcBrokerRoute(
   }
 
   if (!contentTypeAllowsSdp(request.headers)) {
-    return jsonResponse(415, request, ["Realtime broker requires application/sdp."], false);
+    return jsonResponse(
+      415,
+      request,
+      ["Realtime broker requires application/sdp."],
+      false
+    );
   }
 
   if (!request.body?.trim()) {
@@ -87,14 +103,21 @@ export async function handleRealtimeUnifiedWebrtcBrokerRoute(
   }
 
   if (!environment.openAiApiKey) {
-    return jsonResponse(503, request, [`Server is missing ${OPENAI_API_KEY_ENV_VAR}.`], false);
+    return jsonResponse(
+      503,
+      request,
+      [`Server is missing ${OPENAI_API_KEY_ENV_VAR}.`],
+      false
+    );
   }
 
   if (!context.exchangeWithOpenAi) {
     return jsonResponse(
       501,
       request,
-      ["Realtime broker route is configured, but no OpenAI exchange handler is installed."],
+      [
+        "Realtime broker route is configured, but no OpenAI exchange handler is installed."
+      ],
       false
     );
   }
@@ -105,13 +128,8 @@ export async function handleRealtimeUnifiedWebrtcBrokerRoute(
     exchangeResult = await context.exchangeWithOpenAi(brokerRequest.openAiRequest, {
       apiKey: environment.openAiApiKey
     });
-  } catch {
-    return jsonResponse(
-      503,
-      request,
-      ["Realtime broker exchange failed before returning an SDP answer."],
-      true
-    );
+  } catch (error) {
+    return jsonResponse(503, request, createSafeExchangeFailureMessages(error), true);
   }
 
   return {
@@ -125,19 +143,69 @@ export async function handleRealtimeUnifiedWebrtcBrokerRoute(
   };
 }
 
-function contentTypeAllowsSdp(headers: Record<string, string | undefined> = {}): boolean {
+function contentTypeAllowsSdp(
+  headers: Record<string, string | undefined> = {}
+): boolean {
   const contentType = findHeader(headers, "content-type");
 
   return contentType?.toLowerCase().split(";")[0]?.trim() === "application/sdp";
 }
 
-function findHeader(headers: Record<string, string | undefined>, targetName: string): string | undefined {
+function findHeader(
+  headers: Record<string, string | undefined>,
+  targetName: string
+): string | undefined {
   const normalizedTarget = targetName.toLowerCase();
   const entry = Object.entries(headers).find(
     ([headerName]) => headerName.toLowerCase() === normalizedTarget
   );
 
   return entry?.[1];
+}
+
+function createSafeExchangeFailureMessages(error: unknown): string[] {
+  const messages = ["Realtime broker exchange failed before returning an SDP answer."];
+  const exchangeError = isRealtimeBrokerOpenAiExchangeError(error) ? error : undefined;
+  const upstreamStatus = exchangeError?.upstreamStatus;
+
+  if (Number.isInteger(upstreamStatus)) {
+    messages.push(`OpenAI Realtime upstream returned HTTP ${upstreamStatus}.`);
+  }
+
+  if (exchangeError?.upstreamRequestId) {
+    messages.push(`OpenAI request id: ${exchangeError.upstreamRequestId}.`);
+  }
+
+  const upstreamError = formatSafeUpstreamError(exchangeError?.upstreamError);
+
+  if (upstreamError) {
+    messages.push(`OpenAI Realtime upstream error: ${upstreamError}.`);
+  }
+
+  return messages;
+}
+
+function isRealtimeBrokerOpenAiExchangeError(
+  error: unknown
+): error is RealtimeBrokerOpenAiExchangeError {
+  return typeof error === "object" && error !== null;
+}
+
+function formatSafeUpstreamError(
+  upstreamError: RealtimeBrokerOpenAiExchangeError["upstreamError"] | undefined
+): string | undefined {
+  if (!upstreamError) {
+    return undefined;
+  }
+
+  return [
+    upstreamError.type ? `type=${upstreamError.type}` : undefined,
+    upstreamError.code ? `code=${upstreamError.code}` : undefined,
+    upstreamError.param ? `param=${upstreamError.param}` : undefined,
+    upstreamError.message ? `message=${upstreamError.message}` : undefined
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function jsonResponse(
@@ -162,7 +230,9 @@ function jsonResponse(
   };
 }
 
-function redactResponseHeaders(headers: Record<string, string> = {}): Record<string, string> {
+function redactResponseHeaders(
+  headers: Record<string, string> = {}
+): Record<string, string> {
   return Object.fromEntries(
     Object.entries(headers).filter(
       ([headerName]) => headerName.toLowerCase() !== "authorization"

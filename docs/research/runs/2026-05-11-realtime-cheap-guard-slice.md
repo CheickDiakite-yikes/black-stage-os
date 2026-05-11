@@ -14,7 +14,7 @@ Continue the active Blackstage goal loop after the local `.env.local` key was ad
 
 - Added a reusable Realtime live-smoke cheap guard.
 - Capped runner timeout requests through a tested helper.
-- Validated that the smoke offer is data-channel-only and rejects audio SDP before the broker/provider exchange.
+- Validated that the smoke offer carries an events data channel plus `recvonly` audio, and rejects SDP that can send browser audio before the broker/provider exchange.
 - Added cheap-guard metadata to redacted proof packets without adding raw SDP, secrets, browser traces, or provider calls.
 
 ## What Failed Or Needed Human Intervention
@@ -23,7 +23,7 @@ No human intervention was needed. No live OpenAI call, microphone prompt, or pro
 
 ## Product Insight
 
-Live voice should earn trust by proving what it refuses to do. Rejecting audio SDP before the provider exchange makes the first live test feel controlled instead of spooky.
+Live voice should earn trust by proving what it refuses to do. Rejecting browser-audio-send SDP before the provider exchange makes the first live test feel controlled instead of spooky.
 
 ## AI-Building Insight
 

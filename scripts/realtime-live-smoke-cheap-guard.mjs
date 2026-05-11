@@ -16,9 +16,9 @@ export function createRealtimeLiveSmokeCheapGuard({
     browserReceivesStandardApiKey: false,
     liveFlagMustBeShellExport: true,
     liveCallRequiresExplicitArm: true,
-    offerMode: "data_channel_only",
-    dataChannelOnly: true,
-    rejectsAudioSdp: true,
+    offerMode: "data_channel_plus_recvonly_audio",
+    requiresAudioMediaSection: true,
+    rejectsBrowserAudioSend: true,
     maxProviderRequests: REALTIME_LIVE_SMOKE_MAX_PROVIDER_REQUESTS,
     timeoutCapMs: REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS,
     effectiveTimeoutMs: readRealtimeLiveSmokeTimeoutMs(env),
@@ -40,16 +40,20 @@ export function readRealtimeLiveSmokeTimeoutMs(env = process.env) {
 export function assertRealtimeLiveSmokeOfferIsCheap(offerSdp) {
   const summary = summarizeRealtimeOfferSdp(offerSdp);
 
-  if (summary.hasAudioMediaSection) {
+  if (!summary.hasAudioMediaSection) {
     throw new Error(
-      "Realtime live-smoke cheap guard rejected an SDP offer with audio media."
+      "Realtime live-smoke cheap guard requires a recvonly audio media section."
+    );
+  }
+
+  if (summary.hasAudioSendMediaSection) {
+    throw new Error(
+      "Realtime live-smoke cheap guard rejected an SDP offer that can send browser audio."
     );
   }
 
   if (!summary.hasDataChannelMediaSection) {
-    throw new Error(
-      "Realtime live-smoke cheap guard requires a data-channel-only SDP offer."
-    );
+    throw new Error("Realtime live-smoke cheap guard requires an events data channel.");
   }
 
   return summary;
@@ -57,13 +61,42 @@ export function assertRealtimeLiveSmokeOfferIsCheap(offerSdp) {
 
 export function summarizeRealtimeOfferSdp(offerSdp) {
   const sdp = String(offerSdp ?? "");
+  const audioDirections = readSdpMediaDirections(sdp, "audio");
 
   return {
     byteLength: Buffer.byteLength(sdp, "utf8"),
+    audioDirections,
     hasAudioMediaSection: hasSdpMediaLine(sdp, "audio"),
+    hasAudioSendMediaSection: audioDirections.some(
+      (direction) => direction === "sendonly" || direction === "sendrecv"
+    ),
     hasDataChannelMediaSection: hasSdpMediaLine(sdp, "application"),
     hasVideoMediaSection: hasSdpMediaLine(sdp, "video")
   };
+}
+
+function readSdpMediaDirections(sdp, mediaKind) {
+  return readSdpMediaSections(sdp, mediaKind).map((section) => {
+    if (/(?:^|\r?\n)a=sendonly(?:\r?\n|$)/i.test(section)) {
+      return "sendonly";
+    }
+
+    if (/(?:^|\r?\n)a=recvonly(?:\r?\n|$)/i.test(section)) {
+      return "recvonly";
+    }
+
+    if (/(?:^|\r?\n)a=inactive(?:\r?\n|$)/i.test(section)) {
+      return "inactive";
+    }
+
+    return "sendrecv";
+  });
+}
+
+function readSdpMediaSections(sdp, mediaKind) {
+  return String(sdp ?? "")
+    .split(/\r?\n(?=m=)/)
+    .filter((section) => new RegExp(`^m=${mediaKind}\\b`, "i").test(section));
 }
 
 function hasSdpMediaLine(sdp, mediaKind) {

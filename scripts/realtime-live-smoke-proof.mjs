@@ -100,7 +100,7 @@ export function createSafeRealtimeSmokeErrorMessage(error) {
     rawMessage
   );
 
-  return redacted.split("\n").join(" ").slice(0, 240);
+  return redacted.split("\n").join(" ").slice(0, 1000);
 }
 
 function normalizeStatus(status) {
@@ -170,9 +170,13 @@ function normalizeCheapTestGuard(cheapTestGuard) {
     liveCallRequiresExplicitArm:
       candidate.liveCallRequiresExplicitArm === true ? true : undefined,
     offerMode:
-      candidate.offerMode === "data_channel_only" ? "data_channel_only" : undefined,
-    dataChannelOnly: candidate.dataChannelOnly === true ? true : undefined,
-    rejectsAudioSdp: candidate.rejectsAudioSdp === true ? true : undefined,
+      candidate.offerMode === "data_channel_plus_recvonly_audio"
+        ? "data_channel_plus_recvonly_audio"
+        : undefined,
+    requiresAudioMediaSection:
+      candidate.requiresAudioMediaSection === true ? true : undefined,
+    rejectsBrowserAudioSend:
+      candidate.rejectsBrowserAudioSend === true ? true : undefined,
     maxProviderRequests: normalizeOptionalNumber(candidate.maxProviderRequests),
     timeoutCapMs: normalizeOptionalNumber(candidate.timeoutCapMs),
     effectiveTimeoutMs: normalizeOptionalNumber(candidate.effectiveTimeoutMs),
@@ -187,11 +191,26 @@ function normalizeOfferSummary(offer) {
 
   return compactObject({
     byteLength: normalizeOptionalNumber(offer.byteLength),
-    hasAudioMediaSection: offer.hasAudioMediaSection === false ? false : undefined,
+    audioDirections: normalizeAudioDirections(offer.audioDirections),
+    hasAudioMediaSection: offer.hasAudioMediaSection === true ? true : undefined,
+    hasAudioSendMediaSection:
+      offer.hasAudioSendMediaSection === false ? false : undefined,
     hasDataChannelMediaSection:
       offer.hasDataChannelMediaSection === true ? true : undefined,
     hasVideoMediaSection: offer.hasVideoMediaSection === false ? false : undefined
   });
+}
+
+function normalizeAudioDirections(value) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const directions = value.filter((direction) =>
+    ["inactive", "recvonly", "sendonly", "sendrecv"].includes(direction)
+  );
+
+  return directions.length > 0 ? directions.slice(0, 4) : undefined;
 }
 
 function normalizeNotes(notes) {

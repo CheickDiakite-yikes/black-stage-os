@@ -15,7 +15,7 @@ Continue the `/goal` loop and account for the founder's suggestion to leverage O
 - Turned the voice model choice into a typed instruction contract rather than leaving it as a loose string.
 - Preserved sparse, calm speech as the default voice behavior.
 - Kept tool calls, browsing, file writes, publishing, spending, and memory access behind Stage approval events.
-- Added the instruction version to the trusted-server session metadata for auditability.
+- Kept the instruction version in the local contract for auditability; later live-smoke work removed unsupported provider-side `session.metadata`.
 
 ## What Failed Or Needed Human Intervention
 

@@ -123,7 +123,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - session config type
    - voice event mapping
    - no API key handling yet
-   - Status: implemented as a local-only contract with `gpt-realtime-2` defaults, Blackstage-owned sparse-speech instruction contract, simulation mode, server-broker policy, WebRTC broker plan, trusted-server unified WebRTC request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, server-side OpenAI Realtime exchange adapter, browser-safe broker readiness probe, disabled-by-default browser SDP exchange adapter, browser microphone preflight that starts no stream, Stage Web visible mic preflight status, Realtime-to-Stage event mapper, safety identifier readiness checks, a data-channel-only cheap smoke guard, and tests. No default OpenAI network call or microphone stream runs yet.
+   - Status: implemented as a local-only contract with `gpt-realtime-2` defaults, Blackstage-owned sparse-speech instruction contract, simulation mode, server-broker policy, WebRTC broker plan, trusted-server unified WebRTC request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, server-side OpenAI Realtime exchange adapter, browser-safe broker readiness probe, disabled-by-default browser SDP exchange adapter, browser microphone preflight that starts no stream, Stage Web visible mic preflight status, Realtime-to-Stage event mapper, safety identifier readiness checks, a data-channel plus `recvonly` audio cheap smoke guard, and tests. An explicitly armed no-mic SDP smoke passed against OpenAI; no default OpenAI network call or microphone stream runs yet.
 
 3. Add Stage Shell harness fixtures:
    - one simulated background Codex run

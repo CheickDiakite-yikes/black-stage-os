@@ -16,7 +16,7 @@ Continue toward the active Blackstage goal after the founder added a local `.env
 - Added a tiny local env loader that records only env var names, never secret values.
 - Wired Realtime preflight, prepare, and smoke scripts to load `.env` or `.env.local` locally.
 - Kept live Realtime smoke skipped unless `BLACKSTAGE_REALTIME_LIVE_SMOKE=1` and the safety identifier plus local approval token are also set.
-- Added a cheap-test guard: SDP-only smoke keeps browser audio disabled and caps live smoke timeout.
+- Added a cheap-test guard: SDP-only smoke keeps the microphone track disabled and caps live smoke timeout.
 
 ## What Failed Or Needed Human Intervention
 

@@ -97,7 +97,7 @@ The fixture should include:
 - Research events.
 
 Acceptance criteria:
-- The fixture can be selected from the demo UI.
+- The fixture can be selected only through the development fixture harness, not the startup UI.
 - The fixture makes the Blackstage thesis obvious.
 - It does not use real private data.
 - It includes at least one visible approval moment.

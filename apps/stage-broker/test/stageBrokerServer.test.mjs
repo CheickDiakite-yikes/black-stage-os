@@ -312,7 +312,8 @@ describe("Stage broker server", () => {
       assert.equal(session.type, "realtime");
       assert.equal(session.model, "gpt-realtime-2");
       assert.equal(session.audio.output.voice, "marin");
-      assert.equal(session.metadata.blackstageThreadId, "thread_stage_broker");
+      assert.equal(session.reasoning.effort, "medium");
+      assert.equal("metadata" in session, false);
 
       return new Response("v=0\r\no=- stage-broker-answer\r\n", {
         status: 200,
@@ -345,10 +346,6 @@ describe("Stage broker server", () => {
             },
             reasoning: {
               effort: "medium"
-            },
-            metadata: {
-              blackstageSessionId: "stage_broker_local",
-              blackstageThreadId: "thread_stage_broker"
             }
           }
         }
@@ -360,6 +357,76 @@ describe("Stage broker server", () => {
 
     assert.equal(result.answerSdp, "v=0\r\no=- stage-broker-answer\r\n");
     assert.equal(result.responseHeaders["x-openai-request-id"], "req_stage_broker");
+  });
+
+  it("redacts failed OpenAI Realtime exchanges to status and request id", async () => {
+    const dummyApiKey = ["test", "api", "credential"].join("-");
+    const exchange = createOpenAiRealtimeExchange(async () => {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "invalid_request",
+            message: "Unsupported field: session.reasoning with sk-test-secret",
+            param: "session.reasoning",
+            type: "invalid_request_error"
+          }
+        }),
+        {
+          status: 429,
+          headers: {
+            "x-openai-request-id": "req_stage_broker_failed"
+          }
+        }
+      );
+    });
+
+    await assert.rejects(
+      () =>
+        exchange(
+          {
+            method: "POST",
+            endpointPath: "/v1/realtime/calls",
+            authorization: {
+              source: "server_environment",
+              envVar: "OPENAI_API_KEY",
+              exposedToBrowser: false
+            },
+            safetyIdentifier: "hashed-user-id",
+            body: {
+              kind: "multipart_form_data",
+              sdp: "v=0\r\no=- stage-broker-offer\r\n",
+              session: {
+                type: "realtime",
+                model: "gpt-realtime-2",
+                instructions: "Listen for intent.",
+                audio: {
+                  output: {
+                    voice: "marin"
+                  }
+                },
+                reasoning: {
+                  effort: "medium"
+                }
+              }
+            }
+          },
+          {
+            apiKey: dummyApiKey
+          }
+        ),
+      (error) => {
+        assert.equal(error.upstreamStatus, 429);
+        assert.equal(error.upstreamRequestId, "req_stage_broker_failed");
+        assert.deepEqual(error.upstreamError, {
+          code: "invalid_request",
+          message: "Unsupported field: session.reasoning with [redacted-key]",
+          param: "session.reasoning",
+          type: "invalid_request_error"
+        });
+        assert.doesNotMatch(JSON.stringify(error.upstreamError), /sk-test-secret/);
+        return true;
+      }
+    );
   });
 
   it("returns a safe failure when the live OpenAI exchange fails", async () => {
@@ -374,7 +441,16 @@ describe("Stage broker server", () => {
           [STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR]: approvalPhrase
         }),
         exchangeWithOpenAi: async () => {
-          throw new Error("upstream failed with secret-ish detail");
+          const error = new Error("upstream failed with secret-ish detail");
+          error.upstreamStatus = 503;
+          error.upstreamRequestId = "req_stage_route_failed";
+          error.upstreamError = {
+            code: "invalid_request",
+            message: "Unsupported field: session.reasoning",
+            param: "session.reasoning",
+            type: "invalid_request_error"
+          };
+          throw error;
         }
       })
     );
@@ -395,6 +471,12 @@ describe("Stage broker server", () => {
     assert.equal(
       body.errors[0],
       "Realtime broker exchange failed before returning an SDP answer."
+    );
+    assert.equal(body.errors[1], "OpenAI Realtime upstream returned HTTP 503.");
+    assert.equal(body.errors[2], "OpenAI request id: req_stage_route_failed.");
+    assert.equal(
+      body.errors[3],
+      "OpenAI Realtime upstream error: type=invalid_request_error · code=invalid_request · param=session.reasoning · message=Unsupported field: session.reasoning."
     );
     assert.doesNotMatch(JSON.stringify(body), /secret-ish/);
   });

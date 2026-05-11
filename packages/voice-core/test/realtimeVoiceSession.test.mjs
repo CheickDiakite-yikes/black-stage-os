@@ -517,14 +517,8 @@ describe("Realtime voice session contracts", () => {
     assert.equal(request.openAiRequest.body.sdp, "v=0\r\no=- blackstage-test\r\n");
     assert.equal(request.openAiRequest.body.session.model, "gpt-realtime-2");
     assert.equal(request.openAiRequest.body.session.audio.output.voice, "marin");
-    assert.equal(
-      request.openAiRequest.body.session.metadata.blackstageThreadId,
-      "thread_build_blackstage"
-    );
-    assert.equal(
-      request.openAiRequest.body.session.metadata.blackstageInstructionsVersion,
-      BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION
-    );
+    assert.equal(request.openAiRequest.body.session.reasoning.effort, "medium");
+    assert.equal("metadata" in request.openAiRequest.body.session, false);
     assert.equal(request.clientContract.browserReceives, "sdp_answer_only");
   });
 
@@ -855,7 +849,16 @@ describe("Realtime voice session contracts", () => {
           safetyIdentifier: "hashed-user-id"
         },
         exchangeWithOpenAi: async () => {
-          throw new Error("provider failed with internal detail");
+          const error = new Error("provider failed with internal detail");
+          error.upstreamStatus = 429;
+          error.upstreamRequestId = "req_safe_failure";
+          error.upstreamError = {
+            code: "invalid_request",
+            message: "Unsupported field: session.reasoning",
+            param: "session.reasoning",
+            type: "invalid_request_error"
+          };
+          throw error;
         }
       }
     );
@@ -866,6 +869,12 @@ describe("Realtime voice session contracts", () => {
     assert.equal(
       body.errors[0],
       "Realtime broker exchange failed before returning an SDP answer."
+    );
+    assert.equal(body.errors[1], "OpenAI Realtime upstream returned HTTP 429.");
+    assert.equal(body.errors[2], "OpenAI request id: req_safe_failure.");
+    assert.equal(
+      body.errors[3],
+      "OpenAI Realtime upstream error: type=invalid_request_error · code=invalid_request · param=session.reasoning · message=Unsupported field: session.reasoning."
     );
     assert.doesNotMatch(response.body, /internal detail/);
   });

@@ -69,7 +69,7 @@ export function renderRealtimeSmokeEnvPlan(plan) {
   const lines = [
     "# Realtime live-smoke arming values for this shell only.",
     "# Review these before running; no env file was written.",
-    "# Cheap guard: SDP-only, browser audio disabled, timeout capped at 15000 ms.",
+    "# Cheap guard: SDP-only, recvonly audio section, no microphone track, timeout capped at 15000 ms.",
     "# Safety guard: local env files may hold credentials but cannot arm live smoke by themselves.",
     plan.openAiApiKeyStatus === "set"
       ? "# OPENAI_API_KEY is already set in this shell."

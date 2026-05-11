@@ -4,7 +4,6 @@ import {
   type RealtimeVoiceBrokerPlan
 } from "./realtimeVoiceBroker.js";
 import {
-  BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION,
   DEFAULT_REALTIME_VOICE_MODEL,
   type RealtimeVoiceSessionConfig
 } from "./realtimeVoiceSession.js";
@@ -32,11 +31,6 @@ export type RealtimeServerSessionDescriptor = {
   };
   reasoning: {
     effort: RealtimeVoiceSessionConfig["reasoningEffort"];
-  };
-  metadata: {
-    blackstageSessionId: string;
-    blackstageThreadId: string;
-    blackstageInstructionsVersion: typeof BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION;
   };
 };
 
@@ -148,11 +142,6 @@ export function createRealtimeServerSessionDescriptor(
     },
     reasoning: {
       effort: config.reasoningEffort
-    },
-    metadata: {
-      blackstageSessionId: config.sessionId,
-      blackstageThreadId: config.threadId,
-      blackstageInstructionsVersion: BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION
     }
   };
 }

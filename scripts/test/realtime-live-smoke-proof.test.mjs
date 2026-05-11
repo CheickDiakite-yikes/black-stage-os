@@ -29,6 +29,12 @@ import {
 const PREFLIGHT_SCRIPT_PATH = fileURLToPath(
   new URL("../preflight-realtime-live.mjs", import.meta.url)
 );
+const CHEAP_REALTIME_OFFER_SDP = [
+  "v=0",
+  "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+  "a=recvonly",
+  "m=application 9 UDP/DTLS/SCTP webrtc-datachannel"
+].join("\r\n");
 
 describe("Realtime live smoke proof", () => {
   it("creates redacted proof metadata without browser credentials or audio", () => {
@@ -50,7 +56,7 @@ describe("Realtime live smoke proof", () => {
       browserSendsAudio: false,
       cheapTestGuard: createRealtimeLiveSmokeCheapGuard({
         env: {},
-        offerSdp: "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+        offerSdp: CHEAP_REALTIME_OFFER_SDP
       }),
       localEnv: {
         loaded: true,
@@ -71,10 +77,14 @@ describe("Realtime live smoke proof", () => {
     assert.equal(proof.browserSendsAudio, false);
     assert.equal(proof.cheapTestGuard.browserSendsAudio, false);
     assert.equal(proof.cheapTestGuard.browserReceivesStandardApiKey, false);
-    assert.equal(proof.cheapTestGuard.offerMode, "data_channel_only");
+    assert.equal(proof.cheapTestGuard.offerMode, "data_channel_plus_recvonly_audio");
+    assert.equal(proof.cheapTestGuard.requiresAudioMediaSection, true);
+    assert.equal(proof.cheapTestGuard.rejectsBrowserAudioSend, true);
     assert.equal(proof.cheapTestGuard.maxProviderRequests, 1);
     assert.equal(proof.cheapTestGuard.timeoutCapMs, 15_000);
-    assert.equal(proof.cheapTestGuard.offer.hasAudioMediaSection, false);
+    assert.equal(proof.cheapTestGuard.offer.hasAudioMediaSection, true);
+    assert.deepEqual(proof.cheapTestGuard.offer.audioDirections, ["recvonly"]);
+    assert.equal(proof.cheapTestGuard.offer.hasAudioSendMediaSection, false);
     assert.equal(proof.cheapTestGuard.offer.hasDataChannelMediaSection, true);
     assert.equal(proof.openAiNetworkCallAttempted, true);
     assert.equal(proof.requiredEnv.OPENAI_API_KEY, "set");
@@ -217,6 +227,14 @@ describe("Realtime live smoke proof", () => {
       ),
       "Live Realtime smoke failed with protocol output; raw SDP omitted."
     );
+    assert.match(
+      createSafeRealtimeSmokeErrorMessage(
+        new Error(
+          'Live Realtime smoke failed with HTTP 503: {"errors":["Realtime broker exchange failed before returning an SDP answer.","OpenAI Realtime upstream returned HTTP 400.","OpenAI Realtime upstream error: type=invalid_request_error · code=invalid_request · message=Unsupported field: session.reasoning with sk-proj-redactme12345."]}'
+        )
+      ),
+      /Unsupported field: session\.reasoning with \[redacted\]/
+    );
   });
 });
 
@@ -257,9 +275,9 @@ describe("Realtime live smoke env plan", () => {
       browserReceivesStandardApiKey: false,
       liveFlagMustBeShellExport: true,
       liveCallRequiresExplicitArm: true,
-      offerMode: "data_channel_only",
-      dataChannelOnly: true,
-      rejectsAudioSdp: true,
+      offerMode: "data_channel_plus_recvonly_audio",
+      requiresAudioMediaSection: true,
+      rejectsBrowserAudioSend: true,
       maxProviderRequests: 1,
       timeoutCapMs: 15_000,
       effectiveTimeoutMs: 15_000
@@ -304,19 +322,31 @@ describe("Realtime live smoke cheap guard", () => {
     );
   });
 
-  it("accepts data-channel-only SDP offers", () => {
-    const summary = assertRealtimeLiveSmokeOfferIsCheap(
-      "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
-    );
+  it("accepts recvonly-audio plus data-channel SDP offers", () => {
+    const summary = assertRealtimeLiveSmokeOfferIsCheap(CHEAP_REALTIME_OFFER_SDP);
 
-    assert.equal(summary.hasAudioMediaSection, false);
+    assert.equal(summary.hasAudioMediaSection, true);
+    assert.deepEqual(summary.audioDirections, ["recvonly"]);
+    assert.equal(summary.hasAudioSendMediaSection, false);
     assert.equal(summary.hasDataChannelMediaSection, true);
     assert.equal(summary.hasVideoMediaSection, false);
   });
 
-  it("rejects audio or non-data-channel SDP before provider exchange", () => {
+  it("rejects browser-audio-send or non-data-channel SDP before provider exchange", () => {
     assert.throws(() =>
-      assertRealtimeLiveSmokeOfferIsCheap("v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n")
+      assertRealtimeLiveSmokeOfferIsCheap(
+        [
+          "v=0",
+          "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+          "a=sendrecv",
+          "m=application 9 UDP/DTLS/SCTP webrtc-datachannel"
+        ].join("\r\n")
+      )
+    );
+    assert.throws(() =>
+      assertRealtimeLiveSmokeOfferIsCheap(
+        "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+      )
     );
     assert.throws(() =>
       assertRealtimeLiveSmokeOfferIsCheap("v=0\r\no=- blackstage-empty\r\n")
