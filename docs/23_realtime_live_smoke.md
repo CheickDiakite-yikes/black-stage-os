@@ -103,6 +103,17 @@ pnpm prepare:realtime-smoke
 
 The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, an ignored `.blackstage/` proof path, and the 15-second timeout request. It also prints comments stating the cheap guard: SDP-only, data channel plus `recvonly` audio, no microphone track, shell-only live arming, and one provider request at most. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
 
+For a manual founder-run browser session, use:
+
+```bash
+pnpm prepare:live-voice
+```
+
+That helper prints the two-terminal local broker and Stage Web commands for
+no-mic, no-mic-plus-tool-probe, and microphone-enabled testing. It writes no env
+file, prints no API key, starts no provider call, and starts no microphone stream
+by itself.
+
 ## Redacted Proof File
 
 If you want a local proof packet for the run, set an ignored `.blackstage/` path:

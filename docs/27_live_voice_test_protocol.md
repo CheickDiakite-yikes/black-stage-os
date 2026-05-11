@@ -41,11 +41,17 @@ Run these before any manual voice session:
 ```bash
 pnpm preflight:realtime
 pnpm prepare:realtime-smoke
+pnpm prepare:live-voice
 ```
 
 `pnpm prepare:realtime-smoke` prints local export lines for the live-smoke flag,
 safety identifier, approval token, redacted proof path, and 15-second timeout.
 It does not print `OPENAI_API_KEY` and does not make a network call.
+
+`pnpm prepare:live-voice` prints the manual two-terminal broker and Stage Web
+commands for no-mic, no-mic-plus-tool-probe, and microphone testing. It writes no
+env file, prints no API key, starts no provider call, and starts no microphone
+stream by itself.
 
 Then run the no-mic UI proof:
 
