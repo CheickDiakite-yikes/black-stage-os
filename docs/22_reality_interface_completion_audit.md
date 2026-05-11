@@ -59,8 +59,11 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 ## Evidence From Current Gate
 
-Most recent validation after the full browser regression gate:
+Most recent validation after the root validation gate:
 
+- `pnpm build`: passed across the sorted workspace after the local image, memory recall/review, spoken artifact revision, and full browser regression slices.
+- `pnpm typecheck`: passed across 8 of 9 workspace projects.
+- `pnpm test`: passed after `pnpm check:workflow` reported 12 contract checks; package tests covered 5 `memory-core` subtests, 23 `voice-core` Realtime subtests, 15 `agent-runtime` harness/Codex/Agents SDK/Symphony subtests, 9 `stage-broker` server/exchange/approval-readiness/approval-header subtests, and 13 `stage-runner` server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
 - `pnpm test:e2e`: passed with 15 browser tests using one Playwright worker, covering harness policy, Realtime bridge, artifact flow/action packet, replay, stop/resume, models/maps/simulations/memory, text and image context, local memory write/recall/review/delete, sparse assistant speech, spoken final intent, spoken object correction, and spoken artifact revision.
 - `pnpm --filter @blackstage/stage-web exec playwright test tests/stage-shell.spec.ts -g "memory writes"`: passed after stabilizing cross-thread memory review timing.
 - `pnpm scan:secrets`: passed with no high-confidence secrets across 221 tracked files after final staging.
