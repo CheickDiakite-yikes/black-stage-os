@@ -380,6 +380,10 @@ function MemorySurface({ payload }: { payload: unknown }) {
   const records = Array.isArray(payload.records)
     ? payload.records.filter(isRecord)
     : [];
+  const retrieval = isRecord(payload.retrieval) ? payload.retrieval : undefined;
+  const recallResults = Array.isArray(retrieval?.results)
+    ? retrieval.results.filter(isRecord)
+    : [];
 
   return (
     <div className="cognitive-surface memory-surface" data-testid="memory-surface">
@@ -388,6 +392,24 @@ function MemorySurface({ payload }: { payload: unknown }) {
         <span>{formatPayloadValue(payload.status ?? "private")}</span>
       </div>
       <p>{formatPayloadValue(payload.policy ?? "local-first")}</p>
+      {retrieval ? (
+        <div className="memory-recall" aria-label="Memory recall results">
+          <span>Recall</span>
+          <strong>{formatPayloadValue(retrieval.query ?? "memory")}</strong>
+          {recallResults.length > 0 ? (
+            <ol className="memory-records">
+              {recallResults.slice(0, 4).map((result) => (
+                <li key={formatPayloadValue(result.id)}>
+                  <span>{formatPayloadValue(result.reason ?? "matched")}</span>
+                  <strong>{formatPayloadValue(result.summary ?? "")}</strong>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <em>No approved local memory matched.</em>
+          )}
+        </div>
+      ) : null}
       {records.length > 0 ? (
         <ol className="memory-records" aria-label="Local memory records">
           {records.slice(0, 4).map((record) => (

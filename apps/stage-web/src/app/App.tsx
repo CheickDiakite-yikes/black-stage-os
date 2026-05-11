@@ -20,6 +20,8 @@ import {
   createMemoryWriteDraft,
   deleteMemoryRecord,
   findMemoryRecordByText,
+  rankMemoryRecords,
+  type RankedMemoryResult,
   rejectMemoryRecord,
   type MemoryVaultRecord
 } from "@blackstage/memory-core";
@@ -91,6 +93,7 @@ const commandFillerWords = new Set([
 const TEXT_CONTEXT_LIMIT = 720;
 const MEMORY_COMMAND_PREFIX = "remember ";
 const FORGET_COMMAND_PREFIXES = ["forget ", "delete memory "];
+const RECALL_COMMAND_PREFIXES = ["recall ", "search memory ", "find memory "];
 const REALTIME_LIVE_APPROVAL_PREFIX = "approval_realtime_live_";
 
 type BlackstageTestWindow = Window & {
@@ -503,6 +506,60 @@ export function App() {
     [emitStageEvent, memoryRecords, thread.id]
   );
 
+  const requestMemoryRecall = useCallback(
+    (intentText: string) => {
+      const queryText = parseMemoryRecallCommand(intentText);
+
+      if (!queryText) {
+        return false;
+      }
+
+      const recalledAt = new Date().toISOString();
+      const rankedResults = rankMemoryRecords(memoryRecords, {
+        threadId: thread.id,
+        text: queryText,
+        limit: 5
+      });
+
+      emitStageEvent({
+        type: "object.created",
+        payload: createMemoryVaultObject(thread.id, memoryRecords, recalledAt, {
+          query: queryText,
+          results: rankedResults
+        })
+      });
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `memory_recall_${Date.now().toString(36)}`,
+          threadId: thread.id,
+          agentName: "Local memory vault",
+          type: "completed",
+          summary:
+            rankedResults.length > 0
+              ? `Recalled ${rankedResults.length} local memory match.`
+              : "No approved local memory matched.",
+          details: "Recall inspects redacted approved memory records only.",
+          timestamp: recalledAt
+        }
+      });
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech(
+          rankedResults.length > 0
+            ? "I found matching approved local memory."
+            : "I found no approved local memory for that.",
+          {
+            threadId: thread.id
+          }
+        );
+      }
+
+      return true;
+    },
+    [emitAssistantSpeech, emitStageEvent, memoryRecords, stageVoiceEnabled, thread.id]
+  );
+
   const runIntent = useCallback(
     (
       intentText: string,
@@ -518,6 +575,10 @@ export function App() {
       }
 
       if (!scenarioId && requestMemoryDelete(intentText)) {
+        return;
+      }
+
+      if (!scenarioId && requestMemoryRecall(intentText)) {
         return;
       }
 
@@ -559,6 +620,7 @@ export function App() {
       applyStageCommand,
       emitAssistantSpeech,
       requestMemoryDelete,
+      requestMemoryRecall,
       requestMemoryWrite,
       scheduleTimedEvents,
       sessionId,
@@ -1586,10 +1648,30 @@ function parseMemoryDeleteCommand(intentText: string): string | undefined {
   return targetText.length > 0 ? targetText : undefined;
 }
 
+function parseMemoryRecallCommand(intentText: string): string | undefined {
+  const normalizedIntent = intentText.trim();
+  const lowerIntent = normalizedIntent.toLowerCase();
+  const prefix = RECALL_COMMAND_PREFIXES.find((candidate) =>
+    lowerIntent.startsWith(candidate)
+  );
+
+  if (!prefix) {
+    return undefined;
+  }
+
+  const queryText = normalizedIntent.slice(prefix.length).trim();
+
+  return queryText.length > 0 ? queryText : undefined;
+}
+
 function createMemoryVaultObject(
   threadId: string,
   records: MemoryVaultRecord[],
-  timestamp: string
+  timestamp: string,
+  retrieval?: {
+    query: string;
+    results: RankedMemoryResult[];
+  }
 ): StageObject {
   const visibleRecords = records.filter((record) => record.threadId === threadId);
   const approvedCount = visibleRecords.filter(
@@ -1622,6 +1704,21 @@ function createMemoryVaultObject(
         summary: record.redactedSummary,
         updatedAt: record.updatedAt
       })),
+      retrieval: retrieval
+        ? {
+            query: retrieval.query,
+            resultCount: retrieval.results.length,
+            results: retrieval.results.map((result) => ({
+              id: result.id,
+              score: result.score,
+              scope: result.scope,
+              summary: result.redactedSummary,
+              matchedTerms: result.matchedTerms,
+              threadMatch: result.threadMatch,
+              reason: result.reason
+            }))
+          }
+        : undefined,
       notes: [
         "Memory writes require approval.",
         "Memory deletes require approval.",

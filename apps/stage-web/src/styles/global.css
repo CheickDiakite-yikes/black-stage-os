@@ -1040,6 +1040,33 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.memory-recall {
+  display: grid;
+  gap: 0.42rem;
+  border: 1px solid rgba(216, 189, 133, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 0.62rem;
+}
+
+.memory-recall > span {
+  color: rgba(216, 189, 133, 0.68);
+  font-size: 0.58rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.memory-recall > strong {
+  color: rgba(255, 246, 228, 0.9);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.memory-recall em {
+  color: rgba(239, 228, 210, 0.58);
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
 .memory-surface li {
   color: rgba(239, 228, 210, 0.72);
   font-size: 0.73rem;
