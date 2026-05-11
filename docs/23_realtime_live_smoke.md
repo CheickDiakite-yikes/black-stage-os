@@ -7,6 +7,8 @@ Date: 2026-05-11
 
 `pnpm smoke:realtime` is the first repo-backed path for proving the local Realtime broker against a real OpenAI Realtime SDP exchange. It is skip-gated by default and does not call OpenAI unless the operator explicitly arms it.
 
+Local `.env` and `.env.local` files are supported for credentials such as `OPENAI_API_KEY`, but they do not arm the paid live path by themselves. `BLACKSTAGE_REALTIME_LIVE_SMOKE=1` must be exported in the shell before the command starts.
+
 ## Default Behavior
 
 Running the command without live-smoke env is safe:
@@ -19,6 +21,7 @@ pnpm smoke:realtime
 Expected result:
 
 - `pnpm preflight:realtime` prints only redacted set/unset readiness.
+- `.env` / `.env.local` values are loaded as redacted metadata, but secret values are not printed.
 - `voice-core` builds.
 - `stage-broker` builds.
 - The script exits successfully with a skipped message.
@@ -35,6 +38,8 @@ BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER=local-hashed-user-or-project-id \
 BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN=local-approval-phrase \
 pnpm smoke:realtime
 ```
+
+If `OPENAI_API_KEY` is already present in `.env.local`, leave it there and export only the live-smoke arming values from the shell. If `.env.local` contains `BLACKSTAGE_REALTIME_LIVE_SMOKE=1`, preflight still reports `okToRun: false` unless the live flag was present in the shell before local env loading.
 
 The command:
 
@@ -54,7 +59,7 @@ To generate the non-API-key arming values for a controlled local shell, run:
 pnpm prepare:realtime-smoke
 ```
 
-The helper prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, and an ignored `.blackstage/` proof path. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
+The helper loads `.env` / `.env.local` only to detect whether `OPENAI_API_KEY` is already set, then prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, and an ignored `.blackstage/` proof path. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
 
 ## Redacted Proof File
 
@@ -77,4 +82,4 @@ The route returns sanitized proof summaries only. It omits `requiredEnv`, error 
 
 ## Do Not Commit
 
-Do not commit API keys, approval phrases, raw SDP answers, trace zips, browser artifacts, `.blackstage/` proof files, or local `.env` files.
+Do not commit API keys, approval phrases, raw SDP answers, trace zips, browser artifacts, `.blackstage/` proof files, or local `.env` / `.env.local` files.
