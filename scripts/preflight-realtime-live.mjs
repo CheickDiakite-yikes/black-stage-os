@@ -1,56 +1,54 @@
 import { loadLocalEnvFile, summarizeLocalEnvLoad } from "./local-env.mjs";
 
-const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
-const REQUIRED_ENV_VARS = [
+export const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
+export const REALTIME_REQUIRED_ENV_VARS = [
   "OPENAI_API_KEY",
   "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER",
   "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"
 ];
 
-const shellLiveSmokeArmed = process.env[LIVE_SMOKE_ENV_VAR] === "1";
-const localEnv = loadLocalEnvFile();
-const localEnvIncludesLiveFlag =
-  localEnv.loadedEnvVars.includes(LIVE_SMOKE_ENV_VAR) ||
-  localEnv.skippedEnvVars.includes(LIVE_SMOKE_ENV_VAR);
-const requiredEnv = Object.fromEntries(
-  REQUIRED_ENV_VARS.map((envVar) => [
-    envVar,
-    process.env[envVar]?.trim() ? "set" : "unset"
-  ])
-);
-const missingEnv = REQUIRED_ENV_VARS.filter((envVar) => !process.env[envVar]?.trim());
-const okToRun = shellLiveSmokeArmed && missingEnv.length === 0;
-const notes = createNotes({
-  okToRun,
-  localEnvIncludesLiveFlag,
+export function createRealtimeLivePreflight({
+  env = process.env,
+  localEnv,
   shellLiveSmokeArmed
-});
+} = {}) {
+  const localEnvIncludesLiveFlag = Boolean(
+    localEnv?.loadedEnvVars?.includes(LIVE_SMOKE_ENV_VAR) ||
+    localEnv?.skippedEnvVars?.includes(LIVE_SMOKE_ENV_VAR)
+  );
+  const requiredEnv = Object.fromEntries(
+    REALTIME_REQUIRED_ENV_VARS.map((envVar) => [
+      envVar,
+      env[envVar]?.trim() ? "set" : "unset"
+    ])
+  );
+  const missingEnv = REALTIME_REQUIRED_ENV_VARS.filter(
+    (envVar) => !env[envVar]?.trim()
+  );
+  const liveSmokeArmedByShell = Boolean(shellLiveSmokeArmed);
+  const okToRun = liveSmokeArmedByShell && missingEnv.length === 0;
+  const notes = createNotes({
+    okToRun,
+    localEnvIncludesLiveFlag,
+    shellLiveSmokeArmed: liveSmokeArmedByShell
+  });
 
-console.log(
-  JSON.stringify(
-    {
-      okToRun,
-      liveSmokeArmed: shellLiveSmokeArmed,
-      liveSmokeArmedByShell: shellLiveSmokeArmed,
-      localEnvIncludesLiveFlag,
-      localEnv: summarizeLocalEnvLoad(localEnv),
-      requiredEnv,
-      missingEnv,
-      openAiNetworkCallWouldRun: okToRun,
-      browserReceivesStandardApiKey: false,
-      cheapTestGuard: {
-        liveCallRequiresExplicitArm: true,
-        browserSendsAudio: false
-      },
-      notes
+  return {
+    okToRun,
+    liveSmokeArmed: liveSmokeArmedByShell,
+    liveSmokeArmedByShell,
+    localEnvIncludesLiveFlag,
+    localEnv: summarizeLocalEnvLoad(localEnv ?? emptyLocalEnv()),
+    requiredEnv,
+    missingEnv,
+    openAiNetworkCallWouldRun: okToRun,
+    browserReceivesStandardApiKey: false,
+    cheapTestGuard: {
+      liveCallRequiresExplicitArm: true,
+      browserSendsAudio: false
     },
-    null,
-    2
-  )
-);
-
-if (shellLiveSmokeArmed && missingEnv.length > 0) {
-  process.exitCode = 1;
+    notes
+  };
 }
 
 function createNotes({ okToRun, localEnvIncludesLiveFlag, shellLiveSmokeArmed }) {
@@ -72,4 +70,29 @@ function createNotes({ okToRun, localEnvIncludesLiveFlag, shellLiveSmokeArmed })
     "Live Realtime smoke is not armed.",
     "Set the live flag, safety identifier, and local approval token only from a shell you control."
   ];
+}
+
+function emptyLocalEnv() {
+  return {
+    loaded: false,
+    envPath: ".env",
+    loadedEnvVars: [],
+    skippedEnvVars: []
+  };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const shellLiveSmokeArmed = process.env[LIVE_SMOKE_ENV_VAR] === "1";
+  const localEnv = loadLocalEnvFile();
+  const preflight = createRealtimeLivePreflight({
+    env: process.env,
+    localEnv,
+    shellLiveSmokeArmed
+  });
+
+  console.log(JSON.stringify(preflight, null, 2));
+
+  if (preflight.liveSmokeArmedByShell && !preflight.okToRun) {
+    process.exitCode = 1;
+  }
 }

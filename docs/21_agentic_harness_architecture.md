@@ -213,6 +213,7 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - `agent-runtime` exports `HarnessWorkflowPolicy`
     - Symphony-style snapshots and `apps/stage-runner` readiness expose the policy without granting browser execution rights
     - source-pinned integration matrix for Codex CLI, Codex App Server, Agents SDK, Symphony, and Realtime voice
+    - `pnpm preflight:live` summarizes Realtime, Codex runner, and Agents SDK live readiness without starting any live integration
     - Status: implemented with agent-runtime, stage-runner, and Stage Web policy tests; no live Codex, Agents SDK, or Realtime network call runs by default.
 
 15. Add the Codex App Server handoff contract:

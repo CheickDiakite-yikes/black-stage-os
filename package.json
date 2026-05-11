@@ -21,6 +21,7 @@
     "check:workflow": "node scripts/check-workflow-policy.mjs",
     "lint": "eslint .",
     "scan:secrets": "node scripts/scan-secrets.mjs",
+    "preflight:live": "node scripts/preflight-live-readiness.mjs",
     "preflight:realtime": "node scripts/preflight-realtime-live.mjs",
     "preflight:codex-runner": "node scripts/preflight-codex-runner.mjs",
     "preflight:agents-sdk": "node scripts/preflight-agents-sdk.mjs",
