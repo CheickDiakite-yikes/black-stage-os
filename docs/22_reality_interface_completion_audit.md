@@ -59,17 +59,18 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 ## Evidence From Current Gate
 
-Most recent validation after the agentic workflow-policy slice:
+Most recent validation after the workflow policy check slice:
 
 - `pnpm typecheck`: passed across 8 of 9 workspace projects.
 - `pnpm lint`: passed.
-- `pnpm build`: passed across the sorted workspace build.
+- `pnpm check:workflow`: passed across 9 contract checks.
 - `pnpm --filter @blackstage/agent-runtime test`: passed with 15 harness subtests.
 - `pnpm --filter @blackstage/stage-runner test`: passed with 13 local server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
 - `pnpm test`: passed with 23 `voice-core` subtests, 4 `memory-core` subtests, 15 `agent-runtime` subtests, 9 `stage-broker` server/exchange/approval-readiness/approval-header subtests, and 13 `stage-runner` server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
-- `pnpm smoke:realtime`: passed in default skip-gated mode; no OpenAI network call was attempted.
 - `pnpm exec prettier --check ...`: passed for the touched workflow, harness, runner, audit, and research files.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 206 tracked files after final staging.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 208 tracked files after final staging.
+
+Latest full build and skip-gated Realtime smoke evidence remains the agentic workflow-policy run: `pnpm build` passed across the sorted workspace, and `pnpm smoke:realtime` skipped without making a live OpenAI call.
 
 Latest browser evidence remains the visible-arming run: focused Realtime bridge e2e passed with mocked SDP approval, and full `pnpm test:e2e` passed with 10 browser tests using one Playwright worker.
 

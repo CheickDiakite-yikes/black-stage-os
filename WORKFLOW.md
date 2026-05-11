@@ -37,6 +37,7 @@ Before promoting a workflow slice, run the narrow relevant tests plus the repo g
 
 - `pnpm typecheck`
 - `pnpm lint`
+- `pnpm check:workflow`
 - `pnpm test`
 - `pnpm build`
 - `pnpm scan:secrets`
