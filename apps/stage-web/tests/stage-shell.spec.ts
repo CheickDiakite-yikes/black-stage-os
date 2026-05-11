@@ -1688,6 +1688,21 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
     "Renamed Spec portal to Signal room."
   );
 
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
+
+  await emitFakeSpeechFinal(page, "undo last object change");
+
+  await expect(specObject).toContainText("Spec portal");
+  await expect(specObject).not.toContainText("Signal room");
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Reverted Spec portal."
+  );
+
   const commandEvidence = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
     const snapshot = rawSnapshot
@@ -1720,8 +1735,16 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
           event.payload?.command_text_redacted ===
             "rename the spec portal to Signal room"
       ) ?? false;
+    const undoWasLogged =
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "undo_object" &&
+          event.payload?.command_input_mode === "voice" &&
+          event.payload?.command_text_redacted === "undo last object change"
+      ) ?? false;
 
-    return collapseWasLogged && renameWasLogged;
+    return collapseWasLogged && renameWasLogged && undoWasLogged;
   });
 
   expect(commandEvidence).toBe(true);
