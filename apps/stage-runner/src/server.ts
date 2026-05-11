@@ -11,6 +11,9 @@ import {
   createDryRunCodexWorkerAdapter
 } from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
 import {
+  createLocalCodexWorkerAdapter
+} from "../../../packages/agent-runtime/dist/harness/codexLocalRunner.js";
+import {
   InMemoryHarnessScheduler
 } from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
 import {
@@ -24,6 +27,7 @@ import type {
   HarnessTaskInput,
   HarnessTaskKind
 } from "../../../packages/agent-runtime/dist/harness/harnessTypes.js";
+import { createNodeCodexCommandExecutor } from "./codexCliExecutor.js";
 
 export { BLACKSTAGE_HARNESS_RUNNER_ROUTE } from "../../../packages/agent-runtime/dist/harness/harnessRunnerClient.js";
 
@@ -34,12 +38,14 @@ export const DEFAULT_STAGE_RUNNER_ALLOWED_ORIGINS = [
   "http://localhost:4187"
 ];
 export const STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_RUNNER_ALLOWED_ORIGINS";
+export const STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR = "BLACKSTAGE_CODEX_SUBPROCESS_ENABLED";
 
 export type StageRunnerRuntimeConfig = {
   host: string;
   port: number;
   routePath: string;
   allowedOrigins: string[];
+  codexSubprocessEnabled: boolean;
 };
 
 export type StageRunnerServerOptions = {
@@ -70,24 +76,40 @@ export function createStageRunnerRuntimeConfig(
     host: env.BLACKSTAGE_RUNNER_HOST ?? DEFAULT_STAGE_RUNNER_HOST,
     port: Number(env.BLACKSTAGE_RUNNER_PORT ?? DEFAULT_STAGE_RUNNER_PORT),
     routePath: env.BLACKSTAGE_HARNESS_RUNNER_ROUTE ?? BLACKSTAGE_HARNESS_RUNNER_ROUTE,
-    allowedOrigins: parseAllowedOrigins(env[STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR])
+    allowedOrigins: parseAllowedOrigins(env[STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR]),
+    codexSubprocessEnabled: env[STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR] === "1"
   };
 }
 
-export function createDefaultStageRunnerScheduler(now?: () => string): InMemoryHarnessScheduler {
+export function createDefaultStageRunnerScheduler(options: {
+  now?: () => string;
+  codexSubprocessEnabled?: boolean;
+} = {}): InMemoryHarnessScheduler {
+  const codexAdapter = options.codexSubprocessEnabled
+    ? createLocalCodexWorkerAdapter({
+        enabled: true,
+        executor: createNodeCodexCommandExecutor()
+      })
+    : createDryRunCodexWorkerAdapter();
+
   return new InMemoryHarnessScheduler({
     adapters: [
-      createDryRunCodexWorkerAdapter(),
+      codexAdapter,
       createDryRunAgentsSdkAdapter(),
       createSimulatedHarnessAdapter(["voice"])
     ],
-    now
+    now: options.now
   });
 }
 
 export function createStageRunnerServer(options: StageRunnerServerOptions = {}): Server {
   const runtimeConfig = resolveStageRunnerRuntimeConfig(options.runtimeConfig);
-  const scheduler = options.scheduler ?? createDefaultStageRunnerScheduler(options.now);
+  const scheduler =
+    options.scheduler ??
+    createDefaultStageRunnerScheduler({
+      now: options.now,
+      codexSubprocessEnabled: runtimeConfig.codexSubprocessEnabled
+    });
 
   return createServer((request, response) => {
     void handleStageRunnerRequest(request, response, runtimeConfig, scheduler);
@@ -220,9 +242,9 @@ function createReadinessResponse(
     ok: true,
     route: runtimeConfig.routePath,
     orchestration: "symphony_style_internal_queue",
-    codexMode: "dry_run",
+    codexMode: runtimeConfig.codexSubprocessEnabled ? "local_exec" : "dry_run",
     agentsSdkMode: "dry_run",
-    localCodexSubprocessEnabled: false,
+    localCodexSubprocessEnabled: runtimeConfig.codexSubprocessEnabled,
     browserCanEnqueueWork: false,
     browserCanRunCodex: false,
     browserReceivesProviderCredentials: false,

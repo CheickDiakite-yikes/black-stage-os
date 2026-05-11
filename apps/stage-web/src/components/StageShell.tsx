@@ -479,7 +479,7 @@ function formatHarnessRunnerReadiness(
         return `${snapshot.openWorkCount ?? 0} open · ${snapshot.reviewCount ?? 0} review`;
       }
 
-      return readiness.codexMode === "dry_run" ? "runner mounted" : "runner standby";
+      return readiness.codexMode === "local_exec" ? "runner live" : "runner mounted";
     case "unreachable":
       return "offline";
     case "not_configured":

@@ -1,9 +1,14 @@
 /* global fetch */
 
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import { afterEach, describe, it } from "node:test";
 import {
   BLACKSTAGE_HARNESS_RUNNER_ROUTE,
+  STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR,
+  createCodexSubprocessPreview,
+  createNodeCodexCommandExecutor,
+  createStageRunnerRuntimeConfig,
   createStageRunnerServer
 } from "../dist/index.js";
 
@@ -41,6 +46,25 @@ describe("Stage runner server", () => {
     assert.equal(body.agentsSdkMode, "dry_run");
     assert.equal(body.localCodexSubprocessEnabled, false);
     assert.equal(body.browserCanEnqueueWork, false);
+    assert.equal(body.browserCanRunCodex, false);
+    assert.equal(body.browserReceivesProviderCredentials, false);
+  });
+
+  it("labels the Codex subprocess boundary only when explicitly enabled", async () => {
+    const runtimeConfig = createStageRunnerRuntimeConfig({
+      [STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR]: "1"
+    });
+    const server = await listen(
+      createStageRunnerServer({
+        runtimeConfig
+      })
+    );
+    const response = await fetch(`${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`);
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.codexMode, "local_exec");
+    assert.equal(body.localCodexSubprocessEnabled, true);
     assert.equal(body.browserCanRunCodex, false);
     assert.equal(body.browserReceivesProviderCredentials, false);
   });
@@ -189,6 +213,53 @@ describe("Stage runner server", () => {
   });
 });
 
+describe("Node Codex command executor", () => {
+  it("spawns Codex without a shell and writes the worker prompt to stdin", async () => {
+    let spawned;
+    const child = createFakeChildProcess();
+    const executor = createNodeCodexCommandExecutor({
+      timeoutMs: 1_000,
+      spawnImpl: (command, args, options) => {
+        spawned = {
+          command,
+          args,
+          options
+        };
+
+        return child;
+      }
+    });
+    const result = await executor({
+      command: "codex",
+      args: ["exec", "--json", "-"],
+      cwd: ".blackstage/workspaces/task_codex",
+      stdin: "Task: prove the subprocess boundary",
+      env: {
+        BLACKSTAGE_HARNESS_TASK_ID: "task_codex"
+      }
+    });
+    const preview = createCodexSubprocessPreview({
+      command: "codex",
+      args: ["exec", "--json", "-"],
+      cwd: ".blackstage/workspaces/task_codex",
+      stdin: "Task: prove the subprocess boundary",
+      env: {
+        BLACKSTAGE_HARNESS_TASK_ID: "task_codex"
+      }
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stdout, "codex proof packet");
+    assert.equal(spawned.command, "codex");
+    assert.deepEqual(spawned.args, ["exec", "--json", "-"]);
+    assert.equal(spawned.options.cwd, ".blackstage/workspaces/task_codex");
+    assert.equal(spawned.options.shell, false);
+    assert.equal(child.stdinText, "Task: prove the subprocess boundary");
+    assert.equal(preview.stdinBytes, 35);
+    assert.deepEqual(preview.envKeys, ["BLACKSTAGE_HARNESS_TASK_ID"]);
+  });
+});
+
 async function listen(server) {
   await new Promise((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
@@ -206,4 +277,28 @@ function baseUrl(server) {
   }
 
   return `http://127.0.0.1:${address.port}`;
+}
+
+function createFakeChildProcess() {
+  const child = new EventEmitter();
+
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.stdinText = "";
+  child.stdin = {
+    write(chunk) {
+      child.stdinText += String(chunk);
+    },
+    end() {
+      Promise.resolve().then(() => {
+        child.stdout.emit("data", "codex proof packet");
+        child.emit("close", 0);
+      });
+    }
+  };
+  child.kill = () => {
+    child.killed = true;
+  };
+
+  return child;
 }

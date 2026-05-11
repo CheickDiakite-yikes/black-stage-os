@@ -159,7 +159,16 @@ The stage event log remains the black-box recorder. Replay should work whether e
    - local enqueue and run-next routes for CLI/server callers
    - browser-origin mutations blocked
    - Codex and Agents SDK remain dry-run only
-   - Status: implemented with Node server tests and a Stage Web `Harness edge` status; no live Codex subprocess, Agents SDK API call, Linear, GitHub, or network-backed Symphony worker runs yet.
+   - Status: implemented with Node server tests and a Stage Web `Harness edge` status.
+
+9. Add the explicit Codex subprocess boundary:
+   - Node `spawn` executor for `codex exec`
+   - no shell execution
+   - worker prompt written through stdin
+   - timeout and output limits
+   - only mounted when `BLACKSTAGE_CODEX_SUBPROCESS_ENABLED=1`
+   - browser still cannot enqueue work, run Codex, or receive provider credentials
+   - Status: implemented with fake-process tests; not enabled by default, and no live Codex subprocess ran during validation.
 
 ## Risks
 

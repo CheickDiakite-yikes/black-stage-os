@@ -21,9 +21,9 @@ export type HarnessRunnerReadinessBody = {
   ok: true;
   route: string;
   orchestration: "symphony_style_internal_queue";
-  codexMode: "dry_run" | "disabled";
+  codexMode: "dry_run" | "local_exec" | "disabled";
   agentsSdkMode: "dry_run" | "disabled";
-  localCodexSubprocessEnabled: false;
+  localCodexSubprocessEnabled: boolean;
   browserCanEnqueueWork: false;
   browserCanRunCodex: false;
   browserReceivesProviderCredentials: false;
@@ -38,7 +38,7 @@ export type HarnessRunnerClientReadiness = {
   orchestration?: HarnessRunnerReadinessBody["orchestration"];
   codexMode?: HarnessRunnerReadinessBody["codexMode"];
   agentsSdkMode?: HarnessRunnerReadinessBody["agentsSdkMode"];
-  localCodexSubprocessEnabled: false;
+  localCodexSubprocessEnabled: boolean;
   browserCanEnqueueWork: false;
   browserCanRunCodex: false;
   browserReceivesProviderCredentials: false;
@@ -164,7 +164,7 @@ function parseHarnessRunnerReadinessBody(
     candidate.orchestration !== "symphony_style_internal_queue" ||
     !isHarnessRunnerCodexMode(candidate.codexMode) ||
     !isHarnessRunnerAgentsSdkMode(candidate.agentsSdkMode) ||
-    candidate.localCodexSubprocessEnabled !== false ||
+    typeof candidate.localCodexSubprocessEnabled !== "boolean" ||
     candidate.browserCanEnqueueWork !== false ||
     candidate.browserCanRunCodex !== false ||
     candidate.browserReceivesProviderCredentials !== false ||
@@ -179,7 +179,7 @@ function parseHarnessRunnerReadinessBody(
     orchestration: "symphony_style_internal_queue",
     codexMode: candidate.codexMode,
     agentsSdkMode: candidate.agentsSdkMode,
-    localCodexSubprocessEnabled: false,
+    localCodexSubprocessEnabled: candidate.localCodexSubprocessEnabled,
     browserCanEnqueueWork: false,
     browserCanRunCodex: false,
     browserReceivesProviderCredentials: false,
@@ -190,7 +190,7 @@ function parseHarnessRunnerReadinessBody(
 function isHarnessRunnerCodexMode(
   value: unknown
 ): value is HarnessRunnerReadinessBody["codexMode"] {
-  return value === "dry_run" || value === "disabled";
+  return value === "dry_run" || value === "local_exec" || value === "disabled";
 }
 
 function isHarnessRunnerAgentsSdkMode(
