@@ -386,6 +386,86 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
   expect(dragWasLogged).toBe(true);
 });
 
+test("Stage Shell v0 adds local document notes without file writes", async ({
+  page
+}) => {
+  test.setTimeout(90_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("document-portal-surface")).toContainText(
+    "Stage Shell v0 spec"
+  );
+
+  await page
+    .getByTestId("intent-input")
+    .fill("add note to document keep approval language warm and explicit");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(page.getByTestId("document-portal-surface")).toContainText("local edit");
+  await expect(page.getByTestId("document-portal-surface")).toContainText("User note");
+  await expect(page.getByTestId("document-portal-surface")).toContainText(
+    "keep approval language warm and explicit"
+  );
+
+  const documentNoteWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          payload?: {
+            sections?: Array<{
+              label?: string;
+              value?: string;
+            }>;
+          };
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          command_action?: string;
+          command_value_redacted?: string;
+        };
+      }>;
+    };
+
+    const commandWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "add_document_note" &&
+          event.payload.command_value_redacted ===
+            "keep approval language warm and explicit"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "document_portal" &&
+          event.payload.payload?.sections?.some(
+            (section) =>
+              section.label === "User note" &&
+              section.value === "keep approval language warm and explicit"
+          )
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(documentNoteWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 prepares approved artifacts as harness action packets", async ({
   page
 }) => {

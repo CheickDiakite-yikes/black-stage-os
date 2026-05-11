@@ -83,7 +83,8 @@ type StageCommandAction =
   | "set_url"
   | "set_map"
   | "set_model"
-  | "run_simulation";
+  | "run_simulation"
+  | "add_document_note";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
@@ -2002,6 +2003,12 @@ function parseStageCommand(
     return simulationRunCommand;
   }
 
+  const documentNoteCommand = parseDocumentNoteCommand(intentText, objects);
+
+  if (documentNoteCommand) {
+    return documentNoteCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -2170,6 +2177,39 @@ function parseSimulationRunCommand(
   };
 }
 
+function parseDocumentNoteCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:add|append)\s+(?:a\s+)?note\s+(?:to|on)\s+(?:the\s+)?(?:document|spec|spec portal|document portal)\s*[:,-]?\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:add|append)\s+(?:a\s+)?document\s+note\s*[:,-]?\s+(.+?)\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const target =
+    objects.find(
+      (object) => object.type === "document_portal" && object.state === "focused"
+    ) ?? objects.find((object) => object.type === "document_portal");
+  const noteText = sanitizeStageCommandText(match[1] ?? "");
+
+  if (!target || !noteText) {
+    return undefined;
+  }
+
+  return {
+    action: "add_document_note",
+    target,
+    value: noteText
+  };
+}
+
 function commandActionFromWord(
   word: string | undefined
 ): StageCommandAction | undefined {
@@ -2335,6 +2375,8 @@ function applyStageCommandToObject(
       return applyModelScenarioCommand(object, command.field, command.value);
     case "run_simulation":
       return applySimulationRunCommand(object, command.value);
+    case "add_document_note":
+      return applyDocumentNoteCommand(object, command.value);
   }
 }
 
@@ -2362,6 +2404,8 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Updated ${targetTitle} ${command.field ?? "scenario"} to ${command.value ?? "the requested value"}.`;
     case "run_simulation":
       return `Ran ${targetTitle} for ${command.value ?? "the requested scenario"}.`;
+    case "add_document_note":
+      return `Added a note to ${targetTitle}.`;
   }
 }
 
@@ -2542,6 +2586,37 @@ function applySimulationRunCommand(
   };
 }
 
+function applyDocumentNoteCommand(
+  object: StageObject,
+  noteText: string | undefined
+): StageObject {
+  if (object.type !== "document_portal" || !noteText) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const sections = Array.isArray(payload.sections)
+    ? payload.sections.filter(isObjectPayload)
+    : [];
+
+  return {
+    ...object,
+    state: "expanded",
+    payload: {
+      ...payload,
+      status: "local edit",
+      sections: [
+        {
+          label: "User note",
+          value: noteText
+        },
+        ...sections
+      ].slice(0, 6),
+      guardrail: "Document note is stored locally on the stage; no file write occurred."
+    }
+  };
+}
+
 function formatScenarioLabel(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -2554,6 +2629,12 @@ function sanitizeStageObjectTitle(title: string): string | undefined {
   const normalizedTitle = title.trim().replace(/\s+/g, " ");
 
   return normalizedTitle.length > 0 ? normalizedTitle.slice(0, 80) : undefined;
+}
+
+function sanitizeStageCommandText(value: string): string | undefined {
+  const normalizedValue = value.trim().replace(/\s+/g, " ");
+
+  return normalizedValue.length > 0 ? normalizedValue.slice(0, 180) : undefined;
 }
 
 function readContextModality(file: File): "text" | "image" | "file" {
