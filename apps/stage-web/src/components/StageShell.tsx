@@ -35,6 +35,9 @@ type StageShellProps = {
   harnessRunnerSnapshot: StageWebHarnessRunnerSnapshot;
   researchEvents: ResearchEvent[];
   realtimeBridge: StageWebRealtimeBridgeState;
+  realtimeArmAvailable: boolean;
+  realtimeArmPending: boolean;
+  realtimeArmVisible: boolean;
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   stageEventCount: number;
   stageVoiceEnabled: boolean;
@@ -43,6 +46,7 @@ type StageShellProps = {
   approvalExplanationVisible: boolean;
   onSubmitIntent: (intentText: string, scenarioId?: StageShellScenarioId) => void;
   onApprove: () => void;
+  onArmRealtime: () => void;
   onReject: () => void;
   onAskWhy: () => void;
   onAttachContext: (file: File) => void;
@@ -81,6 +85,9 @@ export function StageShell({
   harnessRunnerSnapshot,
   researchEvents,
   realtimeBridge,
+  realtimeArmAvailable,
+  realtimeArmPending,
+  realtimeArmVisible,
   realtimeBrokerReadiness,
   stageEventCount,
   stageVoiceEnabled,
@@ -89,6 +96,7 @@ export function StageShell({
   approvalExplanationVisible,
   onSubmitIntent,
   onApprove,
+  onArmRealtime,
   onReject,
   onAskWhy,
   onAttachContext,
@@ -112,7 +120,9 @@ export function StageShell({
   const [voiceCapture, setVoiceCapture] = useState<VoiceCaptureState>(() => ({
     status: getSpeechRecognitionConstructor() ? "idle" : "unavailable"
   }));
-  const [transcript, setTranscript] = useState<TranscriptState>(() => createTranscriptState());
+  const [transcript, setTranscript] = useState<TranscriptState>(() =>
+    createTranscriptState()
+  );
   const [interimTranscript, setInterimTranscript] = useState("");
   const [voiceError, setVoiceError] = useState<string | undefined>();
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
@@ -192,7 +202,11 @@ export function StageShell({
       }
     };
     recognition.onerror = (event) => {
-      setVoiceError(event.error ? `Speech capture stopped: ${event.error}` : "Speech capture stopped.");
+      setVoiceError(
+        event.error
+          ? `Speech capture stopped: ${event.error}`
+          : "Speech capture stopped."
+      );
       setVoiceCapture({ status: "idle" });
     };
     recognition.onend = () => {
@@ -241,14 +255,17 @@ export function StageShell({
     realtimeBrokerReadiness,
     realtimeBridge
   );
+  const realtimeArmLabel = formatRealtimeArmLabel(
+    realtimeBridge,
+    realtimeArmAvailable,
+    realtimeArmPending
+  );
 
   return (
     <main
       className={`stage-shell ${thread.status === "paused" ? "stage-idle" : "stage-active"} ${
         voiceCapture.status === "listening" ? "stage-listening" : ""
-      } ${
-        stageVoiceEnabled ? "stage-voice-enabled" : ""
-      }`}
+      } ${stageVoiceEnabled ? "stage-voice-enabled" : ""}`}
       style={stageStyle}
     >
       <div className="stage-fluid-field" aria-hidden="true" />
@@ -303,12 +320,18 @@ export function StageShell({
         </svg>
       </div>
       <div className="stage-depth" aria-hidden="true" />
-      <section className="stage-presence" aria-labelledby="stage-title" data-testid="stage-presence">
+      <section
+        className="stage-presence"
+        aria-labelledby="stage-title"
+        data-testid="stage-presence"
+      >
         <div className="presence-orbit" aria-hidden="true">
           <div className="presence-core" />
         </div>
         <div className="stage-copy">
-          <h1 id="stage-title">{thread.status === "paused" ? "Speak when ready" : thread.title}</h1>
+          <h1 id="stage-title">
+            {thread.status === "paused" ? "Speak when ready" : thread.title}
+          </h1>
           <div className="prompt-rule" aria-hidden="true" />
           <p className="thread-objective">{thread.currentObjective}</p>
         </div>
@@ -318,13 +341,17 @@ export function StageShell({
           <span>{activeScenario?.label ?? "idle field"}</span>
           <strong>{isRunning ? "working" : thread.status}</strong>
         </div>
-        <p>{thread.originalIntent || "The stage is dormant until intent gives it shape."}</p>
+        <p>
+          {thread.originalIntent || "The stage is dormant until intent gives it shape."}
+        </p>
       </section>
       <section className="scenario-rail" aria-label="Demo scenarios">
         {scenarios.slice(0, 4).map((scenario) => (
           <button
             key={scenario.id}
-            className={activeScenario?.id === scenario.id ? "scenario-active" : undefined}
+            className={
+              activeScenario?.id === scenario.id ? "scenario-active" : undefined
+            }
             type="button"
             onClick={() => submitIntent(scenario.intent, scenario.id)}
           >
@@ -332,7 +359,11 @@ export function StageShell({
           </button>
         ))}
       </section>
-      <section className="stage-workspace" aria-label="Dynamic render objects" data-testid="stage-workspace">
+      <section
+        className="stage-workspace"
+        aria-label="Dynamic render objects"
+        data-testid="stage-workspace"
+      >
         <div className="stage-object-constellation">
           {visibleObjects.map((object) => (
             <StageObjectCard
@@ -425,12 +456,32 @@ export function StageShell({
         >
           Stage voice
         </button>
-        <div className="voice-transcript" aria-live="polite" data-testid="voice-transcript">
+        {realtimeArmVisible ? (
+          <button
+            className="realtime-arm-toggle"
+            type="button"
+            aria-pressed={realtimeBridge.status === "connected"}
+            data-testid="realtime-arm-button"
+            disabled={!realtimeArmAvailable}
+            onClick={onArmRealtime}
+          >
+            {realtimeArmLabel}
+          </button>
+        ) : null}
+        <div
+          className="voice-transcript"
+          aria-live="polite"
+          data-testid="voice-transcript"
+        >
           {voiceCapture.status === "listening"
             ? interimTranscript || "listening for intent"
             : finalTranscript || voiceError || "voice-native when available"}
         </div>
-        <div className="stage-voice-reply" aria-live="polite" data-testid="assistant-speech">
+        <div
+          className="stage-voice-reply"
+          aria-live="polite"
+          data-testid="assistant-speech"
+        >
           {assistantSpeechStatus}
         </div>
         <div
@@ -464,6 +515,26 @@ export function StageShell({
       </p>
     </main>
   );
+}
+
+function formatRealtimeArmLabel(
+  bridge: StageWebRealtimeBridgeState,
+  available: boolean,
+  pending: boolean
+): string {
+  if (bridge.status === "connecting") {
+    return "Arming";
+  }
+
+  if (bridge.status === "connected") {
+    return "Live armed";
+  }
+
+  if (pending) {
+    return "Pending";
+  }
+
+  return available ? "Arm live" : "Locked";
 }
 
 function formatRealtimeBrokerReadiness(
@@ -564,7 +635,9 @@ type SpeechRecognitionWindow = Window & {
   webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
 };
 
-function getSpeechRecognitionConstructor(): BrowserSpeechRecognitionConstructor | undefined {
+function getSpeechRecognitionConstructor():
+  | BrowserSpeechRecognitionConstructor
+  | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }

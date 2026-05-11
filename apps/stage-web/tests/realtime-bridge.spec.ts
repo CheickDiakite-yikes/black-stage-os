@@ -2,8 +2,10 @@ import { expect, test } from "@playwright/test";
 
 const brokerRoute = "http://127.0.0.1:8798/api/blackstage/realtime/session";
 
-test("Stage Web bridges live Realtime SDP only when explicitly configured", async ({ page }) => {
-  test.setTimeout(90_000);
+test("Stage Web bridges live Realtime SDP only after visible approval", async ({
+  page
+}) => {
+  test.setTimeout(240_000);
 
   const brokerRequests: Array<{
     method: string;
@@ -21,8 +23,14 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
     browserWindow.__blackstageRealtimeApprovalPhrase = "approve-local-realtime";
     browserWindow.__blackstageRealtimeBrokerUrl = "http://127.0.0.1:8798";
     browserWindow.__blackstageRealtimeWebrtcEnabled = "1";
-    window.localStorage.setItem("blackstage.realtime.approvalPhrase", "approve-local-realtime");
-    window.localStorage.setItem("blackstage.realtimeBroker.url", "http://127.0.0.1:8798");
+    window.localStorage.setItem(
+      "blackstage.realtime.approvalPhrase",
+      "approve-local-realtime"
+    );
+    window.localStorage.setItem(
+      "blackstage.realtimeBroker.url",
+      "http://127.0.0.1:8798"
+    );
     window.localStorage.setItem("blackstage.realtimeWebrtc.enabled", "1");
 
     class FakeRTCPeerConnection {
@@ -56,7 +64,7 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
   await page.route(brokerRoute, async (route) => {
     const request = route.request();
     const method = request.method();
-    const body = method === "POST" ? request.postData() ?? "" : undefined;
+    const body = method === "POST" ? (request.postData() ?? "") : undefined;
 
     brokerRequests.push({
       method,
@@ -90,6 +98,19 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
 
   await page.goto("/");
 
+  await expect(page.getByTestId("realtime-broker-status")).toContainText(
+    "live broker · SDP off"
+  );
+  await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");
+  await expect(page.getByTestId("realtime-arm-button")).toBeEnabled();
+  expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(0);
+
+  await page.getByTestId("realtime-arm-button").click({ force: true });
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Open live Realtime voice edge"
+  );
+  await expect(page.getByTestId("approval-card")).toContainText("network access");
+  await page.getByRole("button", { name: "Approve" }).click({ force: true });
   await expect(page.getByTestId("realtime-broker-status")).toContainText("live SDP");
 
   const bridgeEvidence = await page.evaluate(() => {
@@ -99,24 +120,35 @@ test("Stage Web bridges live Realtime SDP only when explicitly configured", asyn
           researchEvents?: Array<{
             eventType?: string;
             payload?: {
+              action_type?: string;
               agent_name?: string;
+              approval_id?: string;
               summary?: string;
             };
           }>;
         })
       : undefined;
 
-    return (
-      snapshot?.researchEvents?.some(
+    const events = snapshot?.researchEvents ?? [];
+
+    return {
+      bridgeConnected: events.some(
         (event) =>
           event.eventType === "agent_event" &&
           event.payload?.agent_name === "Realtime voice broker" &&
           event.payload?.summary === "Realtime SDP bridge connected."
-      ) ?? false
-    );
+      ),
+      approvalRequested: events.some(
+        (event) =>
+          event.eventType === "approval_requested" &&
+          event.payload?.action_type === "network_access" &&
+          event.payload?.approval_id?.startsWith("approval_realtime_live_")
+      )
+    };
   });
 
-  expect(bridgeEvidence).toBe(true);
+  expect(bridgeEvidence.bridgeConnected).toBe(true);
+  expect(bridgeEvidence.approvalRequested).toBe(true);
   expect(brokerRequests).toEqual(
     expect.arrayContaining([
       expect.objectContaining({

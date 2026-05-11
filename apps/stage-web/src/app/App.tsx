@@ -2,6 +2,7 @@ import {
   createIdleIntentThread,
   stageShellScenarios,
   type AgentEvent,
+  type ApprovalRequest,
   type ResearchEvent,
   type StageEvent,
   type StageObject,
@@ -35,6 +36,7 @@ import {
 import {
   createDefaultStageWebRealtimeBridgeState,
   createStageWebRealtimeBridgeConnectingState,
+  readStageWebRealtimeApprovalPhrase,
   shouldStartStageWebRealtimeBridge,
   startStageWebRealtimeBridge
 } from "../voice/realtimeWebrtcBridge";
@@ -88,6 +90,7 @@ const commandFillerWords = new Set([
 const TEXT_CONTEXT_LIMIT = 720;
 const MEMORY_COMMAND_PREFIX = "remember ";
 const FORGET_COMMAND_PREFIXES = ["forget ", "delete memory "];
+const REALTIME_LIVE_APPROVAL_PREFIX = "approval_realtime_live_";
 
 type BlackstageTestWindow = Window & {
   __blackstageTestDelayMultiplier?: number;
@@ -97,11 +100,16 @@ export function App() {
   const [sessionId, setSessionId] = useState(
     () => loadedSession?.sessionId ?? createStageSession().sessionId
   );
-  const [thread, setThread] = useState(() => loadedSession?.currentThread ?? idleThread);
-  const [activeScenario, setActiveScenario] = useState<StageShellScenario | undefined>(() =>
-    loadedSession?.activeScenarioId
-      ? stageShellScenarios.find((scenario) => scenario.id === loadedSession.activeScenarioId)
-      : undefined
+  const [thread, setThread] = useState(
+    () => loadedSession?.currentThread ?? idleThread
+  );
+  const [activeScenario, setActiveScenario] = useState<StageShellScenario | undefined>(
+    () =>
+      loadedSession?.activeScenarioId
+        ? stageShellScenarios.find(
+            (scenario) => scenario.id === loadedSession.activeScenarioId
+          )
+        : undefined
   );
   const [researchEvents, setResearchEvents] = useState<ResearchEvent[]>(
     () => loadedSession?.researchEvents ?? []
@@ -202,6 +210,136 @@ export function App() {
     });
   }, [emitAssistantSpeech, stageVoiceEnabled]);
 
+  const requestRealtimeArm = useCallback(() => {
+    const timestamp = new Date().toISOString();
+    const routeUrl =
+      realtimeBrokerReadiness.status === "reachable"
+        ? realtimeBrokerReadiness.routeUrl
+        : undefined;
+    const hasPendingRealtimeApproval = thread.approvals.some(
+      isRealtimeLiveApprovalPending
+    );
+
+    if (
+      hasPendingRealtimeApproval ||
+      realtimeBridge.status === "connecting" ||
+      realtimeBridge.status === "connected"
+    ) {
+      return;
+    }
+
+    if (
+      realtimeBrokerReadiness.status !== "reachable" ||
+      realtimeBrokerReadiness.liveModeEnabled !== true ||
+      !routeUrl
+    ) {
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `realtime_arm_blocked_${Date.now().toString(36)}`,
+          threadId: thread.id,
+          taskId: "realtime_sdp_bridge",
+          agentName: "Realtime voice broker",
+          type: "blocked",
+          summary: "Realtime live edge is not ready to arm.",
+          details:
+            "The local broker must be reachable in live mode before Stage Web can request a session.",
+          timestamp
+        }
+      });
+      return;
+    }
+
+    if (!readStageWebRealtimeApprovalPhrase()) {
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `realtime_arm_locked_${Date.now().toString(36)}`,
+          threadId: thread.id,
+          taskId: "realtime_sdp_bridge",
+          agentName: "Realtime voice broker",
+          type: "blocked",
+          summary: "Realtime live edge is locked.",
+          details:
+            "Stage Web needs a local approval phrase before opening the SDP bridge.",
+          timestamp
+        }
+      });
+      return;
+    }
+
+    emitStageEvent({
+      type: "approval.requested",
+      payload: {
+        id: `${REALTIME_LIVE_APPROVAL_PREFIX}${Date.now().toString(36)}`,
+        threadId: thread.id,
+        actionType: "network_access",
+        title: "Open live Realtime voice edge",
+        summary:
+          "Open a server-mediated Realtime SDP exchange for this local stage session.",
+        riskLevel: "high",
+        proposedBy: "Stage Web",
+        scope: routeUrl,
+        consequence:
+          "The browser will exchange SDP with the local broker; the broker may open a live Realtime session using its server-side OpenAI key.",
+        undoPath:
+          "Mute Stage voice or reset the session; no browser API key is stored.",
+        status: "pending",
+        createdAt: timestamp
+      }
+    });
+  }, [
+    emitStageEvent,
+    realtimeBridge.status,
+    realtimeBrokerReadiness,
+    thread.approvals,
+    thread.id
+  ]);
+
+  const startApprovedRealtimeBridge = useCallback(
+    (threadId: string) => {
+      const readiness = realtimeBrokerReadiness;
+
+      if (
+        !shouldStartStageWebRealtimeBridge(readiness, true) ||
+        realtimeBridgeStartedRef.current
+      ) {
+        return;
+      }
+
+      realtimeBridgeStartedRef.current = true;
+
+      if (readiness.routeUrl) {
+        setRealtimeBridge(
+          createStageWebRealtimeBridgeConnectingState(readiness.routeUrl)
+        );
+      }
+
+      void startStageWebRealtimeBridge({
+        readiness,
+        threadId,
+        sessionId,
+        enabled: true,
+        approvalPhrase: readStageWebRealtimeApprovalPhrase(),
+        emitStageEvents: (events) => {
+          events.forEach((event) => {
+            emitStageEvent(event);
+          });
+        }
+      }).then((bridge) => {
+        setRealtimeBridge(bridge.state);
+        bridge.stageEvents.forEach((event) => {
+          emitStageEvent(event);
+        });
+
+        if (bridge.state.status !== "connected") {
+          realtimeBridgeStartedRef.current = false;
+        }
+      });
+    },
+    [emitStageEvent, realtimeBrokerReadiness, sessionId]
+  );
+
   const scheduleTimedEvents = useCallback(
     (
       events: TimedStageEvent[],
@@ -230,7 +368,8 @@ export function App() {
         timerRefs.current.push(timer);
       });
 
-      const finalDelay = Math.max(...scaledEvents.map((event) => event.delayMs), 0) + 180;
+      const finalDelay =
+        Math.max(...scaledEvents.map((event) => event.delayMs), 0) + 180;
       const completionTimer = window.setTimeout(() => {
         activeRunStartedAtRef.current = undefined;
         activeTimedEventsRef.current = [];
@@ -309,7 +448,8 @@ export function App() {
           riskLevel: "medium",
           proposedBy: "Blackstage memory vault",
           scope: "Local thread memory",
-          consequence: "The redacted summary will persist in the local Stage Shell snapshot.",
+          consequence:
+            "The redacted summary will persist in the local Stage Shell snapshot.",
           undoPath: "Use a forget command to request deletion.",
           status: "pending",
           createdAt
@@ -432,7 +572,11 @@ export function App() {
       });
       emitStageEvent({
         type: "object.updated",
-        payload: createMemoryVaultObject(pendingApproval.threadId, nextRecords, approvedAt)
+        payload: createMemoryVaultObject(
+          pendingApproval.threadId,
+          nextRecords,
+          approvedAt
+        )
       });
       setApprovalExplanationVisible(false);
 
@@ -464,7 +608,11 @@ export function App() {
       });
       emitStageEvent({
         type: "object.updated",
-        payload: createMemoryVaultObject(pendingApproval.threadId, nextRecords, deletedAt)
+        payload: createMemoryVaultObject(
+          pendingApproval.threadId,
+          nextRecords,
+          deletedAt
+        )
       });
       setApprovalExplanationVisible(false);
 
@@ -476,11 +624,51 @@ export function App() {
       return;
     }
 
+    if (isRealtimeLiveApproval(pendingApproval)) {
+      const approvedAt = new Date().toISOString();
+
+      emitStageEvent({
+        type: "approval.resolved",
+        payload: {
+          approvalId: pendingApproval.id,
+          threadId: pendingApproval.threadId,
+          status: "approved",
+          resolvedAt: approvedAt,
+          userRequestedExplanation: false
+        }
+      });
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `realtime_arm_approved_${Date.now().toString(36)}`,
+          threadId: pendingApproval.threadId,
+          taskId: "realtime_sdp_bridge",
+          agentName: "Realtime voice broker",
+          type: "started",
+          summary: "Realtime live edge approved; opening SDP bridge.",
+          details:
+            "Stage Web will send an SDP offer to the configured local broker with the local approval header.",
+          timestamp: approvedAt
+        }
+      });
+      setApprovalExplanationVisible(false);
+      realtimeBridgeStartedRef.current = false;
+      startApprovedRealtimeBridge(pendingApproval.threadId);
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech("Approved. Opening the live Realtime edge.", {
+          threadId: pendingApproval.threadId
+        });
+      }
+      return;
+    }
+
     if (!activeScenario) {
       return;
     }
 
-    const [resolutionEvent, ...continuation] = createSimulatedApprovalContinuation(activeScenario);
+    const [resolutionEvent, ...continuation] =
+      createSimulatedApprovalContinuation(activeScenario);
 
     if (resolutionEvent) {
       emitStageEvent(resolutionEvent.event);
@@ -501,11 +689,14 @@ export function App() {
     memoryRecords,
     scheduleTimedEvents,
     stageVoiceEnabled,
+    startApprovedRealtimeBridge,
     thread.approvals
   ]);
 
   const rejectCurrentRequest = useCallback(() => {
-    const approval = thread.approvals.filter((candidate) => candidate.status === "pending").at(-1);
+    const approval = thread.approvals
+      .filter((candidate) => candidate.status === "pending")
+      .at(-1);
 
     if (!approval) {
       return;
@@ -542,10 +733,18 @@ export function App() {
         threadId: approval.threadId
       });
     }
-  }, [emitAssistantSpeech, emitStageEvent, memoryRecords, stageVoiceEnabled, thread.approvals]);
+  }, [
+    emitAssistantSpeech,
+    emitStageEvent,
+    memoryRecords,
+    stageVoiceEnabled,
+    thread.approvals
+  ]);
 
   const askWhy = useCallback(() => {
-    const approval = thread.approvals.find((candidate) => candidate.status === "pending");
+    const approval = thread.approvals.find(
+      (candidate) => candidate.status === "pending"
+    );
 
     if (!approval) {
       return;
@@ -591,7 +790,8 @@ export function App() {
       agentName: "Blackstage simulated operator",
       type: "cancelled",
       summary: "Stopped by user.",
-      details: "Pending simulated work was cancelled and the existing work trace was preserved.",
+      details:
+        "Pending simulated work was cancelled and the existing work trace was preserved.",
       timestamp: stoppedAt
     };
 
@@ -678,9 +878,12 @@ export function App() {
     );
 
     if (stageVoiceEnabled) {
-      emitAssistantSpeech("Starting the local harness. No external systems are touched.", {
-        threadId: thread.id
-      });
+      emitAssistantSpeech(
+        "Starting the local harness. No external systems are touched.",
+        {
+          threadId: thread.id
+        }
+      );
     }
   }, [emitAssistantSpeech, scheduleTimedEvents, stageVoiceEnabled, thread.id]);
 
@@ -721,11 +924,20 @@ export function App() {
     URL.revokeObjectURL(objectUrl);
     setStageEvents(nextStageEvents);
     setResearchEvents(nextResearchEvents);
-  }, [activeScenario?.id, memoryRecords, researchEvents, sessionId, stageEvents, thread]);
+  }, [
+    activeScenario?.id,
+    memoryRecords,
+    researchEvents,
+    sessionId,
+    stageEvents,
+    thread
+  ]);
 
   const updateStageObject = useCallback(
     (objectId: string, updater: (object: StageObject) => StageObject) => {
-      const object = thread.renderObjects.find((candidate) => candidate.id === objectId);
+      const object = thread.renderObjects.find(
+        (candidate) => candidate.id === objectId
+      );
 
       if (!object) {
         return;
@@ -791,7 +1003,9 @@ export function App() {
 
   const saveArtifactRevision = useCallback(
     (artifactId: string, body: string) => {
-      const artifact = thread.artifacts.find((candidate) => candidate.id === artifactId);
+      const artifact = thread.artifacts.find(
+        (candidate) => candidate.id === artifactId
+      );
 
       if (!artifact) {
         return;
@@ -807,7 +1021,9 @@ export function App() {
 
   const approveArtifact = useCallback(
     (artifactId: string) => {
-      const artifact = thread.artifacts.find((candidate) => candidate.id === artifactId);
+      const artifact = thread.artifacts.find(
+        (candidate) => candidate.id === artifactId
+      );
 
       if (!artifact) {
         return;
@@ -837,7 +1053,9 @@ export function App() {
 
   const exportArtifact = useCallback(
     (artifactId: string) => {
-      const artifact = thread.artifacts.find((candidate) => candidate.id === artifactId);
+      const artifact = thread.artifacts.find(
+        (candidate) => candidate.id === artifactId
+      );
 
       if (!artifact) {
         return;
@@ -955,16 +1173,24 @@ export function App() {
     setThread(createIdleIntentThread());
 
     eventsToReplay.forEach((stageEvent, index) => {
-      const timer = window.setTimeout(() => {
-        setThread((currentThread) => applyStageEventToThread(currentThread, stageEvent));
-      }, 120 + index * 110);
+      const timer = window.setTimeout(
+        () => {
+          setThread((currentThread) =>
+            applyStageEventToThread(currentThread, stageEvent)
+          );
+        },
+        120 + index * 110
+      );
       timerRefs.current.push(timer);
     });
 
-    const completionTimer = window.setTimeout(() => {
-      setIsReplaying(false);
-      timerRefs.current = [];
-    }, 180 + eventsToReplay.length * 110);
+    const completionTimer = window.setTimeout(
+      () => {
+        setIsReplaying(false);
+        timerRefs.current = [];
+      },
+      180 + eventsToReplay.length * 110
+    );
     timerRefs.current.push(completionTimer);
   }, [clearTimers, stageEvents]);
 
@@ -984,6 +1210,8 @@ export function App() {
     setIsReplaying(false);
     setApprovalExplanationVisible(false);
     setAssistantSpeechText(undefined);
+    realtimeBridgeStartedRef.current = false;
+    setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
     cancelStageSpeech();
   }, [clearTimers]);
 
@@ -997,7 +1225,14 @@ export function App() {
       memoryRecords,
       savedAt: new Date().toISOString()
     });
-  }, [activeScenario?.id, memoryRecords, researchEvents, sessionId, stageEvents, thread]);
+  }, [
+    activeScenario?.id,
+    memoryRecords,
+    researchEvents,
+    sessionId,
+    stageEvents,
+    thread
+  ]);
 
   useEffect(() => {
     const routeUrl = resolveStageWebRealtimeBrokerRouteUrl();
@@ -1026,41 +1261,13 @@ export function App() {
 
       setRealtimeBrokerReadiness(readiness);
 
-      if (!shouldStartStageWebRealtimeBridge(readiness) || realtimeBridgeStartedRef.current) {
-        return;
-      }
-
-      realtimeBridgeStartedRef.current = true;
-
-      if (!cancelled && readiness.routeUrl) {
-        setRealtimeBridge(createStageWebRealtimeBridgeConnectingState(readiness.routeUrl));
-      }
-
-      const bridge = await startStageWebRealtimeBridge({
-        readiness,
-        threadId: thread.id,
-        sessionId,
-        emitStageEvents: (events) => {
-          events.forEach((event) => {
-            emitStageEvent(event);
-          });
-        }
-      });
-
-      if (!cancelled) {
-        setRealtimeBridge(bridge.state);
-        bridge.stageEvents.forEach((event) => {
-          emitStageEvent(event);
-        });
-      } else {
-        realtimeBridgeStartedRef.current = false;
-      }
+      realtimeBridgeStartedRef.current = false;
     });
 
     return () => {
       cancelled = true;
     };
-  }, [emitStageEvent, sessionId, thread.id]);
+  }, []);
 
   useEffect(() => {
     const routeUrl = resolveStageWebHarnessRunnerRouteUrl();
@@ -1126,6 +1333,17 @@ export function App() {
 
   useEffect(() => clearTimers, [clearTimers]);
 
+  const realtimeArmVisible =
+    realtimeBrokerReadiness.status === "reachable" &&
+    realtimeBrokerReadiness.liveModeEnabled === true;
+  const realtimeArmPending = thread.approvals.some(isRealtimeLiveApprovalPending);
+  const realtimeArmAvailable =
+    realtimeArmVisible &&
+    Boolean(readStageWebRealtimeApprovalPhrase()) &&
+    !realtimeArmPending &&
+    realtimeBridge.status !== "connecting" &&
+    realtimeBridge.status !== "connected";
+
   return (
     <StageShell
       accentColor={stageTheme.accent}
@@ -1139,6 +1357,9 @@ export function App() {
       isRunning={isRunning}
       researchEvents={researchEvents}
       realtimeBridge={realtimeBridge}
+      realtimeArmAvailable={realtimeArmAvailable}
+      realtimeArmPending={realtimeArmPending}
+      realtimeArmVisible={realtimeArmVisible}
       realtimeBrokerReadiness={realtimeBrokerReadiness}
       scenarios={stageShellScenarios}
       stageVoiceEnabled={stageVoiceEnabled}
@@ -1150,6 +1371,7 @@ export function App() {
       onExport={exportSession}
       onReject={rejectCurrentRequest}
       onReset={resetSession}
+      onArmRealtime={requestRealtimeArm}
       onApproveArtifact={approveArtifact}
       onCollapseObject={toggleStageObjectCollapse}
       onExportArtifact={exportArtifact}
@@ -1180,10 +1402,25 @@ function parseMemoryWriteCommand(intentText: string): string | undefined {
   return memoryText.length > 0 ? memoryText : undefined;
 }
 
+function isRealtimeLiveApproval(
+  approval?: ApprovalRequest
+): approval is ApprovalRequest {
+  return (
+    approval?.actionType === "network_access" &&
+    approval.id.startsWith(REALTIME_LIVE_APPROVAL_PREFIX)
+  );
+}
+
+function isRealtimeLiveApprovalPending(approval: ApprovalRequest): boolean {
+  return isRealtimeLiveApproval(approval) && approval.status === "pending";
+}
+
 function parseMemoryDeleteCommand(intentText: string): string | undefined {
   const normalizedIntent = intentText.trim();
   const lowerIntent = normalizedIntent.toLowerCase();
-  const prefix = FORGET_COMMAND_PREFIXES.find((candidate) => lowerIntent.startsWith(candidate));
+  const prefix = FORGET_COMMAND_PREFIXES.find((candidate) =>
+    lowerIntent.startsWith(candidate)
+  );
 
   if (!prefix) {
     return undefined;
@@ -1200,16 +1437,23 @@ function createMemoryVaultObject(
   timestamp: string
 ): StageObject {
   const visibleRecords = records.filter((record) => record.threadId === threadId);
-  const approvedCount = visibleRecords.filter((record) => record.status === "approved").length;
-  const proposedCount = visibleRecords.filter((record) => record.status === "proposed").length;
-  const deletedCount = visibleRecords.filter((record) => record.status === "deleted").length;
+  const approvedCount = visibleRecords.filter(
+    (record) => record.status === "approved"
+  ).length;
+  const proposedCount = visibleRecords.filter(
+    (record) => record.status === "proposed"
+  ).length;
+  const deletedCount = visibleRecords.filter(
+    (record) => record.status === "deleted"
+  ).length;
 
   return {
     id: "local_memory_vault",
     threadId,
     type: "memory_card",
     title: "Local memory vault",
-    summary: "Inspectable local memory records with approval-gated writes and deletion.",
+    summary:
+      "Inspectable local memory records with approval-gated writes and deletion.",
     payload: {
       policy: "approval-gated local memory",
       status: "private",
@@ -1241,7 +1485,10 @@ function createMemoryVaultObject(
   };
 }
 
-function parseStageCommand(intentText: string, objects: StageObject[]): StageCommand | undefined {
+function parseStageCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
   if (objects.length === 0) {
     return undefined;
   }
@@ -1270,7 +1517,9 @@ function parseStageCommand(intentText: string, objects: StageObject[]): StageCom
   };
 }
 
-function commandActionFromWord(word: string | undefined): StageCommandAction | undefined {
+function commandActionFromWord(
+  word: string | undefined
+): StageCommandAction | undefined {
   switch (word) {
     case "focus":
     case "zoom":
@@ -1291,7 +1540,10 @@ function commandActionFromWord(word: string | undefined): StageCommandAction | u
   }
 }
 
-function findStageCommandTarget(objects: StageObject[], targetText: string): StageObject | undefined {
+function findStageCommandTarget(
+  objects: StageObject[],
+  targetText: string
+): StageObject | undefined {
   if (!targetText || targetText === "current") {
     return objects.find((object) => object.state === "focused") ?? objects.at(0);
   }
@@ -1320,7 +1572,9 @@ function findStageCommandTarget(objects: StageObject[], targetText: string): Sta
 function scoreObjectTargetMatch(object: StageObject, targetText: string): number {
   const normalizedTitle = normalizeCommandText(object.title);
   const aliases = getStageObjectAliases(object).map(normalizeCommandText);
-  const haystack = [normalizedTitle, object.type.replace(/_/g, " "), ...aliases].join(" ");
+  const haystack = [normalizedTitle, object.type.replace(/_/g, " "), ...aliases].join(
+    " "
+  );
 
   if (normalizedTitle === targetText || aliases.includes(targetText)) {
     return 4;
@@ -1330,13 +1584,17 @@ function scoreObjectTargetMatch(object: StageObject, targetText: string): number
     return 3;
   }
 
-  if (aliases.some((alias) => alias.includes(targetText) || targetText.includes(alias))) {
+  if (
+    aliases.some((alias) => alias.includes(targetText) || targetText.includes(alias))
+  ) {
     return 2;
   }
 
   const targetParts = targetText.split(" ").filter((part) => part.length > 2);
 
-  return targetParts.length > 0 && targetParts.every((part) => haystack.includes(part)) ? 1 : 0;
+  return targetParts.length > 0 && targetParts.every((part) => haystack.includes(part))
+    ? 1
+    : 0;
 }
 
 function getStageObjectAliases(object: StageObject): string[] {
@@ -1374,7 +1632,10 @@ function getStageObjectAliases(object: StageObject): string[] {
   }
 }
 
-function applyStageCommandToObject(object: StageObject, action: StageCommandAction): StageObject {
+function applyStageCommandToObject(
+  object: StageObject,
+  action: StageCommandAction
+): StageObject {
   switch (action) {
     case "focus":
       return {
