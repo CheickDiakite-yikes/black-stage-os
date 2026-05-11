@@ -174,7 +174,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "Codex Task Brief: Build Stage Shell v0"
   );
 
-  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click({
+    force: true
+  });
 
   await expect(page.getByTestId("approval-card")).toContainText("Approval resolved");
   await expect(page.getByTestId("approval-card")).toContainText("Status: approved");
@@ -627,7 +629,9 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
-  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click({
+    force: true
+  });
   await expect(page.getByTestId("artifact-workbench")).toContainText("approved");
 
   await page
@@ -665,6 +669,16 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
   expect(packetDownload.suggestedFilename()).toContain("harness-action-packet");
   await expect(page.getByTestId("artifact-workbench")).toContainText("exported");
 
+  await page.getByRole("button", { name: "Approve", exact: true }).click({
+    force: true
+  });
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "approved into the local queue"
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Harness action packet approved for local queue."
+  );
+
   const actionWasLogged = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
 
@@ -680,7 +694,10 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
           payload?: {
             worker?: string;
             policy?: string;
+            status?: string;
+            execution?: string;
           };
+          status?: string;
           title?: string;
         };
       }>;
@@ -697,8 +714,23 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
         event.type === "artifact.created" &&
         event.payload?.title?.includes("Harness Action Packet")
     );
+    const approvalWasResolved = snapshot.stageEvents.some(
+      (event) =>
+        event.type === "approval.resolved" && event.payload?.status === "approved"
+    );
+    const queueWasLogged = snapshot.stageEvents.some(
+      (event) =>
+        event.type === "object.updated" &&
+        event.payload?.payload?.status === "approved local queue" &&
+        event.payload.payload.execution === "not_started"
+    );
 
-    return approvalWasLogged && packetArtifactWasLogged;
+    return (
+      approvalWasLogged &&
+      packetArtifactWasLogged &&
+      approvalWasResolved &&
+      queueWasLogged
+    );
   });
 
   expect(actionWasLogged).toBe(true);

@@ -994,6 +994,84 @@ export function App() {
       return;
     }
 
+    const pendingHarnessApproval = thread.approvals
+      .filter(
+        (candidate) =>
+          candidate.status === "pending" && isHarnessActionApproval(candidate)
+      )
+      .at(-1);
+
+    if (pendingHarnessApproval) {
+      const harnessApproval = pendingHarnessApproval;
+      const approvedAt = new Date().toISOString();
+      const actionId = harnessApproval.id.replace(/_approval$/, "");
+      const actionTaskObject = thread.renderObjects.find(
+        (object) => object.id === `${actionId}_task`
+      );
+
+      emitStageEvent({
+        type: "approval.resolved",
+        payload: {
+          approvalId: harnessApproval.id,
+          threadId: harnessApproval.threadId,
+          status: "approved",
+          resolvedAt: approvedAt,
+          userRequestedExplanation: false
+        }
+      });
+
+      if (actionTaskObject) {
+        const payload = isObjectPayload(actionTaskObject.payload)
+          ? actionTaskObject.payload
+          : {};
+
+        emitStageEvent({
+          type: "object.updated",
+          payload: {
+            ...actionTaskObject,
+            summary:
+              "Harness action packet approved into the local queue; external execution remains blocked.",
+            payload: {
+              ...payload,
+              status: "approved local queue",
+              approvedAt,
+              execution: "not_started",
+              guardrail:
+                "This approval records local queue intent only; no external workflow was executed."
+            },
+            state: "expanded",
+            updatedAt: approvedAt
+          }
+        });
+      }
+
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `harness_action_approved_${Date.now().toString(36)}`,
+          threadId: harnessApproval.threadId,
+          taskId: actionId,
+          agentName: "Harness edge",
+          type: "completed",
+          summary: "Harness action packet approved for local queue.",
+          details:
+            "The action packet is approved for a later explicitly armed worker; no external system was contacted.",
+          timestamp: approvedAt
+        }
+      });
+      setApprovalExplanationVisible(false);
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech(
+          "Approved. The harness action packet is queued locally; nothing external ran.",
+          {
+            threadId: harnessApproval.threadId
+          }
+        );
+      }
+      return;
+    }
+
     if (!activeScenario) {
       return;
     }
@@ -1021,7 +1099,8 @@ export function App() {
     scheduleTimedEvents,
     stageVoiceEnabled,
     startApprovedRealtimeBridge,
-    thread.approvals
+    thread.approvals,
+    thread.renderObjects
   ]);
 
   const rejectCurrentRequest = useCallback(() => {
@@ -1950,6 +2029,15 @@ function isRealtimeLiveApproval(
 
 function isRealtimeLiveApprovalPending(approval: ApprovalRequest): boolean {
   return isRealtimeLiveApproval(approval) && approval.status === "pending";
+}
+
+function isHarnessActionApproval(approval: ApprovalRequest): boolean {
+  return Boolean(
+    approval.actionType === "tool_call" &&
+    approval.id.startsWith("artifact_action_") &&
+    approval.id.endsWith("_approval") &&
+    approval.proposedBy === "Blackstage harness"
+  );
 }
 
 function parseMemoryDeleteCommand(intentText: string): string | undefined {
