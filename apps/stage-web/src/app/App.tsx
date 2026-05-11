@@ -207,6 +207,10 @@ export function App() {
 
   const emitStageEvent = useCallback(
     (stageEvent: StageEvent) => {
+      if (stageEvent.type === "assistant.speech") {
+        setAssistantSpeechText(stageEvent.payload.text);
+      }
+
       setThread((currentThread) => applyStageEventToThread(currentThread, stageEvent));
       setStageEvents((currentEvents) => [...currentEvents, stageEvent]);
 

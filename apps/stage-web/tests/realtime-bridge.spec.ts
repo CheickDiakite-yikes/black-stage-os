@@ -327,6 +327,45 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       }
     ).__blackstageEmitRealtimeServerEvent?.({
+      type: "response.output_text.done",
+      text: "I can prepare the live proof object next."
+    });
+  });
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "I can prepare the live proof object next."
+  );
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+        const snapshot = rawSnapshot
+          ? (JSON.parse(rawSnapshot) as {
+              stageEvents?: Array<{
+                payload?: {
+                  source?: string;
+                  text?: string;
+                };
+                type?: string;
+              }>;
+            })
+          : undefined;
+
+        return (snapshot?.stageEvents ?? []).some(
+          (event) =>
+            event.type === "assistant.speech" &&
+            event.payload?.source === "stage_status" &&
+            event.payload?.text === "I can prepare the live proof object next."
+        );
+      })
+    )
+    .toBe(true);
+
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
       type: "response.function_call_arguments.done",
       call_id: "call_realtime_prepare_action",
       name: "blackstage.prepare_external_action"
