@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -86,6 +86,17 @@ async function emitFakeSpeechFinal(page: Page, text: string) {
 
     browserWindow.__blackstageSpeechRecognition?.emitFinal(spokenText);
   }, text);
+}
+
+async function readObjectShift(locator: Locator): Promise<{ x: number; y: number }> {
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+
+    return {
+      x: Number.parseInt(style.getPropertyValue("--object-shift-x"), 10) || 0,
+      y: Number.parseInt(style.getPropertyValue("--object-shift-y"), 10) || 0
+    };
+  });
 }
 
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
@@ -279,6 +290,80 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   });
 
   expect(objectUpdatesWereLogged).toBe(true);
+});
+
+test("Stage Shell v0 records direct object dragging as replayable manipulation", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
+
+  const planObject = page.getByTestId("stage-object-plan_card");
+  const dragHandle = planObject.getByRole("button", {
+    name: "Drag Stage Shell v0 plan"
+  });
+  const initialPosition = await readObjectShift(planObject);
+  const dragBox = await dragHandle.boundingBox();
+
+  expect(dragBox).not.toBeNull();
+
+  if (!dragBox) {
+    return;
+  }
+
+  await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    dragBox.x + dragBox.width / 2 + 42,
+    dragBox.y + dragBox.height / 2 + 18
+  );
+  await page.mouse.up();
+
+  const expectedPosition = {
+    x: initialPosition.x + 42,
+    y: initialPosition.y + 18
+  };
+
+  await expect.poll(async () => readObjectShift(planObject)).toEqual(expectedPosition);
+
+  const dragWasLogged = await page.evaluate((expected) => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          object_type?: string;
+          position?: {
+            x?: number;
+            y?: number;
+          };
+        };
+      }>;
+    };
+
+    return Boolean(
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "render_object_updated" &&
+          event.payload?.object_type === "plan_card" &&
+          event.payload.position?.x === expected.x &&
+          event.payload.position?.y === expected.y
+      )
+    );
+  }, expectedPosition);
+
+  expect(dragWasLogged).toBe(true);
 });
 
 test("Stage Shell v0 prepares approved artifacts as harness action packets", async ({
