@@ -47,7 +47,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Artifact edit/approve/export   | Artifact workbench edits, approves, and exports Markdown                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Covered                              |
 | Act on artifact                | No real external action execution; action remains simulated and approval-gated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Missing by design                    |
 | Text manipulation/correction   | Deterministic text commands focus, pin, collapse, expand objects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Covered for high-confidence commands |
-| Speech manipulation/correction | Voice can submit intent but not yet reliably drive follow-up object commands in a dedicated flow                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Partial                              |
+| Speech manipulation/correction | Voice can submit intent with `inputMode: voice`, spoken follow-up commands can collapse/expand/focus/pin stage objects through the deterministic command layer, and e2e covers spoken `collapse the spec portal` with voice command trace evidence                                                                                                                                                                                                                                                                                                                                                                                         | Covered for deterministic commands   |
 | Gesture/direct manipulation    | Focus, pin, collapse, nudge, drag handle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Partial                              |
 | Non-chatbot aesthetics         | Screenshot, layout, object field, no chat bubbles/sidebar-dominant shell                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Covered for v0                       |
 | Instrumentation                | `researchLogger`, redaction, research trace, run logs under `docs/research/runs/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Covered locally                      |
@@ -59,23 +59,26 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 ## Evidence From Current Gate
 
-Most recent validation after the Stage Web harness policy visibility slice:
+Most recent validation after the spoken Stage command slice:
 
+- `pnpm build`: passed across the sorted workspace.
 - `pnpm typecheck`: passed across 8 of 9 workspace projects.
 - `pnpm lint`: passed.
 - `pnpm check:workflow`: passed across 9 contract checks.
-- `pnpm build`: passed across the sorted workspace.
+- `pnpm --filter @blackstage/stage-core typecheck`: passed.
+- `pnpm --filter @blackstage/agent-runtime typecheck`: passed.
+- `pnpm --filter @blackstage/stage-web typecheck`: passed.
 - `pnpm --filter @blackstage/agent-runtime test`: passed with 15 harness subtests.
 - `pnpm --filter @blackstage/stage-runner test`: passed with 13 local server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
 - `pnpm test`: passed with 23 `voice-core` subtests, 4 `memory-core` subtests, 15 `agent-runtime` subtests, 9 `stage-broker` server/exchange/approval-readiness/approval-header subtests, and 13 `stage-runner` server/snapshot/run/subprocess-boundary/workspace-preparation/live-approval-token subtests.
-- `pnpm --filter @blackstage/stage-web test:e2e -- tests/harness-policy.spec.ts`: passed with mocked runner readiness, snapshot, proofs, and visible workflow policy line.
-- Temporary Playwright visual smoke at `http://127.0.0.1:4191/`: passed with no console errors and screenshot saved outside the repo at `/tmp/blackstage-harness-policy.png`.
-- `pnpm exec prettier --check ...`: passed for the touched Stage Web, audit, and research files.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 210 tracked files after final staging.
+- `pnpm --filter @blackstage/stage-web exec playwright test tests/stage-shell.spec.ts -g "spoken final"`: passed with one browser test and voice-origin intent trace.
+- `pnpm --filter @blackstage/stage-web exec playwright test tests/stage-shell.spec.ts -g "spoken correction"`: passed with one browser test and voice-origin command trace.
+- `pnpm test:e2e`: passed with 12 browser tests using one Playwright worker, including the visible harness policy, Realtime approval bridge, spoken final intent, and spoken correction command.
+- `pnpm smoke:realtime`: passed in default skip-gated mode; no live OpenAI call was made.
+- `pnpm exec prettier --check ...`: passed for the touched Stage Web, stage-core, agent-runtime, audit, and research files.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 211 tracked files after final staging.
 
-Latest skip-gated Realtime smoke evidence remains the agentic workflow-policy run: `pnpm smoke:realtime` skipped without making a live OpenAI call.
-
-Latest browser evidence remains the visible-arming run: focused Realtime bridge e2e passed with mocked SDP approval, and full `pnpm test:e2e` passed with 10 browser tests using one Playwright worker.
+Latest visual smoke evidence remains the harness policy visibility run: temporary Playwright visual smoke at `http://127.0.0.1:4191/` passed with no console errors and screenshot saved outside the repo at `/tmp/blackstage-harness-policy.png`.
 
 Browser validation note: the product keeps its cinematic motion in normal use. Playwright requests `prefers-reduced-motion: reduce` and runs Stage Web e2e with one worker so the long timer-driven living-field scenarios validate behavior instead of competing for local browser resources.
 
@@ -88,7 +91,7 @@ The goal is not complete yet. The largest remaining gaps are:
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
 5. Multimodal context is shallow. Attachments become local document objects, but image understanding and richer context parsing are not implemented.
-6. Speech correction is incomplete. Typed object commands work; spoken follow-up manipulation needs a dedicated reliable path.
+6. Speech correction is bounded. Typed and spoken deterministic object commands work, but open natural-language editing and richer correction semantics are not implemented.
 7. Memory is local-only. It now has approval-gated write/delete semantics and redacted inspection, but no retrieval ranking, cross-thread review UI, or live agent memory policy enforcement yet.
 8. The current visual proof is a browser prototype, not yet a full "computer disappears" environment.
 

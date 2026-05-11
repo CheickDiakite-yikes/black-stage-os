@@ -1,4 +1,8 @@
-import type { ResearchEvent, ResearchEventType, StageEvent } from "@blackstage/stage-core";
+import type {
+  ResearchEvent,
+  ResearchEventType,
+  StageEvent
+} from "@blackstage/stage-core";
 import { redactIntentText } from "./redaction";
 
 export function createResearchEvent(
@@ -59,7 +63,9 @@ export function researchEventFromStageEvent(
     case "object.updated":
       return createResearchEvent(
         sessionId,
-        stageEvent.type === "object.created" ? "render_object_created" : "render_object_updated",
+        stageEvent.type === "object.created"
+          ? "render_object_created"
+          : "render_object_updated",
         {
           object_id: stageEvent.payload.id,
           object_type: stageEvent.payload.type,
@@ -112,7 +118,9 @@ export function researchEventFromStageEvent(
     case "artifact.updated":
       return createResearchEvent(
         sessionId,
-        stageEvent.type === "artifact.created" ? "artifact_created" : "artifact_updated",
+        stageEvent.type === "artifact.created"
+          ? "artifact_created"
+          : "artifact_updated",
         {
           artifact_id: stageEvent.payload.id,
           artifact_type: stageEvent.payload.type,
@@ -154,6 +162,7 @@ export function researchEventFromStageEvent(
           intervention_id: stageEvent.payload.interventionId,
           intervention_type: stageEvent.payload.interventionType,
           command_action: stageEvent.payload.commandAction,
+          command_input_mode: stageEvent.payload.commandInputMode,
           command_text_redacted: stageEvent.payload.commandText
             ? redactIntentText(stageEvent.payload.commandText)
             : undefined,

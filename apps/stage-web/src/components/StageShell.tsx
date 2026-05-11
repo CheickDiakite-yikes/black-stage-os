@@ -44,7 +44,13 @@ type StageShellProps = {
   isRunning: boolean;
   isReplaying: boolean;
   approvalExplanationVisible: boolean;
-  onSubmitIntent: (intentText: string, scenarioId?: StageShellScenarioId) => void;
+  onSubmitIntent: (
+    intentText: string,
+    scenarioId?: StageShellScenarioId,
+    options?: {
+      source?: "scenario" | "text" | "voice";
+    }
+  ) => void;
   onApprove: () => void;
   onArmRealtime: () => void;
   onReject: () => void;
@@ -138,14 +144,20 @@ export function StageShell({
     [thread.renderObjects]
   );
 
-  function submitIntent(nextIntent = intentText, scenarioId?: StageShellScenarioId) {
+  function submitIntent(
+    nextIntent = intentText,
+    scenarioId?: StageShellScenarioId,
+    source: "scenario" | "text" | "voice" = scenarioId ? "scenario" : "text"
+  ) {
     const normalizedIntent = nextIntent.trim();
 
     if (!normalizedIntent) {
       return;
     }
 
-    onSubmitIntent(normalizedIntent, scenarioId);
+    onSubmitIntent(normalizedIntent, scenarioId, {
+      source
+    });
     setIntentText(normalizedIntent);
   }
 
@@ -197,7 +209,7 @@ export function StageShell({
         setInterimTranscript("");
         setIntentText(finalText);
         window.setTimeout(() => {
-          submitIntent(finalText);
+          submitIntent(finalText, undefined, "voice");
         }, 220);
       }
     };
@@ -354,7 +366,7 @@ export function StageShell({
               activeScenario?.id === scenario.id ? "scenario-active" : undefined
             }
             type="button"
-            onClick={() => submitIntent(scenario.intent, scenario.id)}
+            onClick={() => submitIntent(scenario.intent, scenario.id, "scenario")}
           >
             {scenario.label}
           </button>

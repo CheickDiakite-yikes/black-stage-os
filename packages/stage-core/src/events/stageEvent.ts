@@ -41,9 +41,17 @@ export type ApprovalResolutionPayload = {
 export type UserInterventionPayload = {
   interventionId: string;
   threadId: string;
-  interventionType: "stop" | "resume" | "redirect" | "edit" | "ask_why" | "undo" | "retry";
+  interventionType:
+    | "stop"
+    | "resume"
+    | "redirect"
+    | "edit"
+    | "ask_why"
+    | "undo"
+    | "retry";
   commandAction?: "focus" | "pin" | "unpin" | "collapse" | "expand";
   commandText?: string;
+  commandInputMode?: "voice" | "text";
   targetObjectId?: string;
   timestamp: string;
 };

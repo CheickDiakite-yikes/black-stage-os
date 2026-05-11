@@ -288,21 +288,29 @@ export const stageShellScenarios: StageShellScenario[] = [
         summary: "Evaluate an acquisition target and produce a decision memo.",
         payload: {
           originalIntent: "Acquire a company?",
-          parsedObjective: "Assess strategic fit, risks, valuation posture, and next diligence actions."
+          parsedObjective:
+            "Assess strategic fit, risks, valuation posture, and next diligence actions."
         }
       },
       {
         type: "plan_card",
         title: "Diligence plan",
-        summary: "Four workstreams: financial quality, market position, integration risk, decision memo.",
+        summary:
+          "Four workstreams: financial quality, market position, integration risk, decision memo.",
         payload: {
-          steps: ["Normalize revenue", "Map competitors", "Identify red flags", "Draft memo"]
+          steps: [
+            "Normalize revenue",
+            "Map competitors",
+            "Identify red flags",
+            "Draft memo"
+          ]
         }
       },
       {
         type: "risk_matrix",
         title: "Risk surface",
-        summary: "Revenue concentration and integration complexity are the first watchpoints.",
+        summary:
+          "Revenue concentration and integration complexity are the first watchpoints.",
         payload: {
           risks: [
             { label: "Customer concentration", severity: "high" },
@@ -314,7 +322,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "model_card",
         title: "Valuation model",
-        summary: "A simple base/upside/downside acquisition model stays visible as assumptions move.",
+        summary:
+          "A simple base/upside/downside acquisition model stays visible as assumptions move.",
         payload: {
           modelTitle: "Acquisition sensitivity model",
           status: "simulated",
@@ -328,7 +337,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "map_portal",
         title: "Market map",
-        summary: "Competitors, customers, and diligence gaps are arranged as a simulated market surface.",
+        summary:
+          "Competitors, customers, and diligence gaps are arranged as a simulated market surface.",
         payload: {
           center: "TargetCo",
           status: "simulated",
@@ -353,7 +363,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "planned",
         summary: "Mapped the acquisition question into diligence workstreams.",
-        details: "The simulated runtime separated strategic fit, financial quality, risk, and memo output."
+        details:
+          "The simulated runtime separated strategic fit, financial quality, risk, and memo output."
       },
       {
         type: "started",
@@ -363,27 +374,32 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "progress",
         summary: "Compared revenue quality and market posture.",
-        details: "The stage is using synthetic assumptions to demonstrate the diligence workflow."
+        details:
+          "The stage is using synthetic assumptions to demonstrate the diligence workflow."
       },
       {
         type: "approval_requested",
         summary: "Approval needed before simulated outreach.",
-        details: "External banker/customer outreach is consequence-bearing and remains gated."
+        details:
+          "External banker/customer outreach is consequence-bearing and remains gated."
       }
     ],
     {
       actionType: "external_message",
       title: "Approve simulated outreach brief",
-      summary: "Prepare a draft outreach note to request confirmatory diligence materials.",
+      summary:
+        "Prepare a draft outreach note to request confirmatory diligence materials.",
       scope: "One simulated note to a fictional seller representative.",
-      consequence: "In a real system, this would contact an external party. V0 will only create prompt cards.",
+      consequence:
+        "In a real system, this would contact an external party. V0 will only create prompt cards.",
       riskLevel: "high"
     },
     {
       type: "memo",
       title: "Acquisition Diligence Memo",
       content: {
-        recommendation: "Proceed to deeper diligence only if revenue concentration and founder dependency clear thresholds.",
+        recommendation:
+          "Proceed to deeper diligence only if revenue concentration and founder dependency clear thresholds.",
         sections: [
           "Strategic fit is plausible but unproven.",
           "Primary diligence gap is quality of recurring revenue.",
@@ -398,15 +414,20 @@ export const stageShellScenarios: StageShellScenario[] = [
         summary: "Build a simple model scaffold from the diligence assumptions.",
         payload: {
           objective: "Create a valuation sensitivity model fixture.",
-          tests: ["Model handles base/upside/downside", "Assumptions are visible and editable"]
+          tests: [
+            "Model handles base/upside/downside",
+            "Assumptions are visible and editable"
+          ]
         }
       },
       {
         type: "research_note",
         title: "Research note",
-        summary: "Visible risk gating made the simulated external action feel governed.",
+        summary:
+          "Visible risk gating made the simulated external action feel governed.",
         payload: {
-          insight: "Approval clarity is part of the product surface, not a modal afterthought."
+          insight:
+            "Approval clarity is part of the product surface, not a modal afterthought."
         }
       }
     ]
@@ -434,7 +455,12 @@ export const stageShellScenarios: StageShellScenario[] = [
         title: "Raise plan",
         summary: "Narrative, target list, proof points, and weekly operating cadence.",
         payload: {
-          steps: ["Sharpen thesis", "Segment investors", "Draft intro asks", "Build follow-up rhythm"]
+          steps: [
+            "Sharpen thesis",
+            "Segment investors",
+            "Draft intro asks",
+            "Build follow-up rhythm"
+          ]
         }
       },
       {
@@ -442,13 +468,19 @@ export const stageShellScenarios: StageShellScenario[] = [
         title: "Four-week cadence",
         summary: "A calm weekly rhythm, not a chaotic outbound dashboard.",
         payload: {
-          weeks: ["Narrative lock", "Warm intros", "First meetings", "Partner follow-up"]
+          weeks: [
+            "Narrative lock",
+            "Warm intros",
+            "First meetings",
+            "Partner follow-up"
+          ]
         }
       },
       {
         type: "map_portal",
         title: "Investor map",
-        summary: "A simulated relationship map keeps warm paths separate from cold outbound.",
+        summary:
+          "A simulated relationship map keeps warm paths separate from cold outbound.",
         payload: {
           center: "Founder thesis",
           status: "simulated",
@@ -473,7 +505,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "planned",
         summary: "Converted fundraising intent into a staged operating plan.",
-        details: "The simulated operator prioritized narrative clarity before outbound volume."
+        details:
+          "The simulated operator prioritized narrative clarity before outbound volume."
       },
       {
         type: "started",
@@ -496,7 +529,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       title: "Approve simulated investor intro prompts",
       summary: "Create draft prompts for investor intro emails without sending them.",
       scope: "Three simulated investor prompt cards.",
-      consequence: "In a real system, outbound investor communication would create external commitments.",
+      consequence:
+        "In a real system, outbound investor communication would create external commitments.",
       riskLevel: "high"
     },
     {
@@ -519,7 +553,10 @@ export const stageShellScenarios: StageShellScenario[] = [
         summary: "Create a local fixture for investor action state, not a CRM.",
         payload: {
           objective: "Prototype a stage-native investor action tracker.",
-          acceptance: ["No dashboard clutter", "Actions render as objects around the intent"]
+          acceptance: [
+            "No dashboard clutter",
+            "Actions render as objects around the intent"
+          ]
         }
       },
       {
@@ -552,15 +589,23 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "plan_card",
         title: "Stage Shell v0 plan",
-        summary: "Build a living field, event stream, approval ritual, artifacts, and instrumentation.",
+        summary:
+          "Build a living field, event stream, approval ritual, artifacts, and instrumentation.",
         payload: {
-          slices: ["Event model", "Render field", "Simulated runtime", "Approval/artifact loop", "Research capture"]
+          slices: [
+            "Event model",
+            "Render field",
+            "Simulated runtime",
+            "Approval/artifact loop",
+            "Research capture"
+          ]
         }
       },
       {
         type: "document_portal",
         title: "Spec portal",
-        summary: "The Stage Shell spec stays open as an inspectable object while the plan forms.",
+        summary:
+          "The Stage Shell spec stays open as an inspectable object while the plan forms.",
         payload: {
           documentTitle: "Stage Shell v0 spec",
           status: "reviewing",
@@ -583,7 +628,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "artifact_card",
         title: "Codex task brief forming",
-        summary: "A local brief is being assembled with objective, files, acceptance criteria, and tests.",
+        summary:
+          "A local brief is being assembled with objective, files, acceptance criteria, and tests.",
         payload: {
           status: "drafting",
           artifactTitle: "Codex Task Brief: Build Stage Shell v0"
@@ -594,12 +640,14 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "planned",
         summary: "Read the product thesis as an interface constraint.",
-        details: "The simulation keeps the black field central and treats dashboard sprawl as a product bug."
+        details:
+          "The simulation keeps the black field central and treats dashboard sprawl as a product bug."
       },
       {
         type: "started",
         summary: "Started Stage Shell v0 work decomposition.",
-        details: "The plan is sliced into domain, runtime, render, instrumentation, and validation checkpoints."
+        details:
+          "The plan is sliced into domain, runtime, render, instrumentation, and validation checkpoints."
       },
       {
         type: "progress",
@@ -609,15 +657,18 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "approval_requested",
         summary: "Approval needed to create task prompt cards.",
-        details: "The task cards are local artifacts, but the approval ritual is still shown for the thesis."
+        details:
+          "The task cards are local artifacts, but the approval ritual is still shown for the thesis."
       }
     ],
     {
       actionType: "file_write",
       title: "Create three Codex task prompts",
       summary: "Generate local prompt cards from the engineering plan.",
-      scope: "Three local prompt-card render objects in the current Stage Shell session.",
-      consequence: "In v0 this does not write files automatically; it creates inspectable local artifacts.",
+      scope:
+        "Three local prompt-card render objects in the current Stage Shell session.",
+      consequence:
+        "In v0 this does not write files automatically; it creates inspectable local artifacts.",
       riskLevel: "medium"
     },
     {
@@ -625,8 +676,19 @@ export const stageShellScenarios: StageShellScenario[] = [
       title: "Codex Task Brief: Build Stage Shell v0",
       content: {
         objective: "Build the browser Stage Shell prototype from the existing repo.",
-        files: ["stage-core fixtures", "agent-runtime simulator", "stage-web components", "research logs"],
-        acceptanceCriteria: ["Intent submits", "Objects emerge", "Approval gates action", "Artifact appears", "Events export"]
+        files: [
+          "stage-core fixtures",
+          "agent-runtime simulator",
+          "stage-web components",
+          "research logs"
+        ],
+        acceptanceCriteria: [
+          "Intent submits",
+          "Objects emerge",
+          "Approval gates action",
+          "Artifact appears",
+          "Events export"
+        ]
       }
     },
     [
@@ -635,15 +697,24 @@ export const stageShellScenarios: StageShellScenario[] = [
         title: "Task 1: Evented render model",
         summary: "Create deterministic scenarios and event stream primitives.",
         payload: {
-          acceptance: ["Typed stage events", "At least three fixtures", "Runtime emits timed steps"]
+          acceptance: [
+            "Typed stage events",
+            "At least three fixtures",
+            "Runtime emits timed steps"
+          ]
         }
       },
       {
         type: "codex_task_card",
         title: "Task 2: Living Stage Shell",
-        summary: "Render intent, plan, agent labor, approval, artifact, and task cards.",
+        summary:
+          "Render intent, plan, agent labor, approval, artifact, and task cards.",
         payload: {
-          acceptance: ["No chat-bubble dominance", "Responsive field", "Visible approvals"]
+          acceptance: [
+            "No chat-bubble dominance",
+            "Responsive field",
+            "Visible approvals"
+          ]
         }
       },
       {
@@ -651,21 +722,28 @@ export const stageShellScenarios: StageShellScenario[] = [
         title: "Task 3: Research instrumentation",
         summary: "Log local redacted events, export session JSON, and score the demo.",
         payload: {
-          acceptance: ["Research events captured", "Session export works", "Scorecard exists"]
+          acceptance: [
+            "Research events captured",
+            "Session export works",
+            "Scorecard exists"
+          ]
         }
       },
       {
         type: "research_note",
         title: "Research note",
-        summary: "Self-hosting the build as a stage scenario tests whether the product can explain itself.",
+        summary:
+          "Self-hosting the build as a stage scenario tests whether the product can explain itself.",
         payload: {
-          insight: "The demo is strongest when the system's own labor is visible and governable."
+          insight:
+            "The demo is strongest when the system's own labor is visible and governable."
         }
       },
       {
         type: "browser_portal",
         title: "Validation browser",
-        summary: "A simulated browser lane shows where live validation evidence belongs without browsing externally.",
+        summary:
+          "A simulated browser lane shows where live validation evidence belongs without browsing externally.",
         payload: {
           url: "blackstage://validation/stage-shell-v0",
           status: "simulated",
@@ -680,7 +758,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "model_card",
         title: "Interface model",
-        summary: "A compact model shows how intent turns into objects, approvals, and artifacts.",
+        summary:
+          "A compact model shows how intent turns into objects, approvals, and artifacts.",
         payload: {
           modelTitle: "Reality interface model",
           status: "simulated",
@@ -694,7 +773,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "map_portal",
         title: "Object map",
-        summary: "The stage arranges object families around the current intent instead of opening apps.",
+        summary:
+          "The stage arranges object families around the current intent instead of opening apps.",
         payload: {
           center: "Build Stage Shell v0",
           status: "simulated",
@@ -709,7 +789,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "simulation_card",
         title: "Demo simulator",
-        summary: "The system rehearses the first five-second experience as a simulated timeline.",
+        summary:
+          "The system rehearses the first five-second experience as a simulated timeline.",
         payload: {
           simulationTitle: "First five seconds",
           status: "simulated",
@@ -723,7 +804,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "memory_card",
         title: "Memory boundary",
-        summary: "Project memory remains local and redacted unless the user approves a future write.",
+        summary:
+          "Project memory remains local and redacted unless the user approves a future write.",
         payload: {
           policy: "local-first",
           status: "private",
@@ -757,9 +839,15 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "plan_card",
         title: "Synthesis plan",
-        summary: "Cluster notes, name insights, identify uncertainty, and define next tests.",
+        summary:
+          "Cluster notes, name insights, identify uncertainty, and define next tests.",
         payload: {
-          steps: ["Cluster", "Extract claims", "Mark uncertainty", "Draft next experiments"]
+          steps: [
+            "Cluster",
+            "Extract claims",
+            "Mark uncertainty",
+            "Draft next experiments"
+          ]
         }
       },
       {
@@ -767,13 +855,18 @@ export const stageShellScenarios: StageShellScenario[] = [
         title: "Insight clusters",
         summary: "Three simulated clusters: trust, control, and artifact usefulness.",
         payload: {
-          clusters: ["Trust from visibility", "Control from approval", "Value from artifacts"]
+          clusters: [
+            "Trust from visibility",
+            "Control from approval",
+            "Value from artifacts"
+          ]
         }
       },
       {
         type: "simulation_card",
         title: "Next-test simulator",
-        summary: "A small simulated experiment compares the stage flow against chat-only output.",
+        summary:
+          "A small simulated experiment compares the stage flow against chat-only output.",
         payload: {
           simulationTitle: "Research comparison",
           status: "simulated",
@@ -787,7 +880,8 @@ export const stageShellScenarios: StageShellScenario[] = [
       {
         type: "memory_card",
         title: "Memory boundary",
-        summary: "The system keeps source notes redacted and tracks only safe research metadata.",
+        summary:
+          "The system keeps source notes redacted and tracks only safe research metadata.",
         payload: {
           policy: "redacted by default",
           status: "private",
@@ -838,7 +932,11 @@ export const stageShellScenarios: StageShellScenario[] = [
           "Approval cards should explain consequence, not merely ask permission.",
           "Artifacts make the stage feel useful beyond conversation."
         ],
-        nextTests: ["Compare against chat-only flow", "Measure approval clarity", "Observe first five-second comprehension"]
+        nextTests: [
+          "Compare against chat-only flow",
+          "Measure approval clarity",
+          "Observe first five-second comprehension"
+        ]
       }
     },
     [
@@ -922,7 +1020,8 @@ export function createScenarioThread(
 export function createScenarioStageEvents(
   scenario: StageShellScenario,
   thread: IntentThread,
-  submittedAt = thread.createdAt
+  submittedAt = thread.createdAt,
+  inputMode: "voice" | "text" = "text"
 ): TimedStageEvent[] {
   const events: TimedStageEvent[] = [
     {
@@ -933,7 +1032,7 @@ export function createScenarioStageEvents(
         payload: {
           rawText: thread.originalIntent,
           submittedAt,
-          inputMode: "text"
+          inputMode
         }
       }
     },

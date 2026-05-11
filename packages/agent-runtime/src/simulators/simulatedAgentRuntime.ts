@@ -18,6 +18,7 @@ export type SimulatedAgentRuntime = {
 
 export type SimulatedStageRunInput = {
   intentText: string;
+  inputMode?: "voice" | "text";
   scenarioId?: StageShellScenarioId;
   submittedAt?: string;
   sessionId?: string;
@@ -37,7 +38,9 @@ export function createSimulatedAgentRuntime(): SimulatedAgentRuntime {
   };
 }
 
-export function createSimulatedStageRun(input: SimulatedStageRunInput): SimulatedStageRun {
+export function createSimulatedStageRun(
+  input: SimulatedStageRunInput
+): SimulatedStageRun {
   const runtime = createSimulatedAgentRuntime();
   const scenario = input.scenarioId
     ? getStageShellScenario(input.scenarioId)
@@ -54,7 +57,7 @@ export function createSimulatedStageRun(input: SimulatedStageRunInput): Simulate
     runtime,
     scenario,
     thread,
-    steps: createScenarioStageEvents(scenario, thread, submittedAt)
+    steps: createScenarioStageEvents(scenario, thread, submittedAt, input.inputMode)
   };
 }
 

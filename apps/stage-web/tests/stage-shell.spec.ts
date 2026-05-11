@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,12 +9,88 @@ const screenshotPath = path.join(repoRoot, "artifacts/screenshots/stage-shell-v0
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
-    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier =
-      0.25;
+    (
+      window as Window & { __blackstageTestDelayMultiplier?: number }
+    ).__blackstageTestDelayMultiplier = 0.25;
   });
 });
 
-test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ page }) => {
+async function installFakeSpeechRecognition(page: Page) {
+  await page.addInitScript(() => {
+    type SpeechResultEvent = {
+      resultIndex: number;
+      results: Array<{
+        0: {
+          transcript: string;
+        };
+        isFinal: boolean;
+      }>;
+    };
+
+    class FakeSpeechRecognition {
+      continuous = false;
+      interimResults = false;
+      lang = "en-US";
+      onstart: (() => void) | null = null;
+      onresult: ((event: SpeechResultEvent) => void) | null = null;
+      onerror: ((event: { error?: string }) => void) | null = null;
+      onend: (() => void) | null = null;
+
+      start() {
+        browserWindow.__blackstageSpeechRecognition = this;
+        this.onstart?.();
+      }
+
+      stop() {
+        this.onend?.();
+      }
+
+      abort() {
+        this.onend?.();
+      }
+
+      emitFinal(text: string) {
+        this.onresult?.({
+          resultIndex: 0,
+          results: [
+            {
+              0: {
+                transcript: text
+              },
+              isFinal: true
+            }
+          ]
+        });
+        this.onend?.();
+      }
+    }
+
+    const browserWindow = window as Window & {
+      SpeechRecognition?: typeof FakeSpeechRecognition;
+      webkitSpeechRecognition?: typeof FakeSpeechRecognition;
+      __blackstageSpeechRecognition?: FakeSpeechRecognition;
+    };
+
+    browserWindow.SpeechRecognition = FakeSpeechRecognition;
+    browserWindow.webkitSpeechRecognition = FakeSpeechRecognition;
+  });
+}
+
+async function emitFakeSpeechFinal(page: Page, text: string) {
+  await page.evaluate((spokenText) => {
+    const browserWindow = window as Window & {
+      __blackstageSpeechRecognition?: {
+        emitFinal: (text: string) => void;
+      };
+    };
+
+    browserWindow.__blackstageSpeechRecognition?.emitFinal(spokenText);
+  }, text);
+}
+
+test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
+  page
+}) => {
   test.setTimeout(480_000);
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
@@ -34,7 +110,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ pag
 
   await page.getByRole("button", { name: "Build BlackStage" }).click();
 
-  await expect(page.getByTestId("stage-workspace")).toContainText("Stage Shell v0 plan");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
@@ -62,7 +140,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ pag
   await expect(planObject).toHaveClass(/stage-object-expanded/);
   await expect(planObject).toContainText("Event model");
 
-  const dragHandle = planObject.getByRole("button", { name: "Move Stage Shell v0 plan" });
+  const dragHandle = planObject.getByRole("button", {
+    name: "Move Stage Shell v0 plan"
+  });
 
   await dragHandle.click({
     force: true
@@ -141,7 +221,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ pag
   expect(pageErrors).toEqual([]);
 });
 
-test("Stage Shell v0 treats text commands as stage-object manipulation", async ({ page }) => {
+test("Stage Shell v0 treats text commands as stage-object manipulation", async ({
+  page
+}) => {
   test.setTimeout(120_000);
 
   await page.goto("/");
@@ -199,7 +281,9 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   expect(objectUpdatesWereLogged).toBe(true);
 });
 
-test("Stage Shell v0 replays the local event log without mutating it", async ({ page }) => {
+test("Stage Shell v0 replays the local event log without mutating it", async ({
+  page
+}) => {
   test.setTimeout(90_000);
 
   await page.goto("/");
@@ -232,7 +316,9 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({ 
     .getByRole("button", { name: "Replay trace" })
     .click();
 
-  await expect(page.getByTestId("stage-workspace")).toContainText("Stage Shell v0 plan");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
@@ -258,14 +344,17 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
   await page.evaluate(() => {
-    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier =
-      4;
+    (
+      window as Window & { __blackstageTestDelayMultiplier?: number }
+    ).__blackstageTestDelayMultiplier = 4;
   });
   await page.getByRole("button", { name: "Build BlackStage" }).click();
   await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
   await page.getByRole("button", { name: "Stop" }).dispatchEvent("click");
 
-  await expect(page.getByTestId("agent-activity-feed")).toContainText("Stopped by user.");
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Stopped by user."
+  );
   await expect(page.getByTestId("agent-activity-feed")).toContainText("cancelled");
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
   await expect(page.getByLabel("Intent thread")).toContainText("paused");
@@ -296,7 +385,9 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
 
   expect(stopWasLogged).toBe(true);
   await page.getByRole("button", { name: "Resume" }).click();
-  await expect(page.getByTestId("agent-activity-feed")).toContainText("Resumed by user.");
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Resumed by user."
+  );
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts",
     {
@@ -332,7 +423,9 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   expect(resumeWasLogged).toBe(true);
 });
 
-test("Stage Shell v0 renders models maps simulations and memory objects", async ({ page }) => {
+test("Stage Shell v0 renders models maps simulations and memory objects", async ({
+  page
+}) => {
   test.setTimeout(120_000);
 
   await page.goto("/");
@@ -344,11 +437,17 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
 
   await page.getByRole("button", { name: "Approve", exact: true }).click();
 
-  await expect(page.getByTestId("model-surface")).toContainText("Reality interface model");
+  await expect(page.getByTestId("model-surface")).toContainText(
+    "Reality interface model"
+  );
   await expect(page.getByTestId("map-surface")).toContainText("Build Stage Shell v0");
-  await expect(page.getByTestId("simulation-surface")).toContainText("First five seconds");
+  await expect(page.getByTestId("simulation-surface")).toContainText(
+    "First five seconds"
+  );
   await expect(page.getByTestId("memory-surface")).toContainText("local-first");
-  await expect(page.getByTestId("memory-surface")).toContainText("Memory writes require approval");
+  await expect(page.getByTestId("memory-surface")).toContainText(
+    "Memory writes require approval"
+  );
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Background harness recorder"
   );
@@ -360,10 +459,14 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
   );
 
   await page.getByRole("button", { name: "Run harness" }).click();
-  await expect(page.getByTestId("stage-workspace")).toContainText("Live harness recorder");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Live harness recorder"
+  );
 });
 
-test("Stage Shell v0 attaches local context as a private document object", async ({ page }) => {
+test("Stage Shell v0 attaches local context as a private document object", async ({
+  page
+}) => {
   test.setTimeout(90_000);
 
   await page.goto("/");
@@ -383,7 +486,9 @@ test("Stage Shell v0 attaches local context as a private document object", async
     )
   });
 
-  await expect(page.getByTestId("stage-workspace")).toContainText("Context: stage-note.txt");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Context: stage-note.txt"
+  );
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Attach this local note as context"
   );
@@ -502,7 +607,9 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
 
   await page.getByRole("button", { name: "Build BlackStage" }).click();
   await expect(page.getByTestId("assistant-speech")).toContainText("Intent received");
-  await expect(page.getByTestId("stage-workspace")).toContainText("Stage Shell v0 plan");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
 
   const voiceEvidence = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
@@ -524,7 +631,8 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
       assistantSpeechLogged:
         snapshot?.researchEvents?.some(
           (event) =>
-            event.eventType === "assistant_speech" && event.payload?.source === "stage_status"
+            event.eventType === "assistant_speech" &&
+            event.payload?.source === "stage_status"
         ) ?? false,
       spoken: browserWindow.__blackstageSpoken ?? []
     };
@@ -544,83 +652,21 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
 }) => {
   test.setTimeout(90_000);
 
-  await page.addInitScript(() => {
-    type SpeechResultEvent = {
-      resultIndex: number;
-      results: Array<{
-        0: {
-          transcript: string;
-        };
-        isFinal: boolean;
-      }>;
-    };
-
-    class FakeSpeechRecognition {
-      continuous = false;
-      interimResults = false;
-      lang = "en-US";
-      onstart: (() => void) | null = null;
-      onresult: ((event: SpeechResultEvent) => void) | null = null;
-      onerror: ((event: { error?: string }) => void) | null = null;
-      onend: (() => void) | null = null;
-
-      start() {
-        browserWindow.__blackstageSpeechRecognition = this;
-        this.onstart?.();
-      }
-
-      stop() {
-        this.onend?.();
-      }
-
-      abort() {
-        this.onend?.();
-      }
-
-      emitFinal(text: string) {
-        this.onresult?.({
-          resultIndex: 0,
-          results: [
-            {
-              0: {
-                transcript: text
-              },
-              isFinal: true
-            }
-          ]
-        });
-        this.onend?.();
-      }
-    }
-
-    const browserWindow = window as Window & {
-      SpeechRecognition?: typeof FakeSpeechRecognition;
-      webkitSpeechRecognition?: typeof FakeSpeechRecognition;
-      __blackstageSpeechRecognition?: FakeSpeechRecognition;
-    };
-
-    browserWindow.SpeechRecognition = FakeSpeechRecognition;
-    browserWindow.webkitSpeechRecognition = FakeSpeechRecognition;
-  });
+  await installFakeSpeechRecognition(page);
 
   await page.goto("/");
 
   await page.getByRole("button", { name: "Speak" }).click({
     force: true
   });
-  await expect(page.getByTestId("voice-transcript")).toContainText("listening for intent");
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
 
-  await page.evaluate(() => {
-    const browserWindow = window as Window & {
-      __blackstageSpeechRecognition?: {
-        emitFinal: (text: string) => void;
-      };
-    };
-
-    browserWindow.__blackstageSpeechRecognition?.emitFinal(
-      "Help me plan a seed round and produce the next five investor actions."
-    );
-  });
+  await emitFakeSpeechFinal(
+    page,
+    "Help me plan a seed round and produce the next five investor actions."
+  );
 
   await expect(page.getByTestId("intent-input")).toHaveValue(
     "Help me plan a seed round and produce the next five investor actions."
@@ -629,4 +675,91 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
   await expect(page.getByTestId("voice-transcript")).toContainText(
     "Help me plan a seed round"
   );
+
+  const inputModeWasVoice = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              input_mode?: string;
+            };
+          }>;
+        })
+      : undefined;
+
+    return (
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "intent_submitted" &&
+          event.payload?.input_mode === "voice"
+      ) ?? false
+    );
+  });
+
+  expect(inputModeWasVoice).toBe(true);
+});
+
+test("Stage Shell v0 applies spoken correction commands to stage objects", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await installFakeSpeechRecognition(page);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("document-portal-surface")).toContainText(
+    "Stage Shell v0 spec"
+  );
+
+  const specObject = page.getByTestId("stage-object-document_portal");
+
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "listening for intent"
+  );
+
+  await emitFakeSpeechFinal(page, "collapse the spec portal");
+
+  await expect(page.getByTestId("voice-transcript")).toContainText(
+    "collapse the spec portal"
+  );
+  await expect(specObject).toHaveClass(/stage-object-collapsed/);
+  await expect(page.getByTestId("document-portal-surface")).toHaveCount(0);
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Collapsed Spec portal."
+  );
+
+  const commandEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              command_action?: string;
+              command_input_mode?: string;
+              command_text_redacted?: string;
+            };
+          }>;
+        })
+      : undefined;
+
+    return (
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "collapse" &&
+          event.payload?.command_input_mode === "voice" &&
+          event.payload?.command_text_redacted === "collapse the spec portal"
+      ) ?? false
+    );
+  });
+
+  expect(commandEvidence).toBe(true);
 });

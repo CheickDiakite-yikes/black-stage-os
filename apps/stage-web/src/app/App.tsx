@@ -68,6 +68,7 @@ const idleThread = createIdleIntentThread();
 const loadedSession = loadStageSession();
 
 type StageCommandAction = "focus" | "pin" | "unpin" | "collapse" | "expand";
+type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
   action: StageCommandAction;
@@ -382,11 +383,11 @@ export function App() {
   );
 
   const applyStageCommand = useCallback(
-    (intentText: string) => {
+    (intentText: string, source: IntentSubmissionSource = "text") => {
       const command = parseStageCommand(intentText, thread.renderObjects);
 
       if (!command) {
-        return false;
+        return undefined;
       }
 
       const timestamp = new Date().toISOString();
@@ -398,6 +399,7 @@ export function App() {
           threadId: command.target.threadId,
           interventionType: "redirect",
           commandAction: command.action,
+          commandInputMode: source === "voice" ? "voice" : "text",
           commandText: intentText,
           targetObjectId: command.target.id,
           timestamp
@@ -411,7 +413,7 @@ export function App() {
         }
       });
 
-      return true;
+      return command;
     },
     [emitStageEvent, thread.renderObjects]
   );
@@ -502,7 +504,15 @@ export function App() {
   );
 
   const runIntent = useCallback(
-    (intentText: string, scenarioId?: StageShellScenarioId) => {
+    (
+      intentText: string,
+      scenarioId?: StageShellScenarioId,
+      options: {
+        source?: IntentSubmissionSource;
+      } = {}
+    ) => {
+      const source = options.source ?? (scenarioId ? "scenario" : "text");
+
       if (!scenarioId && requestMemoryWrite(intentText)) {
         return;
       }
@@ -511,13 +521,21 @@ export function App() {
         return;
       }
 
-      if (!scenarioId && applyStageCommand(intentText)) {
+      const appliedCommand = !scenarioId
+        ? applyStageCommand(intentText, source)
+        : undefined;
+
+      if (appliedCommand) {
+        emitAssistantSpeech(formatStageCommandConfirmation(appliedCommand), {
+          threadId: appliedCommand.target.threadId
+        });
         return;
       }
 
       const nextSessionId = sessionId || createStageSession().sessionId;
       const run = createSimulatedStageRun({
         intentText,
+        inputMode: source === "voice" ? "voice" : "text",
         scenarioId,
         sessionId: nextSessionId
       });
@@ -1664,6 +1682,23 @@ function applyStageCommandToObject(
         ...object,
         state: "expanded"
       };
+  }
+}
+
+function formatStageCommandConfirmation(command: StageCommand): string {
+  const targetTitle = command.target.title;
+
+  switch (command.action) {
+    case "focus":
+      return `Focused ${targetTitle}.`;
+    case "pin":
+      return `Pinned ${targetTitle}.`;
+    case "unpin":
+      return `Unpinned ${targetTitle}.`;
+    case "collapse":
+      return `Collapsed ${targetTitle}.`;
+    case "expand":
+      return `Opened ${targetTitle}.`;
   }
 }
 
