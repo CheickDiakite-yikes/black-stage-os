@@ -61,6 +61,12 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 Most recent validation after the root validation gate:
 
+- `pnpm typecheck`: passed across 8 of 9 workspace projects after the object-control and spoken-undo slices.
+- `pnpm test`: passed after `pnpm check:workflow` reported 15 contract checks; package tests covered 5 script subtests, 5 `memory-core` subtests, 23 `voice-core` Realtime subtests, 17 `agent-runtime` subtests, 10 `stage-broker` subtests, and 14 `stage-runner` subtests.
+- `pnpm lint`: passed.
+- `pnpm check:workflow && pnpm scan:secrets`: passed with no high-confidence secrets across 247 tracked files.
+- `pnpm build`: passed across the sorted workspace, including the Stage Web Vite production build.
+- `pnpm test:e2e`: passed with 23 browser tests using one Playwright worker after the document, timeline, browser, map, model, simulation, object undo, and spoken undo slices; refreshed `artifacts/screenshots/stage-shell-v0.png`.
 - `pnpm --filter @blackstage/agent-runtime typecheck`: passed after adding the Codex App Server handoff contract.
 - `pnpm check:workflow`: passed across 13 contract checks after updating `WORKFLOW.md` and `HarnessWorkflowPolicy` for Codex CLI/App Server transports.
 - `pnpm --filter @blackstage/agent-runtime test`: passed with 16 harness/Codex/Agents SDK/Symphony/readiness subtests, including the dry-run Codex App Server handoff proof.
