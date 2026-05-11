@@ -612,8 +612,18 @@ function formatRealtimeProofSuffix(proofs: StageWebRealtimeBrokerProofs): string
 
   const proofCount = proofs.proofCount ?? 0;
   const proofLabel = proofCount === 1 ? "proof" : "proofs";
+  const latestProof = proofs.latestProof;
 
-  return ` · ${proofCount} ${proofLabel}`;
+  if (!latestProof) {
+    return ` · ${proofCount} ${proofLabel}`;
+  }
+
+  const networkLabel = latestProof.openAiNetworkCallAttempted
+    ? "network"
+    : "no network";
+  const audioLabel = latestProof.browserSendsAudio ? "audio" : "no audio";
+
+  return ` · ${latestProof.status} proof · ${networkLabel} · ${audioLabel}`;
 }
 
 function formatRealtimeMicPreflight(preflight: VoiceCapturePreflight): string {

@@ -157,7 +157,11 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("realtime-broker-status")).toContainText(
     "live broker · SDP off"
   );
-  await expect(page.getByTestId("realtime-broker-status")).toContainText("1 proof");
+  await expect(page.getByTestId("realtime-broker-status")).toContainText(
+    "skipped proof"
+  );
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("no network");
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("no audio");
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("mic gesture");
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");
