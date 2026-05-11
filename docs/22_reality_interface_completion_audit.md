@@ -72,6 +72,7 @@ Most recent validation after the root validation gate:
 - `pnpm --filter @blackstage/agent-runtime test`: passed with 16 subtests after adding `codexTransport` to the runner readiness client.
 - `pnpm --filter @blackstage/stage-runner test`: passed with 14 subtests, including `BLACKSTAGE_CODEX_TRANSPORT=app_server` dry-run handoff proof and no live execution rights.
 - `pnpm --filter @blackstage/stage-web exec playwright test tests/harness-policy.spec.ts`: passed after the readiness payload started requiring `codexTransport`.
+- `pnpm --filter @blackstage/stage-web exec playwright test tests/stage-shell.spec.ts -g "local context"`: passed after adding JSON structured-context browser proof alongside the CSV proof.
 - `pnpm test`: passed after the Codex App Server handoff slice, including 5 script tests, 5 memory-core subtests, 23 voice-core Realtime subtests, 16 agent-runtime subtests, 10 stage-broker subtests, and 13 stage-runner subtests.
 - `pnpm typecheck`: passed across 8 of 9 workspace projects.
 - `pnpm lint`: passed.

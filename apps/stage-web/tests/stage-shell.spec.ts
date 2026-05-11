@@ -694,6 +694,64 @@ test("Stage Shell v0 attaches local context as a private document object", async
   });
 
   expect(structuredContextWasLogged).toBe(true);
+
+  await page.getByTestId("context-file-input").setInputFiles({
+    name: "market-scenarios.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify([
+        {
+          scenario: "base",
+          arr: 100,
+          burn: 45
+        },
+        {
+          scenario: "stretch",
+          arr: 160,
+          burn: 62
+        }
+      ])
+    )
+  });
+
+  const latestJsonDocumentPortal = page.getByTestId("document-portal-surface").last();
+
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Context: market-scenarios.json"
+  );
+  await expect(latestJsonDocumentPortal).toContainText("JSON structure");
+  await expect(latestJsonDocumentPortal).toContainText(
+    "2 array items · keys: scenario, arr, burn"
+  );
+
+  const jsonContextWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      researchEvents: Array<{
+        eventType: string;
+        payload?: {
+          structured_kind?: string;
+          structured_item_count?: number;
+          local_only?: boolean;
+        };
+      }>;
+    };
+
+    return snapshot.researchEvents.some(
+      (event) =>
+        event.eventType === "context_attached" &&
+        event.payload?.structured_kind === "json" &&
+        event.payload.structured_item_count === 2 &&
+        event.payload.local_only === true
+    );
+  });
+
+  expect(jsonContextWasLogged).toBe(true);
 });
 
 test("Stage Shell v0 renders local image context without uploading it", async ({
