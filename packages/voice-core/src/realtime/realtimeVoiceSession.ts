@@ -1,4 +1,6 @@
 export const DEFAULT_REALTIME_VOICE_MODEL = "gpt-realtime-2";
+export const BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION =
+  "blackstage.realtime.instructions.v0";
 
 export type RealtimeVoiceModel =
   | typeof DEFAULT_REALTIME_VOICE_MODEL
@@ -16,6 +18,15 @@ export type RealtimeVoicePolicy = {
   forbidsBrowserApiKey: true;
   toolCallsRequireStageApproval: true;
   transcriptStorage: "redacted_events_only" | "local_full_transcript";
+};
+
+export type RealtimeVoiceInstructionContract = {
+  version: typeof BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION;
+  model: typeof DEFAULT_REALTIME_VOICE_MODEL;
+  speechCadence: "sparse_key_turns";
+  toolPolicy: "stage_approval_before_execution";
+  tracePolicy: "stage_events_only";
+  instructions: string;
 };
 
 export type RealtimeVoiceSessionConfig = {
@@ -47,18 +58,38 @@ export type RealtimeVoiceSessionSafetyReport = {
   warnings: string[];
 };
 
+export function createBlackstageRealtimeInstructionContract(): RealtimeVoiceInstructionContract {
+  return {
+    version: BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION,
+    model: DEFAULT_REALTIME_VOICE_MODEL,
+    speechCadence: "sparse_key_turns",
+    toolPolicy: "stage_approval_before_execution",
+    tracePolicy: "stage_events_only",
+    instructions: [
+      "You are the Blackstage realtime voice edge.",
+      "Listen for intent, preserve the calm black-stage atmosphere, and speak only key turns.",
+      "Use short spoken confirmations; do not narrate every internal step.",
+      "Convert user intent into stage events, visible work, approvals, and artifacts.",
+      "Do not execute tools, browse, write files, publish, spend money, or touch memory without a Stage approval event.",
+      "When a tool is needed, request approval and wait for the stage to resolve it.",
+      "Never expose provider credentials or safety identifiers to the browser.",
+      "Keep transcript storage to redacted stage events unless the local operator explicitly enables fuller local transcript capture."
+    ].join("\n")
+  };
+}
+
 export function createRealtimeVoiceSessionConfig(
   input: RealtimeVoiceSessionInput
 ): RealtimeVoiceSessionConfig {
+  const instructionContract = createBlackstageRealtimeInstructionContract();
+
   return {
     sessionId: input.sessionId,
     threadId: input.threadId,
     model: input.model ?? DEFAULT_REALTIME_VOICE_MODEL,
     transport: input.transport ?? "webrtc",
     networkMode: input.networkMode ?? "simulation",
-    instructions:
-      input.instructions ??
-      "Listen for intent, speak sparingly, and route all consequential actions through Stage approvals.",
+    instructions: input.instructions ?? instructionContract.instructions,
     reasoningEffort: "medium",
     inputModalities: ["audio", "text", "image"],
     outputModalities: ["audio", "text"],

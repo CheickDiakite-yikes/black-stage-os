@@ -4,6 +4,7 @@ import {
   type RealtimeVoiceBrokerPlan
 } from "./realtimeVoiceBroker.js";
 import {
+  BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION,
   DEFAULT_REALTIME_VOICE_MODEL,
   type RealtimeVoiceSessionConfig
 } from "./realtimeVoiceSession.js";
@@ -35,6 +36,7 @@ export type RealtimeServerSessionDescriptor = {
   metadata: {
     blackstageSessionId: string;
     blackstageThreadId: string;
+    blackstageInstructionsVersion: typeof BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION;
   };
 };
 
@@ -89,10 +91,7 @@ export function createRealtimeUnifiedWebrtcBrokerRequest(
   const readiness = inspectRealtimeVoiceBrokerReadiness(config, {
     safetyIdentifier: input.safetyIdentifier
   });
-  const blockedReasons = [
-    ...readiness.warnings,
-    ...inspectLiveGate(config, input)
-  ];
+  const blockedReasons = [...readiness.warnings, ...inspectLiveGate(config, input)];
 
   if (blockedReasons.length > 0) {
     return {
@@ -152,12 +151,15 @@ export function createRealtimeServerSessionDescriptor(
     },
     metadata: {
       blackstageSessionId: config.sessionId,
-      blackstageThreadId: config.threadId
+      blackstageThreadId: config.threadId,
+      blackstageInstructionsVersion: BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION
     }
   };
 }
 
-function createClientContract(serverRoute?: string): RealtimeUnifiedWebrtcClientContract {
+function createClientContract(
+  serverRoute?: string
+): RealtimeUnifiedWebrtcClientContract {
   return {
     method: "POST",
     path: serverRoute ?? BLACKSTAGE_REALTIME_BROKER_ROUTE,
@@ -189,7 +191,9 @@ function inspectLiveGate(
   }
 
   if (!input.clientSdpOffer?.trim()) {
-    blockedReasons.push("Browser SDP offer is required before opening a realtime call.");
+    blockedReasons.push(
+      "Browser SDP offer is required before opening a realtime call."
+    );
   }
 
   return blockedReasons;

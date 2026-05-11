@@ -26,7 +26,9 @@ import {
   inspectRealtimeWebrtcClientExchangeBlockers
 } from "../dist/realtime/realtimeVoiceWebrtcClient.js";
 import {
+  BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION,
   DEFAULT_REALTIME_VOICE_MODEL,
+  createBlackstageRealtimeInstructionContract,
   createRealtimeVoiceSessionConfig,
   inspectRealtimeVoiceSessionSafety
 } from "../dist/realtime/realtimeVoiceSession.js";
@@ -90,6 +92,24 @@ describe("Realtime voice session contracts", () => {
     assert.equal(config.model, "gpt-realtime-2");
     assert.equal(config.networkMode, "simulation");
     assert.deepEqual(config.outputModalities, ["audio", "text"]);
+  });
+
+  it("creates a Blackstage-owned realtime instruction contract", () => {
+    const contract = createBlackstageRealtimeInstructionContract();
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_instructions",
+      threadId: "thread_build_blackstage"
+    });
+
+    assert.equal(contract.version, BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION);
+    assert.equal(contract.model, "gpt-realtime-2");
+    assert.equal(contract.speechCadence, "sparse_key_turns");
+    assert.equal(contract.toolPolicy, "stage_approval_before_execution");
+    assert.equal(contract.tracePolicy, "stage_events_only");
+    assert.match(contract.instructions, /speak only key turns/i);
+    assert.match(contract.instructions, /Do not execute tools/);
+    assert.match(contract.instructions, /Stage approval event/);
+    assert.equal(config.instructions, contract.instructions);
   });
 
   it("keeps browser safety boundaries explicit", () => {
@@ -378,6 +398,10 @@ describe("Realtime voice session contracts", () => {
     assert.equal(
       request.openAiRequest.body.session.metadata.blackstageThreadId,
       "thread_build_blackstage"
+    );
+    assert.equal(
+      request.openAiRequest.body.session.metadata.blackstageInstructionsVersion,
+      BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION
     );
     assert.equal(request.clientContract.browserReceives, "sdp_answer_only");
   });
