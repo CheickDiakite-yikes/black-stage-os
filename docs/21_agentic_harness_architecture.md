@@ -204,7 +204,8 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - live-mode `POST /api/blackstage/harness/run-next` requires `BLACKSTAGE_CODEX_RUN_APPROVAL_TOKEN`
     - local callers must send the matching `x-blackstage-codex-approval` header
     - denied requests return `403` and leave queued work untouched
-    - Status: implemented with local server tests; no live Codex subprocess ran during validation.
+    - `pnpm preflight:codex-runner` reports redacted shell readiness without starting the runner or invoking Codex
+    - Status: implemented with local server and script tests; no live Codex subprocess ran during validation.
 
 14. Codify the upstream-aligned workflow policy:
     - root `WORKFLOW.md` defines the Blackstage harness control plane, worker split, safety boundaries, evidence expectations, and validation floor
