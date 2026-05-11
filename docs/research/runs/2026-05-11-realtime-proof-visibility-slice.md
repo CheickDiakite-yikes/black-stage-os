@@ -4,32 +4,33 @@ Date: 2026-05-11
 
 ## What Was Attempted
 
-Make the live Realtime edge more auditable inside Stage Web by showing the latest redacted smoke proof status, network-call state, and audio state instead of only a proof count.
+Make the Stage Web Realtime edge display the actual no-mic smoke proof boundary instead of a vague audio label.
 
 ## Prompt Given To Codex
 
-Continue toward the active Blackstage reality-interface goal after anchoring the background harness around open-source Codex, Symphony orchestration, Agents SDK manager plans, and `gpt-realtime-2`.
+Continue the active Blackstage goal loop in committed slices, keep live testing cheap, and make the startup and Realtime surfaces honest rather than demo-like.
 
 ## What Codex Did Well
 
-- Kept the Realtime bridge no-audio and approval-gated.
-- Made proof evidence visible in the calm `Realtime edge` status line: skipped/passed/failed proof, network/no network, and audio/no audio.
-- Updated browser coverage so Stage Web must render the redacted proof evidence before any live SDP approval flow.
+- Preserved the `.blackstage/` proof boundary and exposed only sanitized proof metadata.
+- Carried the cheap-guard offer shape into the broker proof summary.
+- Updated the Stage Web Realtime status to show no mic send plus `recvonly` when that proof detail is available.
 
 ## What Failed Or Needed Human Intervention
 
-No human intervention was needed. This slice did not run a live OpenAI Realtime smoke, request microphone permission, start a media stream, or send audio.
+No human intervention was needed. The slice stayed local and did not make another provider call.
 
 ## Product Insight
 
-Live voice trust is built through visible evidence, not hidden readiness. Showing "no network" and "no audio" gives the operator a quiet safety signal while the product still feels like a stage rather than a log viewer.
+The proof surface should name the real safety contract. "No mic send" is clearer than "no audio" now that OpenAI requires a `recvonly` audio media section.
 
 ## AI-Building Insight
 
-Proof summaries should be useful to future agents and humans at the same time. A compact status line gives future automation a rendered assertion to test while giving the founder a quick gut-check that the live edge is still gated.
+Realtime provider integration work needs UI-facing evidence that is precise but not secret-bearing. Summaries should preserve safety shape while dropping raw SDP, raw errors, and credentials.
 
 ## Evidence
 
+- `apps/stage-broker/src/realtimeSmokeProofs.ts`
+- `apps/stage-web/src/voice/realtimeBrokerReadiness.ts`
 - `apps/stage-web/src/components/StageShell.tsx`
 - `apps/stage-web/tests/realtime-bridge.spec.ts`
-- `docs/22_reality_interface_completion_audit.md`

@@ -134,6 +134,17 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
                 openAiNetworkCallAttempted: false,
                 browserReceivesStandardApiKey: false,
                 browserSendsAudio: false,
+                cheapTestGuard: {
+                  offerMode: "data_channel_plus_recvonly_audio",
+                  rejectsBrowserAudioSend: true,
+                  maxProviderRequests: 1,
+                  effectiveTimeoutMs: 15000,
+                  offer: {
+                    audioDirections: ["recvonly"],
+                    hasAudioSendMediaSection: false,
+                    hasDataChannelMediaSection: true
+                  }
+                },
                 missingEnv: ["BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"]
               }
             ]
@@ -182,7 +193,8 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     "skipped proof"
   );
   await expect(page.getByTestId("realtime-broker-status")).toContainText("no network");
-  await expect(page.getByTestId("realtime-broker-status")).toContainText("no audio");
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("no mic send");
+  await expect(page.getByTestId("realtime-broker-status")).toContainText("recvonly");
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("mic gesture");
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");

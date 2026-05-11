@@ -650,9 +650,22 @@ function formatRealtimeProofSuffix(proofs: StageWebRealtimeBrokerProofs): string
   const networkLabel = latestProof.openAiNetworkCallAttempted
     ? "network"
     : "no network";
-  const audioLabel = latestProof.browserSendsAudio ? "audio" : "no audio";
+  const audioLabel = latestProof.browserSendsAudio ? "mic send" : "no mic send";
+  const guardLabel = formatRealtimeProofGuardLabel(latestProof);
 
-  return ` · ${latestProof.status} proof · ${networkLabel} · ${audioLabel}`;
+  return ` · ${latestProof.status} proof · ${networkLabel} · ${audioLabel}${guardLabel}`;
+}
+
+function formatRealtimeProofGuardLabel(
+  latestProof: StageWebRealtimeBrokerProofs["latestProof"]
+): string {
+  const directions = latestProof?.cheapTestGuard?.offer?.audioDirections ?? [];
+
+  if (directions.includes("recvonly")) {
+    return " · recvonly";
+  }
+
+  return "";
 }
 
 function formatRealtimeMicPreflight(preflight: VoiceCapturePreflight): string {

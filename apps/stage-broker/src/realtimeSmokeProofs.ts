@@ -20,7 +20,26 @@ export type RealtimeSmokeProofSummary = {
   offerBytes?: number;
   answerBytes?: number;
   answerSha256Prefix?: string;
+  cheapTestGuard?: RealtimeSmokeProofCheapGuardSummary;
   missingEnv: string[];
+};
+
+export type RealtimeSmokeProofAudioDirection =
+  | "inactive"
+  | "recvonly"
+  | "sendonly"
+  | "sendrecv";
+
+export type RealtimeSmokeProofCheapGuardSummary = {
+  offerMode?: "data_channel_plus_recvonly_audio";
+  rejectsBrowserAudioSend?: true;
+  maxProviderRequests?: number;
+  effectiveTimeoutMs?: number;
+  offer?: {
+    audioDirections?: RealtimeSmokeProofAudioDirection[];
+    hasAudioSendMediaSection?: false;
+    hasDataChannelMediaSection?: true;
+  };
 };
 
 export type RealtimeSmokeProofIndexOptions = {
@@ -108,10 +127,64 @@ export function parseRealtimeSmokeProofSummary(
       typeof candidate.answerSha256Prefix === "string"
         ? candidate.answerSha256Prefix
         : undefined,
+    cheapTestGuard: parseCheapTestGuard(candidate.cheapTestGuard),
     missingEnv: candidate.missingEnv.filter(
       (envVar): envVar is string => typeof envVar === "string"
     )
   };
+}
+
+function parseCheapTestGuard(
+  value: unknown
+): RealtimeSmokeProofCheapGuardSummary | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as {
+    effectiveTimeoutMs?: unknown;
+    maxProviderRequests?: unknown;
+    offer?: unknown;
+    offerMode?: unknown;
+    rejectsBrowserAudioSend?: unknown;
+  };
+  const offer = parseCheapTestGuardOffer(candidate.offer);
+  const summary: RealtimeSmokeProofCheapGuardSummary = {
+    offerMode:
+      candidate.offerMode === "data_channel_plus_recvonly_audio"
+        ? "data_channel_plus_recvonly_audio"
+        : undefined,
+    rejectsBrowserAudioSend:
+      candidate.rejectsBrowserAudioSend === true ? true : undefined,
+    maxProviderRequests: normalizeOptionalNumber(candidate.maxProviderRequests),
+    effectiveTimeoutMs: normalizeOptionalNumber(candidate.effectiveTimeoutMs),
+    offer
+  };
+
+  return hasDefinedSummaryValue(summary) ? summary : undefined;
+}
+
+function parseCheapTestGuardOffer(
+  value: unknown
+): RealtimeSmokeProofCheapGuardSummary["offer"] | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as {
+    audioDirections?: unknown;
+    hasAudioSendMediaSection?: unknown;
+    hasDataChannelMediaSection?: unknown;
+  };
+  const offer: NonNullable<RealtimeSmokeProofCheapGuardSummary["offer"]> = {
+    audioDirections: normalizeAudioDirections(candidate.audioDirections),
+    hasAudioSendMediaSection:
+      candidate.hasAudioSendMediaSection === false ? false : undefined,
+    hasDataChannelMediaSection:
+      candidate.hasDataChannelMediaSection === true ? true : undefined
+  };
+
+  return hasDefinedSummaryValue(offer) ? offer : undefined;
 }
 
 function resolveProofRoot(repoRoot: string, proofRoot: string): string {
@@ -132,6 +205,28 @@ function normalizeOptionalNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? value
     : undefined;
+}
+
+function normalizeAudioDirections(
+  value: unknown
+): RealtimeSmokeProofAudioDirection[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const directions = value.filter(
+    (direction): direction is RealtimeSmokeProofAudioDirection =>
+      direction === "inactive" ||
+      direction === "recvonly" ||
+      direction === "sendonly" ||
+      direction === "sendrecv"
+  );
+
+  return directions.length > 0 ? directions.slice(0, 4) : undefined;
+}
+
+function hasDefinedSummaryValue(value: object): boolean {
+  return Object.values(value).some((entry) => entry !== undefined);
 }
 
 function isRealtimeSmokeProofStatus(value: unknown): value is RealtimeSmokeProofStatus {

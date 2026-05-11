@@ -30,6 +30,17 @@ export type StageWebRealtimeBrokerProofSummary = {
   openAiNetworkCallAttempted: boolean;
   browserReceivesStandardApiKey: false;
   browserSendsAudio: boolean;
+  cheapTestGuard?: {
+    offerMode?: "data_channel_plus_recvonly_audio";
+    rejectsBrowserAudioSend?: true;
+    maxProviderRequests?: number;
+    effectiveTimeoutMs?: number;
+    offer?: {
+      audioDirections?: Array<"inactive" | "recvonly" | "sendonly" | "sendrecv">;
+      hasAudioSendMediaSection?: false;
+      hasDataChannelMediaSection?: true;
+    };
+  };
 };
 
 export type StageWebRealtimeBrokerProofs = {
@@ -272,14 +283,95 @@ function parseStageWebRealtimeProofSummary(
     createdAt: candidate.createdAt,
     openAiNetworkCallAttempted: candidate.openAiNetworkCallAttempted,
     browserReceivesStandardApiKey: false,
-    browserSendsAudio: candidate.browserSendsAudio
+    browserSendsAudio: candidate.browserSendsAudio,
+    cheapTestGuard: parseStageWebRealtimeProofCheapGuard(candidate.cheapTestGuard)
   };
+}
+
+function parseStageWebRealtimeProofCheapGuard(
+  value: unknown
+): StageWebRealtimeBrokerProofSummary["cheapTestGuard"] | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as {
+    effectiveTimeoutMs?: unknown;
+    maxProviderRequests?: unknown;
+    offer?: unknown;
+    offerMode?: unknown;
+    rejectsBrowserAudioSend?: unknown;
+  };
+  const guard: NonNullable<StageWebRealtimeBrokerProofSummary["cheapTestGuard"]> = {
+    offerMode:
+      candidate.offerMode === "data_channel_plus_recvonly_audio"
+        ? "data_channel_plus_recvonly_audio"
+        : undefined,
+    rejectsBrowserAudioSend:
+      candidate.rejectsBrowserAudioSend === true ? true : undefined,
+    maxProviderRequests: normalizeOptionalNumber(candidate.maxProviderRequests),
+    effectiveTimeoutMs: normalizeOptionalNumber(candidate.effectiveTimeoutMs),
+    offer: parseStageWebRealtimeProofOffer(candidate.offer)
+  };
+
+  return hasDefinedSummaryValue(guard) ? guard : undefined;
+}
+
+function parseStageWebRealtimeProofOffer(
+  value: unknown
+): NonNullable<StageWebRealtimeBrokerProofSummary["cheapTestGuard"]>["offer"] {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as {
+    audioDirections?: unknown;
+    hasAudioSendMediaSection?: unknown;
+    hasDataChannelMediaSection?: unknown;
+  };
+  const offer: NonNullable<
+    NonNullable<StageWebRealtimeBrokerProofSummary["cheapTestGuard"]>["offer"]
+  > = {
+    audioDirections: normalizeAudioDirections(candidate.audioDirections),
+    hasAudioSendMediaSection:
+      candidate.hasAudioSendMediaSection === false ? false : undefined,
+    hasDataChannelMediaSection:
+      candidate.hasDataChannelMediaSection === true ? true : undefined
+  };
+
+  return hasDefinedSummaryValue(offer) ? offer : undefined;
 }
 
 function isRealtimeProofStatus(
   status: unknown
 ): status is StageWebRealtimeBrokerProofSummary["status"] {
   return status === "passed" || status === "failed" || status === "skipped";
+}
+
+function normalizeOptionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined;
+}
+
+function normalizeAudioDirections(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const directions = value.filter(
+    (direction): direction is "inactive" | "recvonly" | "sendonly" | "sendrecv" =>
+      direction === "inactive" ||
+      direction === "recvonly" ||
+      direction === "sendonly" ||
+      direction === "sendrecv"
+  );
+
+  return directions.length > 0 ? directions.slice(0, 4) : undefined;
+}
+
+function hasDefinedSummaryValue(value: object): boolean {
+  return Object.values(value).some((entry) => entry !== undefined);
 }
 
 function readStageWebBrokerEnvValue(): string | undefined {

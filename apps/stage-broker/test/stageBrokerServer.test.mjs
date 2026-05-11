@@ -129,6 +129,17 @@ describe("Stage broker server", () => {
             openAiNetworkCallAttempted: false,
             browserReceivesStandardApiKey: false,
             browserSendsAudio: false,
+            cheapTestGuard: {
+              offerMode: "data_channel_plus_recvonly_audio",
+              rejectsBrowserAudioSend: true,
+              maxProviderRequests: 1,
+              effectiveTimeoutMs: 15000,
+              offer: {
+                audioDirections: ["recvonly"],
+                hasAudioSendMediaSection: false,
+                hasDataChannelMediaSection: true
+              }
+            },
             requiredEnv: {
               OPENAI_API_KEY: "set"
             },
@@ -173,6 +184,21 @@ describe("Stage broker server", () => {
       assert.equal(body.proofs[0].openAiNetworkCallAttempted, false);
       assert.equal(body.proofs[0].browserReceivesStandardApiKey, false);
       assert.equal(body.proofs[0].browserSendsAudio, false);
+      assert.equal(
+        body.proofs[0].cheapTestGuard.offerMode,
+        "data_channel_plus_recvonly_audio"
+      );
+      assert.equal(body.proofs[0].cheapTestGuard.rejectsBrowserAudioSend, true);
+      assert.equal(body.proofs[0].cheapTestGuard.maxProviderRequests, 1);
+      assert.equal(body.proofs[0].cheapTestGuard.effectiveTimeoutMs, 15000);
+      assert.deepEqual(body.proofs[0].cheapTestGuard.offer.audioDirections, [
+        "recvonly"
+      ]);
+      assert.equal(body.proofs[0].cheapTestGuard.offer.hasAudioSendMediaSection, false);
+      assert.equal(
+        body.proofs[0].cheapTestGuard.offer.hasDataChannelMediaSection,
+        true
+      );
       assert.deepEqual(body.proofs[0].missingEnv, [
         "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"
       ]);
