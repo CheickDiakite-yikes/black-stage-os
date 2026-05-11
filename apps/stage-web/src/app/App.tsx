@@ -42,7 +42,9 @@ import {
 import {
   createDefaultStageWebRealtimeBridgeState,
   createStageWebRealtimeBridgeConnectingState,
+  prepareStageWebRealtimeAudioTrack,
   readStageWebRealtimeApprovalPhrase,
+  readStageWebRealtimeAudioEnabled,
   shouldStartStageWebRealtimeBridge,
   startStageWebRealtimeBridge
 } from "../voice/realtimeWebrtcBridge";
@@ -365,18 +367,34 @@ export function App() {
         );
       }
 
-      void startStageWebRealtimeBridge({
-        readiness,
-        threadId,
-        sessionId,
-        enabled: true,
-        approvalPhrase: readStageWebRealtimeApprovalPhrase(),
-        emitStageEvents: (events) => {
-          events.forEach((event) => {
-            emitStageEvent(event);
-          });
-        }
-      }).then((bridge) => {
+      void (async () => {
+        const freshMicPreflight = await checkStageWebRealtimeMicPreflight({
+          explicitUserGesture: true,
+          realtimeApprovalArmed: true
+        });
+
+        setRealtimeMicPreflight(freshMicPreflight);
+
+        const audioTrackResult = await prepareStageWebRealtimeAudioTrack({
+          enabled: readStageWebRealtimeAudioEnabled(),
+          preflight: freshMicPreflight
+        });
+
+        return startStageWebRealtimeBridge({
+          readiness,
+          threadId,
+          sessionId,
+          enabled: true,
+          approvedAudioTrack: audioTrackResult.track,
+          audioTrackApproved: audioTrackResult.status === "ready",
+          approvalPhrase: readStageWebRealtimeApprovalPhrase(),
+          emitStageEvents: (events) => {
+            events.forEach((event) => {
+              emitStageEvent(event);
+            });
+          }
+        });
+      })().then((bridge) => {
         setRealtimeBridge(bridge.state);
         bridge.stageEvents.forEach((event) => {
           emitStageEvent(event);

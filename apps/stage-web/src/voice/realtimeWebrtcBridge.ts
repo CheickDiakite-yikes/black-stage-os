@@ -1,18 +1,24 @@
 import type { StageEvent } from "@blackstage/stage-core";
 import {
-  exchangeRealtimeWebrtcSdp,
   BLACKSTAGE_REALTIME_APPROVAL_HEADER,
+  createVoiceCaptureStartPlan,
+  exchangeRealtimeWebrtcSdp,
   mapRealtimeVoiceEventToStageEvents,
   parseRealtimeVoiceServerEvent,
   type RealtimeBrokerClientReadiness,
+  type RealtimeWebrtcAudioTrack,
   type RealtimeWebrtcPeerConnection,
-  type RealtimeWebrtcPeerConnectionFactory
+  type RealtimeWebrtcPeerConnectionFactory,
+  type VoiceCapturePreflight,
+  type VoiceCaptureStartPlan
 } from "@blackstage/voice-core";
 
 export const STAGE_WEB_REALTIME_WEBRTC_ENABLED_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_WEBRTC_ENABLED";
 export const STAGE_WEB_REALTIME_APPROVAL_TOKEN_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN";
+export const STAGE_WEB_REALTIME_AUDIO_ENABLED_ENV_VAR =
+  "VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED";
 
 export type StageWebRealtimeBridgeStatus =
   | "disabled"
@@ -43,6 +49,8 @@ export type StageWebRealtimeBridgeOptions = {
   threadId: string;
   sessionId: string;
   enabled?: boolean;
+  approvedAudioTrack?: RealtimeWebrtcAudioTrack;
+  audioTrackApproved?: boolean;
   createPeerConnection?: RealtimeWebrtcPeerConnectionFactory;
   fetchImpl?: typeof fetch;
   approvalPhrase?: string;
@@ -54,6 +62,42 @@ export type StageWebRealtimeBridgeMappingContext = {
   threadId: string;
   sessionId: string;
   now?: () => string;
+};
+
+export type StageWebRealtimeAudioTrackStatus =
+  | "disabled"
+  | "blocked"
+  | "ready"
+  | "failed";
+
+export type StageWebRealtimeAudioTrackResult = {
+  status: StageWebRealtimeAudioTrackStatus;
+  getUserMediaCalled: boolean;
+  startsMediaStream: boolean;
+  browserReceivesStandardApiKey: false;
+  track?: RealtimeWebrtcAudioTrack;
+  startPlan?: VoiceCaptureStartPlan;
+  errors: string[];
+};
+
+export type StageWebRealtimeAudioTrackOptions = {
+  enabled?: boolean;
+  preflight: VoiceCapturePreflight;
+  navigatorLike?: StageWebRealtimeAudioNavigator;
+};
+
+type StageWebRealtimeAudioNavigator = {
+  mediaDevices?: {
+    getUserMedia?: (constraints: {
+      audio: true;
+      video: false;
+    }) => Promise<StageWebRealtimeAudioStream>;
+  };
+};
+
+type StageWebRealtimeAudioStream = {
+  getAudioTracks?: () => RealtimeWebrtcAudioTrack[];
+  getTracks?: () => Array<RealtimeWebrtcAudioTrack | { kind?: string }>;
 };
 
 export function createDefaultStageWebRealtimeBridgeState(
@@ -120,6 +164,8 @@ export async function startStageWebRealtimeBridge(
       }));
   const exchange = await exchangeRealtimeWebrtcSdp({
     enabled: options.enabled ?? readStageWebRealtimeWebrtcEnabled(),
+    approvedAudioTrack: options.approvedAudioTrack,
+    audioTrackApproved: options.audioTrackApproved,
     readiness: options.readiness,
     createPeerConnection,
     fetchBrokerAnswer: async (request) => {
@@ -148,6 +194,7 @@ export async function startStageWebRealtimeBridge(
     threadId: options.threadId,
     routeUrl: exchange.routeUrl,
     timestamp,
+    browserSendsAudio: exchange.browserSendsAudio,
     errors: exchange.errors
   });
 
@@ -198,6 +245,91 @@ export function readStageWebRealtimeApprovalPhrase(
   const trimmedValue = value?.trim();
 
   return trimmedValue || undefined;
+}
+
+export function readStageWebRealtimeAudioEnabled(
+  value = readStageWebRealtimeAudioEnvValue()
+): boolean {
+  return value?.trim() === "1";
+}
+
+export async function prepareStageWebRealtimeAudioTrack(
+  options: StageWebRealtimeAudioTrackOptions
+): Promise<StageWebRealtimeAudioTrackResult> {
+  if (options.enabled !== true) {
+    return {
+      status: "disabled",
+      getUserMediaCalled: false,
+      startsMediaStream: false,
+      browserReceivesStandardApiKey: false,
+      errors: []
+    };
+  }
+
+  if (options.preflight.status !== "ready") {
+    return {
+      status: "blocked",
+      getUserMediaCalled: false,
+      startsMediaStream: false,
+      browserReceivesStandardApiKey: false,
+      errors: options.preflight.warnings
+    };
+  }
+
+  const navigatorLike = options.navigatorLike ?? readStageWebRealtimeAudioNavigator();
+  const getUserMedia = navigatorLike?.mediaDevices?.getUserMedia;
+
+  if (!getUserMedia) {
+    return {
+      status: "failed",
+      getUserMediaCalled: false,
+      startsMediaStream: false,
+      browserReceivesStandardApiKey: false,
+      errors: ["Browser microphone capture is unavailable."]
+    };
+  }
+
+  const startPlan = createVoiceCaptureStartPlan(options.preflight);
+
+  try {
+    const stream = await getUserMedia({
+      audio: true,
+      video: false
+    });
+    const track = readFirstAudioTrack(stream);
+
+    if (!track) {
+      return {
+        status: "failed",
+        getUserMediaCalled: true,
+        startsMediaStream: true,
+        browserReceivesStandardApiKey: false,
+        startPlan,
+        errors: ["Browser microphone capture returned no audio track."]
+      };
+    }
+
+    return {
+      status: "ready",
+      getUserMediaCalled: true,
+      startsMediaStream: true,
+      browserReceivesStandardApiKey: false,
+      track,
+      startPlan,
+      errors: []
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      getUserMediaCalled: true,
+      startsMediaStream: false,
+      browserReceivesStandardApiKey: false,
+      startPlan,
+      errors: [
+        error instanceof Error ? error.message : "Browser microphone capture failed."
+      ]
+    };
+  }
 }
 
 function createBrowserRealtimePeerConnection(
@@ -263,6 +395,7 @@ function createRealtimeBridgeStageEvents(
   input: {
     threadId: string;
     timestamp: string;
+    browserSendsAudio: boolean;
     routeUrl?: string;
     errors: string[];
   }
@@ -294,7 +427,9 @@ function createRealtimeBridgeStageEvents(
               : "Realtime SDP bridge blocked.",
         details:
           status === "connected"
-            ? "The browser exchanged SDP through the local broker without receiving a standard API key or sending audio."
+            ? input.browserSendsAudio
+              ? "The browser exchanged SDP through the local broker after attaching an approved local audio track; no standard API key was exposed."
+              : "The browser exchanged SDP through the local broker without receiving a standard API key or sending audio."
             : input.errors.join(" "),
         evidence: input.routeUrl
           ? [
@@ -310,6 +445,27 @@ function createRealtimeBridgeStageEvents(
       }
     }
   ];
+}
+
+function readFirstAudioTrack(
+  stream: StageWebRealtimeAudioStream
+): RealtimeWebrtcAudioTrack | undefined {
+  const [audioTrack] =
+    stream.getAudioTracks?.() ??
+    stream
+      .getTracks?.()
+      .filter((track): track is RealtimeWebrtcAudioTrack => track.kind === "audio") ??
+    [];
+
+  return audioTrack;
+}
+
+function readStageWebRealtimeAudioNavigator():
+  | StageWebRealtimeAudioNavigator
+  | undefined {
+  return typeof navigator === "undefined"
+    ? undefined
+    : (navigator as StageWebRealtimeAudioNavigator);
 }
 
 function readStageWebRealtimeWebrtcEnvValue(): string | undefined {
@@ -362,6 +518,32 @@ function readStageWebRealtimeApprovalEnvValue(): string | undefined {
   };
 
   return meta.env?.[STAGE_WEB_REALTIME_APPROVAL_TOKEN_ENV_VAR];
+}
+
+function readStageWebRealtimeAudioEnvValue(): string | undefined {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeAudioEnabled?: string;
+  };
+
+  if (runtimeConfig.__blackstageRealtimeAudioEnabled) {
+    return runtimeConfig.__blackstageRealtimeAudioEnabled;
+  }
+
+  try {
+    const localEnabled = localStorage.getItem("blackstage.realtimeAudio.enabled");
+
+    if (localEnabled) {
+      return localEnabled;
+    }
+  } catch {
+    // Local runtime config is best-effort; Vite env remains the durable path.
+  }
+
+  const meta = import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  };
+
+  return meta.env?.[STAGE_WEB_REALTIME_AUDIO_ENABLED_ENV_VAR];
 }
 
 function stableHash(value: string): string {
