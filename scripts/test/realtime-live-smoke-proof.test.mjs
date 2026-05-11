@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { loadLocalEnvFile } from "../local-env.mjs";
 import {
   createRealtimeSmokeEnvPlan,
@@ -17,6 +19,10 @@ import {
   resolveRealtimeSmokeProofPath,
   writeRealtimeLiveSmokeProof
 } from "../realtime-live-smoke-proof.mjs";
+
+const PREFLIGHT_SCRIPT_PATH = fileURLToPath(
+  new URL("../preflight-realtime-live.mjs", import.meta.url)
+);
 
 describe("Realtime live smoke proof", () => {
   it("creates redacted proof metadata without browser credentials or audio", () => {
@@ -241,6 +247,48 @@ describe("Realtime live smoke env plan", () => {
       rendered,
       /export BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH='.blackstage\/realtime-smoke\/live-2026-05-11T10-00-00-000Z.json'/
     );
-    assert.equal(rendered.includes("OPENAI_API_KEY="), false);
+    assert.equal(rendered.includes(["OPENAI_API_KEY", "="].join("")), false);
+  });
+});
+
+describe("Realtime live smoke arming", () => {
+  it("does not arm a paid call from .env.local alone", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "blackstage-preflight-"));
+
+    try {
+      await writeFile(
+        join(repoRoot, ".env.local"),
+        [
+          "OPENAI_API_KEY=sk-proj-preflight123",
+          "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER=blackstage-local-test",
+          "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN=approval-token-test",
+          "BLACKSTAGE_REALTIME_LIVE_SMOKE=1"
+        ].join("\n"),
+        "utf8"
+      );
+
+      const result = spawnSync(process.execPath, [PREFLIGHT_SCRIPT_PATH], {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: {
+          PATH: process.env.PATH ?? ""
+        }
+      });
+      const output = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(output.okToRun, false);
+      assert.equal(output.liveSmokeArmedByShell, false);
+      assert.equal(output.localEnvIncludesLiveFlag, true);
+      assert.equal(output.openAiNetworkCallWouldRun, false);
+      assert.equal(output.requiredEnv.OPENAI_API_KEY, "set");
+      assert.equal(result.stdout.includes("sk-proj-preflight123"), false);
+      assert.equal(result.stdout.includes("approval-token-test"), false);
+    } finally {
+      await rm(repoRoot, {
+        recursive: true,
+        force: true
+      });
+    }
   });
 });

@@ -25,17 +25,21 @@ const REQUIRED_ENV_VARS = [
 ];
 const DEFAULT_TIMEOUT_MS = 30_000;
 const CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS = 15_000;
+const shellLiveSmokeArmedAtStartup = process.env[LIVE_SMOKE_ENV_VAR] === "1";
 
 async function main() {
   const localEnv = loadLocalEnvFile();
+  const localEnvIncludesLiveFlag =
+    localEnv.loadedEnvVars.includes(LIVE_SMOKE_ENV_VAR) ||
+    localEnv.skippedEnvVars.includes(LIVE_SMOKE_ENV_VAR);
   const requiredEnv = createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS);
   const missingEnvVars = REQUIRED_ENV_VARS.filter(
     (envVar) => !process.env[envVar]?.trim()
   );
 
-  if (process.env[LIVE_SMOKE_ENV_VAR] !== "1") {
+  if (!shellLiveSmokeArmedAtStartup) {
     console.log(
-      `Skipped live Realtime smoke. Set ${LIVE_SMOKE_ENV_VAR}=1 with local broker/OpenAI env to run. Run pnpm preflight:realtime for redacted readiness.`
+      `Skipped live Realtime smoke. Export ${LIVE_SMOKE_ENV_VAR}=1 in the shell with local broker/OpenAI env to run. Run pnpm preflight:realtime for redacted readiness.`
     );
     await writeProof({
       status: "skipped",
@@ -45,10 +49,7 @@ async function main() {
       missingEnv: missingEnvVars,
       openAiNetworkCallAttempted: false,
       browserSendsAudio: false,
-      notes: [
-        "Live Realtime smoke was not armed; no OpenAI network call ran.",
-        "Cheap-test guard: SDP-only, no browser audio."
-      ]
+      notes: createSkippedNotes(localEnvIncludesLiveFlag)
     });
     return;
   }
@@ -115,6 +116,7 @@ async function main() {
       answerBytes: Buffer.byteLength(answerSdp, "utf8"),
       answerSha256Prefix: answerDigest,
       browserSendsAudio: false,
+      localEnv: summarizeLocalEnvLoad(localEnv),
       notes: [
         "Live Realtime SDP exchange completed through the local broker.",
         `Cheap-test guard: timeout capped at ${CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio disabled.`
@@ -227,16 +229,31 @@ function readTimeoutMs() {
   return Math.min(requestedTimeoutMs, CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS);
 }
 
+function createSkippedNotes(localEnvIncludesLiveFlag) {
+  if (localEnvIncludesLiveFlag) {
+    return [
+      "Live Realtime smoke was not armed because the live flag must be exported in the shell before this script starts.",
+      "Local env files may provide credentials, but they cannot arm a paid OpenAI call by themselves.",
+      "Cheap-test guard: SDP-only, no browser audio."
+    ];
+  }
+
+  return [
+    "Live Realtime smoke was not armed; no OpenAI network call ran.",
+    "Cheap-test guard: SDP-only, no browser audio."
+  ];
+}
+
 main().catch(async (error) => {
   try {
     await writeProof({
       status: "failed",
-      liveSmokeArmed: process.env[LIVE_SMOKE_ENV_VAR] === "1",
+      liveSmokeArmed: shellLiveSmokeArmedAtStartup,
       requiredEnv: createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS),
       localEnv: summarizeLocalEnvLoad(loadLocalEnvFile()),
       missingEnv: REQUIRED_ENV_VARS.filter((envVar) => !process.env[envVar]?.trim()),
       openAiNetworkCallAttempted:
-        process.env[LIVE_SMOKE_ENV_VAR] === "1" &&
+        shellLiveSmokeArmedAtStartup &&
         REQUIRED_ENV_VARS.every((envVar) => process.env[envVar]?.trim()),
       browserSendsAudio: false,
       errorMessage: createSafeRealtimeSmokeErrorMessage(error)
