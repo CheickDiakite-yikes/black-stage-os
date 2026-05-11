@@ -69,7 +69,7 @@ Most recent validation after the root validation gate:
 - `BLACKSTAGE_REALTIME_LIVE_SMOKE=0 pnpm smoke:realtime`: passed in skip-gated mode with no OpenAI network call, no browser audio, and a redacted proof path when configured.
 - `pnpm exec prettier --check ... && git diff --check`: passed for the touched Realtime/Codex preflight scripts, tests, docs, audit, and research files.
 - `pnpm scan:secrets`: passed with no high-confidence secrets across 272 tracked files.
-- `pnpm test`: passed after the cheap Realtime arming-plan slice, including workflow checks, 8 script subtests, 5 memory-core subtests, 28 voice-core Realtime subtests, 17 agent-runtime subtests, 10 stage-broker subtests, and 14 stage-runner subtests.
+- `pnpm test`: passed after the Codex runner preflight slice, including workflow checks, 12 script subtests, 5 memory-core subtests, 28 voice-core Realtime subtests, 17 agent-runtime subtests, 10 stage-broker subtests, and 14 stage-runner subtests.
 - `pnpm typecheck`: passed across 8 of 9 workspace projects.
 - `pnpm lint`: passed.
 - `pnpm --filter @blackstage/stage-web typecheck`: passed after wiring the disabled-by-default local-audio handoff flag into the Realtime bridge.
