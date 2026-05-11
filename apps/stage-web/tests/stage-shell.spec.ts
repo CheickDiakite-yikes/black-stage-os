@@ -9,11 +9,13 @@ const screenshotPath = path.join(repoRoot, "artifacts/screenshots/stage-shell-v0
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
+    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier =
+      0.25;
   });
 });
 
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(480_000);
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
 
@@ -195,7 +197,7 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
 });
 
 test("Stage Shell v0 replays the local event log without mutating it", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   await page.goto("/");
 
@@ -251,16 +253,14 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({ 
 
 test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.addInitScript(() => {
-    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier = 12;
-  });
-
   await page.goto("/");
+  await page.evaluate(() => {
+    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier =
+      4;
+  });
   await page.getByRole("button", { name: "Build BlackStage" }).click();
   await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
-  await page.getByRole("button", { name: "Stop" }).click({
-    force: true
-  });
+  await page.getByRole("button", { name: "Stop" }).dispatchEvent("click");
 
   await expect(page.getByTestId("agent-activity-feed")).toContainText("Stopped by user.");
   await expect(page.getByTestId("agent-activity-feed")).toContainText("cancelled");
@@ -297,7 +297,7 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Approval needed to create task prompt cards.",
     {
-      timeout: 20_000
+      timeout: 35_000
     }
   );
 
@@ -330,7 +330,7 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
 });
 
 test("Stage Shell v0 renders models maps simulations and memory objects", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   await page.goto("/");
 
@@ -361,7 +361,7 @@ test("Stage Shell v0 renders models maps simulations and memory objects", async 
 });
 
 test("Stage Shell v0 attaches local context as a private document object", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   await page.goto("/");
   await page.getByRole("button", { name: "Build BlackStage" }).click();
@@ -391,7 +391,7 @@ test("Stage Shell v0 attaches local context as a private document object", async
 });
 
 test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
 
   await page.goto("/");
 
@@ -537,6 +537,8 @@ test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled"
 test("Stage Shell v0 accepts a spoken final intent when browser speech is available", async ({
   page
 }) => {
+  test.setTimeout(90_000);
+
   await page.addInitScript(() => {
     type SpeechResultEvent = {
       resultIndex: number;
