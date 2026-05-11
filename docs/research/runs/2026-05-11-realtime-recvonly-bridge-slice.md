@@ -20,6 +20,7 @@ Continue the active Blackstage goal from the pushed Realtime smoke/proof state a
 - Kept the startup orb labeled as `Start voice input` even when the Realtime broker is ready, so live-edge wiring does not leak operator language into the first user action.
 - Surfaced approved microphone-track attachment as visible Realtime broker labor before the SDP bridge connects.
 - Parsed Realtime speech-start/speech-stop lifecycle events and verified they surface as visible agent labor.
+- Parsed Realtime output-audio started/stopped/cleared server events and verified started/stopped events surface as visible assistant-audio labor in Stage Web.
 - Drove a fake Realtime server transcript through the retained data-channel listener and verified it became a normal voice intent run that shaped the Stage Shell plan.
 - Drove a fake Realtime assistant text event through the same listener and verified it surfaced in the Stage speech status instead of remaining only in storage.
 - Drove a fake Realtime server tool-call event through the same data-channel listener and verified it became a visible pending Stage approval instead of an executed action.
@@ -45,6 +46,8 @@ The first useful event-streaming proofs should be small: lifecycle events become
 The live edge should still enter through the same object the user already understands: the orb. Secondary controls can remain as operator fallbacks, but the startup surface should not split or rename the user's first action.
 
 When microphone audio is explicitly enabled, the mic handoff itself needs to become visible labor. Otherwise a user can approve a live edge and see `live SDP` without knowing whether local audio was actually attached.
+
+Realtime output audio has its own lifecycle separate from final assistant transcript text. Mapping that lifecycle into broker labor gives the stage an audit trail for when the assistant starts, stops, or clears spoken output.
 
 ## Evidence
 

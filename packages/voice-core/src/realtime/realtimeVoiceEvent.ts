@@ -4,6 +4,9 @@ export type RealtimeVoiceEvent =
   | { type: "voice.final_transcript"; text: string; timestamp: string }
   | { type: "voice.assistant_delta"; textDelta: string; timestamp: string }
   | { type: "voice.assistant_speech"; text: string; timestamp: string }
+  | { type: "voice.output_audio_started"; timestamp: string }
+  | { type: "voice.output_audio_stopped"; timestamp: string }
+  | { type: "voice.output_audio_cleared"; timestamp: string }
   | {
       type: "voice.tool_call_requested";
       callId: string;
@@ -74,6 +77,21 @@ export function parseRealtimeVoiceServerEvent(
             timestamp
           }
         : undefined;
+    case "output_audio_buffer.started":
+      return {
+        type: "voice.output_audio_started",
+        timestamp
+      };
+    case "output_audio_buffer.stopped":
+      return {
+        type: "voice.output_audio_stopped",
+        timestamp
+      };
+    case "output_audio_buffer.cleared":
+      return {
+        type: "voice.output_audio_cleared",
+        timestamp
+      };
     case "response.content_part.done": {
       const part = isRecord(event.part) ? event.part : undefined;
       const text =

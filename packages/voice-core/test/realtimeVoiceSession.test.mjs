@@ -626,6 +626,49 @@ describe("Realtime voice session contracts", () => {
     assert.equal(speechEvent.payload.text, "Intent received. I am shaping the stage.");
   });
 
+  it("maps realtime assistant audio lifecycle into visible agent events", () => {
+    const [startedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.output_audio_started",
+        timestamp: "2026-05-10T23:54:21.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+    const [stoppedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.output_audio_stopped",
+        timestamp: "2026-05-10T23:54:31.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+    const [clearedEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.output_audio_cleared",
+        timestamp: "2026-05-10T23:54:32.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.equal(startedEvent?.type, "agent.progress");
+    assert.equal(startedEvent.payload.type, "started");
+    assert.equal(startedEvent.payload.summary, "Realtime assistant audio started.");
+    assert.equal(stoppedEvent?.type, "agent.progress");
+    assert.equal(stoppedEvent.payload.type, "completed");
+    assert.equal(stoppedEvent.payload.summary, "Realtime assistant audio stopped.");
+    assert.equal(clearedEvent?.type, "agent.progress");
+    assert.equal(clearedEvent.payload.type, "cancelled");
+    assert.equal(clearedEvent.payload.summary, "Realtime assistant audio cleared.");
+  });
+
   it("maps realtime tool calls into Stage approval requests", () => {
     const [stageEvent] = mapRealtimeVoiceEventToStageEvents(
       {
@@ -762,6 +805,40 @@ describe("Realtime voice session contracts", () => {
     assert.deepEqual(stopped, {
       type: "voice.capture_stopped",
       timestamp: "2026-05-10T00:00:04.000Z"
+    });
+  });
+
+  it("parses realtime assistant audio output lifecycle events", () => {
+    const started = parseRealtimeVoiceServerEvent(
+      {
+        type: "output_audio_buffer.started"
+      },
+      "2026-05-10T00:00:05.000Z"
+    );
+    const stopped = parseRealtimeVoiceServerEvent(
+      {
+        type: "output_audio_buffer.stopped"
+      },
+      "2026-05-10T00:00:06.000Z"
+    );
+    const cleared = parseRealtimeVoiceServerEvent(
+      {
+        type: "output_audio_buffer.cleared"
+      },
+      "2026-05-10T00:00:07.000Z"
+    );
+
+    assert.deepEqual(started, {
+      type: "voice.output_audio_started",
+      timestamp: "2026-05-10T00:00:05.000Z"
+    });
+    assert.deepEqual(stopped, {
+      type: "voice.output_audio_stopped",
+      timestamp: "2026-05-10T00:00:06.000Z"
+    });
+    assert.deepEqual(cleared, {
+      type: "voice.output_audio_cleared",
+      timestamp: "2026-05-10T00:00:07.000Z"
     });
   });
 

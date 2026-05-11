@@ -22,7 +22,8 @@ export function mapRealtimeVoiceEventToStageEvents(
             agentName: "Realtime voice broker",
             type: "started",
             summary: "Realtime voice capture started.",
-            details: "The voice edge is listening and will route consequential tool calls through Stage approvals.",
+            details:
+              "The voice edge is listening and will route consequential tool calls through Stage approvals.",
             timestamp: event.timestamp
           }
         }
@@ -46,11 +47,62 @@ export function mapRealtimeVoiceEventToStageEvents(
         {
           type: "assistant.speech",
           payload: {
-            speechId: createEventId(context, "assistant_speech", event.timestamp, event.text),
+            speechId: createEventId(
+              context,
+              "assistant_speech",
+              event.timestamp,
+              event.text
+            ),
             threadId: context.threadId,
             text: event.text,
             spokenAt: event.timestamp,
             source: "stage_status"
+          }
+        }
+      ];
+    case "voice.output_audio_started":
+      return [
+        {
+          type: "agent.progress",
+          payload: {
+            id: createEventId(context, "output_audio_started", event.timestamp),
+            threadId: context.threadId,
+            agentName: "Realtime voice broker",
+            type: "started",
+            summary: "Realtime assistant audio started.",
+            details:
+              "The Realtime server began producing assistant audio for the active stage session.",
+            timestamp: event.timestamp
+          }
+        }
+      ];
+    case "voice.output_audio_stopped":
+      return [
+        {
+          type: "agent.progress",
+          payload: {
+            id: createEventId(context, "output_audio_stopped", event.timestamp),
+            threadId: context.threadId,
+            agentName: "Realtime voice broker",
+            type: "completed",
+            summary: "Realtime assistant audio stopped.",
+            timestamp: event.timestamp
+          }
+        }
+      ];
+    case "voice.output_audio_cleared":
+      return [
+        {
+          type: "agent.progress",
+          payload: {
+            id: createEventId(context, "output_audio_cleared", event.timestamp),
+            threadId: context.threadId,
+            agentName: "Realtime voice broker",
+            type: "cancelled",
+            summary: "Realtime assistant audio cleared.",
+            details:
+              "The Realtime server cleared pending assistant audio, usually after interruption or an explicit clear.",
+            timestamp: event.timestamp
           }
         }
       ];
@@ -67,7 +119,8 @@ export function mapRealtimeVoiceEventToStageEvents(
             riskLevel: "medium",
             proposedBy: "Realtime voice broker",
             scope: "Current intent thread",
-            consequence: "Blackstage may run the requested tool only after explicit approval.",
+            consequence:
+              "Blackstage may run the requested tool only after explicit approval.",
             undoPath: "Reject the approval request to leave the tool call unexecuted.",
             status: "pending",
             createdAt: event.timestamp

@@ -397,6 +397,31 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       }
     ).__blackstageEmitRealtimeServerEvent?.({
+      type: "output_audio_buffer.started"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime assistant audio started."
+  );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "output_audio_buffer.stopped"
+    });
+  });
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime assistant audio stopped."
+  );
+
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
       type: "response.function_call_arguments.done",
       call_id: "call_realtime_prepare_action",
       name: "blackstage.prepare_external_action"
