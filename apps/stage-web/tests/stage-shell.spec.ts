@@ -281,6 +281,73 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   expect(objectUpdatesWereLogged).toBe(true);
 });
 
+test("Stage Shell v0 prepares approved artifacts as harness action packets", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByTestId("artifact-workbench")).toContainText("approved");
+
+  await page
+    .getByTestId("artifact-workbench")
+    .getByRole("button", { name: "Prepare action" })
+    .click({ force: true });
+
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Harness action packet"
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Harness action packet prepared."
+  );
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Approve harness action"
+  );
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "does not contact external systems"
+  );
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Prepared a harness action packet"
+  );
+
+  const actionWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents: Array<{
+        type: string;
+        payload?: {
+          actionType?: string;
+          payload?: {
+            worker?: string;
+            policy?: string;
+          };
+          title?: string;
+        };
+      }>;
+    };
+
+    return snapshot.stageEvents.some(
+      (event) =>
+        event.type === "approval.requested" &&
+        event.payload?.actionType === "tool_call" &&
+        event.payload?.title?.includes("Approve harness action")
+    );
+  });
+
+  expect(actionWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 replays the local event log without mutating it", async ({
   page
 }) => {

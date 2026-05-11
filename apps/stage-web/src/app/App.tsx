@@ -1106,6 +1106,117 @@ export function App() {
     [emitStageEvent, thread.artifacts]
   );
 
+  const prepareArtifactAction = useCallback(
+    (artifactId: string) => {
+      const artifact = thread.artifacts.find(
+        (candidate) => candidate.id === artifactId
+      );
+
+      if (!artifact || artifact.status !== "approved") {
+        return;
+      }
+
+      const preparedAt = new Date().toISOString();
+      const actionId = `artifact_action_${Date.now().toString(36)}`;
+      const actionTaskObject: StageObject = {
+        id: `${actionId}_task`,
+        threadId: artifact.threadId,
+        type: "codex_task_card",
+        title: `Harness action packet: ${artifact.title}`,
+        summary:
+          "Approved artifact converted into a local, approval-gated harness task packet.",
+        payload: {
+          taskId: actionId,
+          artifactId: artifact.id,
+          artifactTitle: artifact.title,
+          controlPlane: "Symphony queue",
+          worker: "Agents SDK manager",
+          status: "awaiting human approval",
+          policy: "No browser-origin mutation. No external system touched.",
+          steps: [
+            {
+              label: "Review artifact",
+              value: "Human-approved content is the input."
+            },
+            {
+              label: "Prepare harness packet",
+              value: "Visible local task card and approval request only."
+            },
+            {
+              label: "Hold for approval",
+              value:
+                "Execution remains blocked until the user approves a later live path."
+            }
+          ]
+        },
+        position: {
+          x: 22,
+          y: 76,
+          z: thread.renderObjects.length + 1
+        },
+        state: "focused",
+        pinned: true,
+        createdAt: preparedAt,
+        updatedAt: preparedAt
+      };
+      const approvalRequest: ApprovalRequest = {
+        id: `${actionId}_approval`,
+        threadId: artifact.threadId,
+        actionType: "tool_call",
+        title: `Approve harness action for ${artifact.title}`,
+        summary:
+          "Prepare a local harness handoff from this artifact. This does not contact external systems.",
+        riskLevel: "medium",
+        proposedBy: "Blackstage harness",
+        scope:
+          "Local action packet only; no browser-origin mutation or provider credential exposure.",
+        consequence:
+          "If approved later, a live harness path could act on the artifact through a separately armed worker.",
+        undoPath:
+          "Rejecting keeps the artifact approved but leaves the prepared action packet inert.",
+        status: "pending",
+        createdAt: preparedAt
+      };
+
+      emitStageEvent({
+        type: "object.created",
+        payload: actionTaskObject
+      });
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `${actionId}_agent_event`,
+          threadId: artifact.threadId,
+          taskId: actionId,
+          agentName: "Harness edge",
+          type: "approval_requested",
+          summary: "Harness action packet prepared.",
+          details:
+            "The approved artifact is ready for a local handoff, but execution is blocked behind approval.",
+          evidence: [
+            {
+              id: `${actionId}_artifact_ref`,
+              label: artifact.title,
+              sourceType: "artifact"
+            }
+          ],
+          timestamp: preparedAt
+        }
+      });
+      emitStageEvent({
+        type: "approval.requested",
+        payload: approvalRequest
+      });
+      emitAssistantSpeech(
+        "Prepared a harness action packet. Approval is required before anything leaves the stage.",
+        {
+          threadId: artifact.threadId
+        }
+      );
+    },
+    [emitAssistantSpeech, emitStageEvent, thread.artifacts, thread.renderObjects.length]
+  );
+
   const attachContext = useCallback(
     async (file: File) => {
       const attachedAt = new Date().toISOString();
@@ -1398,6 +1509,7 @@ export function App() {
       onFocusObject={focusStageObject}
       onMoveObject={moveStageObject}
       onPinObject={toggleStageObjectPin}
+      onPrepareArtifactAction={prepareArtifactAction}
       onReplayTrace={replayStageEvents}
       onResumeAgent={resumeAgentWork}
       onSaveArtifact={saveArtifactRevision}

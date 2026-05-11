@@ -6,6 +6,7 @@ type ArtifactCardProps = {
   artifacts: Artifact[];
   onApproveArtifact: (artifactId: string) => void;
   onExportArtifact: (artifactId: string) => void;
+  onPrepareArtifactAction: (artifactId: string) => void;
   onSaveArtifact: (artifactId: string, body: string) => void;
 };
 
@@ -13,6 +14,7 @@ export function ArtifactCard({
   artifacts,
   onApproveArtifact,
   onExportArtifact,
+  onPrepareArtifactAction,
   onSaveArtifact
 }: ArtifactCardProps) {
   if (artifacts.length === 0) {
@@ -24,6 +26,7 @@ export function ArtifactCard({
       artifacts={artifacts}
       onApproveArtifact={onApproveArtifact}
       onExportArtifact={onExportArtifact}
+      onPrepareArtifactAction={onPrepareArtifactAction}
       onSaveArtifact={onSaveArtifact}
     />
   );
@@ -33,18 +36,25 @@ function ArtifactStack({
   artifacts,
   onApproveArtifact,
   onExportArtifact,
+  onPrepareArtifactAction,
   onSaveArtifact
 }: ArtifactCardProps) {
   const orderedArtifacts = useMemo(() => [...artifacts].reverse(), [artifacts]);
   const activeArtifact = orderedArtifacts[0];
-  const [draftBody, setDraftBody] = useState(() => artifactToEditableText(activeArtifact));
+  const [draftBody, setDraftBody] = useState(() =>
+    artifactToEditableText(activeArtifact)
+  );
 
   useEffect(() => {
     setDraftBody(artifactToEditableText(activeArtifact));
   }, [activeArtifact]);
 
   return (
-    <section className="artifact-stack" aria-label="Artifacts" data-testid="artifact-stack">
+    <section
+      className="artifact-stack"
+      aria-label="Artifacts"
+      data-testid="artifact-stack"
+    >
       <article className="artifact-workbench" data-testid="artifact-workbench">
         <div className="panel-heading">
           <span>Artifact workbench</span>
@@ -67,24 +77,39 @@ function ArtifactStack({
           <button
             type="button"
             onClick={() => onApproveArtifact(activeArtifact.id)}
-            disabled={activeArtifact.status === "approved" || activeArtifact.status === "exported"}
+            disabled={
+              activeArtifact.status === "approved" ||
+              activeArtifact.status === "exported"
+            }
           >
             Approve artifact
           </button>
           <button type="button" onClick={() => onExportArtifact(activeArtifact.id)}>
             Export markdown
           </button>
+          <button
+            type="button"
+            onClick={() => onPrepareArtifactAction(activeArtifact.id)}
+            disabled={activeArtifact.status !== "approved"}
+          >
+            Prepare action
+          </button>
         </div>
       </article>
       {orderedArtifacts.map((artifact) => (
-        <article key={artifact.id} className={`artifact-card artifact-card-${artifact.status}`}>
+        <article
+          key={artifact.id}
+          className={`artifact-card artifact-card-${artifact.status}`}
+        >
           <div className="panel-heading">
             <span>{artifact.type.replace("_", " ")}</span>
             <strong>{artifact.status}</strong>
           </div>
           <h2>{artifact.title}</h2>
           <ArtifactContent content={artifact.content} />
-          <p className="artifact-provenance">{artifact.provenance.length} provenance reference</p>
+          <p className="artifact-provenance">
+            {artifact.provenance.length} provenance reference
+          </p>
         </article>
       ))}
     </section>
@@ -121,7 +146,13 @@ function ArtifactContent({ content }: { content: unknown }) {
 }
 
 function findArtifactList(content: Record<string, unknown>): unknown[] | undefined {
-  const listKeys = ["actions", "sections", "acceptanceCriteria", "insights", "nextTests"];
+  const listKeys = [
+    "actions",
+    "sections",
+    "acceptanceCriteria",
+    "insights",
+    "nextTests"
+  ];
 
   for (const key of listKeys) {
     const value = content[key];

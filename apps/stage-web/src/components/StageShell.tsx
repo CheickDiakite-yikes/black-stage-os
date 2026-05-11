@@ -71,6 +71,7 @@ type StageShellProps = {
     }
   ) => void;
   onPinObject: (objectId: string) => void;
+  onPrepareArtifactAction: (artifactId: string) => void;
   onReplayTrace: () => void;
   onResumeAgent: () => void;
   onSaveArtifact: (artifactId: string, body: string) => void;
@@ -114,6 +115,7 @@ export function StageShell({
   onFocusObject,
   onMoveObject,
   onPinObject,
+  onPrepareArtifactAction,
   onReplayTrace,
   onResumeAgent,
   onSaveArtifact,
@@ -410,6 +412,7 @@ export function StageShell({
           artifacts={thread.artifacts}
           onApproveArtifact={onApproveArtifact}
           onExportArtifact={onExportArtifact}
+          onPrepareArtifactAction={onPrepareArtifactAction}
           onSaveArtifact={onSaveArtifact}
         />
       </section>
