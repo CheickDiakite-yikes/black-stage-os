@@ -100,6 +100,12 @@ const REVIEW_MEMORY_COMMANDS = new Set([
   "show memory review",
   "show memories"
 ]);
+const ARTIFACT_REVISION_PREFIXES = [
+  "revise artifact to ",
+  "update artifact to ",
+  "replace artifact with ",
+  "edit artifact to "
+];
 const REALTIME_LIVE_APPROVAL_PREFIX = "approval_realtime_live_";
 
 type BlackstageTestWindow = Window & {
@@ -427,6 +433,39 @@ export function App() {
     [emitStageEvent, thread.renderObjects]
   );
 
+  const applyArtifactRevisionCommand = useCallback(
+    (intentText: string, source: IntentSubmissionSource = "text") => {
+      const revisionText = parseArtifactRevisionCommand(intentText);
+      const artifact = thread.artifacts.at(-1);
+
+      if (!revisionText || !artifact) {
+        return undefined;
+      }
+
+      const timestamp = new Date().toISOString();
+
+      emitStageEvent({
+        type: "user.intervention",
+        payload: {
+          interventionId: `intervention_artifact_revision_${Date.now().toString(36)}`,
+          threadId: artifact.threadId,
+          interventionType: "edit",
+          commandInputMode: source === "voice" ? "voice" : "text",
+          commandText: intentText,
+          targetObjectId: artifact.id,
+          timestamp
+        }
+      });
+      emitStageEvent({
+        type: "artifact.updated",
+        payload: artifactWithEditedText(artifact, revisionText)
+      });
+
+      return artifact;
+    },
+    [emitStageEvent, thread.artifacts]
+  );
+
   const requestMemoryWrite = useCallback(
     (intentText: string) => {
       const memoryText = parseMemoryWriteCommand(intentText);
@@ -632,6 +671,17 @@ export function App() {
         return;
       }
 
+      const revisedArtifact = !scenarioId
+        ? applyArtifactRevisionCommand(intentText, source)
+        : undefined;
+
+      if (revisedArtifact) {
+        emitAssistantSpeech(`Updated ${revisedArtifact.title}.`, {
+          threadId: revisedArtifact.threadId
+        });
+        return;
+      }
+
       const appliedCommand = !scenarioId
         ? applyStageCommand(intentText, source)
         : undefined;
@@ -668,6 +718,7 @@ export function App() {
     },
     [
       applyStageCommand,
+      applyArtifactRevisionCommand,
       emitAssistantSpeech,
       requestMemoryDelete,
       requestMemoryRecall,
@@ -1717,6 +1768,22 @@ function parseMemoryRecallCommand(intentText: string): string | undefined {
 
 function parseMemoryReviewCommand(intentText: string): boolean {
   return REVIEW_MEMORY_COMMANDS.has(intentText.trim().toLowerCase());
+}
+
+function parseArtifactRevisionCommand(intentText: string): string | undefined {
+  const normalizedIntent = intentText.trim();
+  const lowerIntent = normalizedIntent.toLowerCase();
+  const prefix = ARTIFACT_REVISION_PREFIXES.find((candidate) =>
+    lowerIntent.startsWith(candidate)
+  );
+
+  if (!prefix) {
+    return undefined;
+  }
+
+  const revisionText = normalizedIntent.slice(prefix.length).trim();
+
+  return revisionText.length > 0 ? revisionText : undefined;
 }
 
 function createMemoryVaultObject(

@@ -929,3 +929,61 @@ test("Stage Shell v0 applies spoken correction commands to stage objects", async
 
   expect(commandEvidence).toBe(true);
 });
+
+test("Stage Shell v0 applies spoken artifact revision commands", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  await installFakeSpeechRecognition(page);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("artifact-stack")).toContainText(
+    "Codex Task Brief: Build Stage Shell v0"
+  );
+
+  await page.getByRole("button", { name: "Speak" }).click({
+    force: true
+  });
+  await emitFakeSpeechFinal(
+    page,
+    "revise artifact to Ship the black stage as a quiet command center"
+  );
+
+  await expect(page.getByTestId("artifact-workbench")).toContainText("review");
+  await expect(page.getByTestId("artifact-editor")).toHaveValue(
+    "Ship the black stage as a quiet command center"
+  );
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Updated Codex Task Brief: Build Stage Shell v0."
+  );
+
+  const revisionEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              intervention_type?: string;
+              command_input_mode?: string;
+              command_text_redacted?: string;
+            };
+          }>;
+        })
+      : undefined;
+
+    return (
+      snapshot?.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.intervention_type === "edit" &&
+          event.payload?.command_input_mode === "voice" &&
+          event.payload?.command_text_redacted ===
+            "revise artifact to Ship the black stage as a quiet command center"
+      ) ?? false
+    );
+  });
+
+  expect(revisionEvidence).toBe(true);
+});
