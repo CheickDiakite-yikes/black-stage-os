@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  createVoiceCaptureStartPlan,
+  inspectVoiceCapturePreflight
+} from "../dist/capture/voiceCapture.js";
+import {
   createRealtimeVoiceBrokerPlan,
   inspectRealtimeVoiceBrokerReadiness
 } from "../dist/realtime/realtimeVoiceBroker.js";
@@ -28,6 +32,54 @@ import {
 } from "../dist/realtime/realtimeVoiceSession.js";
 
 describe("Realtime voice session contracts", () => {
+  it("preflights microphone capture without starting media or sending audio", () => {
+    const preflight = inspectVoiceCapturePreflight({
+      mediaDevicesAvailable: true,
+      getUserMediaAvailable: true,
+      permissionState: "prompt",
+      explicitUserGesture: false,
+      realtimeApprovalArmed: false
+    });
+
+    assert.equal(preflight.status, "needs_user_gesture");
+    assert.equal(preflight.browserCanRequestMicrophone, false);
+    assert.equal(preflight.startsMediaStream, false);
+    assert.equal(preflight.browserSendsAudioToProvider, false);
+    assert.equal(preflight.requiresUserGesture, true);
+    assert.equal(preflight.requiresRealtimeApproval, true);
+    assert.ok(
+      preflight.warnings.some((warning) => warning.includes("explicit user gesture"))
+    );
+  });
+
+  it("creates a microphone start plan only after gesture, approval, and permission", () => {
+    const blocked = inspectVoiceCapturePreflight({
+      mediaDevicesAvailable: true,
+      getUserMediaAvailable: true,
+      permissionState: "granted",
+      explicitUserGesture: true,
+      realtimeApprovalArmed: false
+    });
+
+    assert.equal(blocked.status, "needs_permission");
+    assert.throws(() => createVoiceCaptureStartPlan(blocked), /not ready/);
+
+    const ready = inspectVoiceCapturePreflight({
+      mediaDevicesAvailable: true,
+      getUserMediaAvailable: true,
+      permissionState: "granted",
+      explicitUserGesture: true,
+      realtimeApprovalArmed: true
+    });
+    const plan = createVoiceCaptureStartPlan(ready);
+
+    assert.equal(ready.status, "ready");
+    assert.equal(ready.browserCanRequestMicrophone, true);
+    assert.equal(plan.startsMediaStream, true);
+    assert.equal(plan.browserSendsAudioToProvider, false);
+    assert.equal(plan.handoff, "local_webrtc_track_only");
+  });
+
   it("defaults to the verified realtime voice model in simulation mode", () => {
     const config = createRealtimeVoiceSessionConfig({
       sessionId: "voice_session_1",
