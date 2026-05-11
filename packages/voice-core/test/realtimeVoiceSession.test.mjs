@@ -725,6 +725,7 @@ describe("Realtime voice session contracts", () => {
         type: "voice.tool_call_requested",
         callId: "call_find_files",
         toolName: "find_files",
+        argumentsJson: '{"query":"*.ts"}',
         requiresApproval: true,
         timestamp: "2026-05-10T23:54:00.000Z"
       },
@@ -738,6 +739,12 @@ describe("Realtime voice session contracts", () => {
     assert.equal(stageEvent.payload.actionType, "tool_call");
     assert.equal(stageEvent.payload.status, "pending");
     assert.equal(stageEvent.payload.proposedBy, "Realtime voice broker");
+    assert.deepEqual(stageEvent.payload.toolCall, {
+      provider: "openai_realtime",
+      callId: "call_find_files",
+      toolName: "find_files",
+      argumentsJson: '{"query":"*.ts"}'
+    });
   });
 
   it("maps realtime capture lifecycle into visible agent events", () => {
@@ -931,7 +938,8 @@ describe("Realtime voice session contracts", () => {
       {
         type: "response.function_call_arguments.done",
         call_id: "call_realtime_browser",
-        name: "open_browser"
+        name: "open_browser",
+        arguments: '{"url":"https://example.com"}'
       },
       "2026-05-10T00:00:00.000Z"
     );
@@ -940,6 +948,7 @@ describe("Realtime voice session contracts", () => {
       type: "voice.tool_call_requested",
       callId: "call_realtime_browser",
       toolName: "open_browser",
+      argumentsJson: '{"url":"https://example.com"}',
       requiresApproval: true,
       timestamp: "2026-05-10T00:00:00.000Z"
     });

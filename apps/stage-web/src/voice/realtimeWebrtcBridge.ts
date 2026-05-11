@@ -53,10 +53,21 @@ export type StageWebRealtimeBridgeResult = {
   connection?: StageWebRealtimeBridgeConnection;
 };
 
+export type StageWebRealtimeToolResultInput = {
+  callId: string;
+  output: Record<string, unknown>;
+};
+
 export type StageWebRealtimeBridgeConnection = Pick<
   RealtimeWebrtcPeerConnection,
   "close"
->;
+> & {
+  sendToolResult?: (input: StageWebRealtimeToolResultInput) => boolean;
+};
+
+type StageWebRealtimeWritablePeerConnection = RealtimeWebrtcPeerConnection & {
+  sendToolResult?: (input: StageWebRealtimeToolResultInput) => boolean;
+};
 
 export type StageWebRealtimeBridgeOptions = {
   readiness: RealtimeBrokerClientReadiness;
@@ -167,7 +178,7 @@ export async function startStageWebRealtimeBridge(
 ): Promise<StageWebRealtimeBridgeResult> {
   const timestamp = options.now?.() ?? new Date().toISOString();
   const emitStageEvents = options.emitStageEvents ?? (() => undefined);
-  let retainedConnection: RealtimeWebrtcPeerConnection | undefined;
+  let retainedConnection: StageWebRealtimeWritablePeerConnection | undefined;
   const createPeerConnection =
     options.createPeerConnection ??
     (() =>
@@ -183,7 +194,8 @@ export async function startStageWebRealtimeBridge(
         }
       }));
   const createRetainedPeerConnection = () => {
-    retainedConnection = createPeerConnection();
+    retainedConnection =
+      createPeerConnection() as StageWebRealtimeWritablePeerConnection;
 
     return retainedConnection;
   };
@@ -237,7 +249,12 @@ export async function startStageWebRealtimeBridge(
     },
     stageEvents,
     connection:
-      exchange.status === "connected" ? { close: retainedConnection?.close } : undefined
+      exchange.status === "connected"
+        ? {
+            close: retainedConnection?.close?.bind(retainedConnection),
+            sendToolResult: retainedConnection?.sendToolResult?.bind(retainedConnection)
+          }
+        : undefined
   };
 }
 
@@ -407,12 +424,13 @@ export function createStageWebRealtimeAudioTrackStageEvent(
 
 function createBrowserRealtimePeerConnection(
   onMessage: (message: unknown) => void
-): RealtimeWebrtcPeerConnection {
+): StageWebRealtimeWritablePeerConnection {
   const PeerConnection = globalThis.RTCPeerConnection;
   const textProbe = readStageWebRealtimeTextProbe();
   const toolProbe = readStageWebRealtimeToolProbe();
   const debugEnabled = readStageWebRealtimeDebugEnabled();
   const debugStartedAt = Date.now();
+  let channel: RTCDataChannel | undefined;
   let toolProbeSent = false;
 
   if (!PeerConnection) {
@@ -423,9 +441,10 @@ function createBrowserRealtimePeerConnection(
 
   return {
     createDataChannel(label) {
-      const channel = peerConnection.createDataChannel(label);
+      const dataChannel = peerConnection.createDataChannel(label);
+      channel = dataChannel;
 
-      channel.addEventListener("message", (event) => {
+      dataChannel.addEventListener("message", (event) => {
         recordStageWebRealtimeDebugEvent("server", event.data, {
           enabled: debugEnabled,
           startedAt: debugStartedAt
@@ -437,23 +456,23 @@ function createBrowserRealtimePeerConnection(
           realtimeDataChannelMessageEndsResponse(event.data)
         ) {
           toolProbeSent = true;
-          sendStageWebRealtimeToolProbe(channel, toolProbe, {
+          sendStageWebRealtimeToolProbe(dataChannel, toolProbe, {
             enabled: debugEnabled,
             startedAt: debugStartedAt
           });
         }
       });
       if (textProbe) {
-        channel.addEventListener("open", () => {
-          sendStageWebRealtimeTextProbe(channel, textProbe, {
+        dataChannel.addEventListener("open", () => {
+          sendStageWebRealtimeTextProbe(dataChannel, textProbe, {
             enabled: debugEnabled,
             startedAt: debugStartedAt
           });
         });
       } else if (toolProbe) {
-        channel.addEventListener("open", () => {
+        dataChannel.addEventListener("open", () => {
           toolProbeSent = true;
-          sendStageWebRealtimeToolProbe(channel, toolProbe, {
+          sendStageWebRealtimeToolProbe(dataChannel, toolProbe, {
             enabled: debugEnabled,
             startedAt: debugStartedAt
           });
@@ -461,7 +480,7 @@ function createBrowserRealtimePeerConnection(
       }
 
       return {
-        label: channel.label
+        label: dataChannel.label
       };
     },
     async createOffer() {
@@ -480,6 +499,17 @@ function createBrowserRealtimePeerConnection(
     },
     close() {
       peerConnection.close();
+    },
+    sendToolResult(input) {
+      if (!channel || channel.readyState !== "open") {
+        return false;
+      }
+
+      sendStageWebRealtimeToolResult(channel, input, {
+        enabled: debugEnabled,
+        startedAt: debugStartedAt
+      });
+      return true;
     },
     addTrack(track) {
       peerConnection.addTrack(track as MediaStreamTrack);
@@ -873,6 +903,26 @@ export type StageWebRealtimeToolProbeClientEvent =
       };
     };
 
+export type StageWebRealtimeToolResultClientEvent =
+  | {
+      type: "conversation.item.create";
+      event_id: string;
+      item: {
+        type: "function_call_output";
+        call_id: string;
+        output: string;
+      };
+    }
+  | {
+      type: "response.create";
+      event_id: string;
+      response: {
+        output_modalities: ["text"];
+        instructions: string;
+        max_output_tokens: 48;
+      };
+    };
+
 export type StageWebRealtimeDebugEvent = {
   direction: "client" | "server";
   type: string;
@@ -973,6 +1023,33 @@ export function createStageWebRealtimeToolProbeClientEvents(
   ];
 }
 
+export function createStageWebRealtimeToolResultClientEvents(
+  input: StageWebRealtimeToolResultInput,
+  resultId = stableHash(`${input.callId}:${JSON.stringify(input.output)}`)
+): StageWebRealtimeToolResultClientEvent[] {
+  return [
+    {
+      type: "conversation.item.create",
+      event_id: `stage_web_tool_result_item_${resultId}`,
+      item: {
+        type: "function_call_output",
+        call_id: input.callId,
+        output: JSON.stringify(input.output)
+      }
+    },
+    {
+      type: "response.create",
+      event_id: `stage_web_tool_result_response_${resultId}`,
+      response: {
+        output_modalities: ["text"],
+        instructions:
+          "Acknowledge the approved local Blackstage tool result in one calm sentence.",
+        max_output_tokens: 48
+      }
+    }
+  ];
+}
+
 function sendStageWebRealtimeTextProbe(
   channel: RTCDataChannel,
   promptText: string,
@@ -998,6 +1075,22 @@ function sendStageWebRealtimeToolProbe(
   }
 ) {
   const clientEvents = createStageWebRealtimeToolProbeClientEvents(promptText);
+
+  clientEvents.forEach((clientEvent) => {
+    recordStageWebRealtimeDebugEvent("client", clientEvent, debug);
+    channel.send(JSON.stringify(clientEvent));
+  });
+}
+
+function sendStageWebRealtimeToolResult(
+  channel: RTCDataChannel,
+  input: StageWebRealtimeToolResultInput,
+  debug: {
+    enabled: boolean;
+    startedAt: number;
+  }
+) {
+  const clientEvents = createStageWebRealtimeToolResultClientEvents(input);
 
   clientEvents.forEach((clientEvent) => {
     recordStageWebRealtimeDebugEvent("client", clientEvent, debug);

@@ -169,7 +169,13 @@ export function mapRealtimeVoiceEventToStageEvents(
               "Blackstage may run the requested tool only after explicit approval.",
             undoPath: "Reject the approval request to leave the tool call unexecuted.",
             status: "pending",
-            createdAt: event.timestamp
+            createdAt: event.timestamp,
+            toolCall: {
+              provider: "openai_realtime",
+              callId: event.callId,
+              toolName: event.toolName,
+              argumentsJson: event.argumentsJson
+            }
           }
         }
       ];

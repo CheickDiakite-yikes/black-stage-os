@@ -14,6 +14,7 @@ export type RealtimeVoiceEvent =
       type: "voice.tool_call_requested";
       callId: string;
       toolName: string;
+      argumentsJson?: string;
       requiresApproval: true;
       timestamp: string;
     }
@@ -129,12 +130,14 @@ export function parseRealtimeVoiceServerEvent(
       const callId =
         readStringField(event, "call_id") ?? readStringField(event, "callId");
       const toolName = readStringField(event, "name") ?? "unknown_realtime_tool";
+      const argumentsJson = readStringField(event, "arguments");
 
       return callId
         ? {
             type: "voice.tool_call_requested",
             callId,
             toolName,
+            argumentsJson,
             requiresApproval: true,
             timestamp
           }

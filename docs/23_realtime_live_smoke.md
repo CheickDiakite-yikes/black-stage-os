@@ -76,6 +76,14 @@ writes a redacted debug summary with event types, tool names, and elapsed timing
 The UI smoke still sends no microphone audio, exposes no standard API key to the
 browser, stores no raw payloads in the proof, and stays capped by the cheap guard.
 
+The browser bridge now has an approval-resolved local tool path for the same
+function-call shape. After the human approves the Realtime tool request,
+Stage Web can run the safe `blackstage.prepare_external_action` adapter, render
+the result as stage work plus a review artifact, and send a `function_call_output`
+item back over the already-open data channel when it is writable. The local tool
+result records `externalSideEffects: false` and does not create another broker
+POST, start microphone capture, or store raw provider payloads.
+
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
 To generate the non-API-key arming values for a controlled local shell, run:

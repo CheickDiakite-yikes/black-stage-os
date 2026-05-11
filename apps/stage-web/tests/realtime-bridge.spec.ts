@@ -28,6 +28,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       __blackstageClosedPeerConnections?: number;
       __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       __blackstageGetUserMediaCalls?: number;
+      __blackstageRealtimeClientEvents?: unknown[];
       __blackstageRealtimeTransceivers?: string[];
     };
 
@@ -38,6 +39,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     browserWindow.__blackstageTestDelayMultiplier = 0.1;
     browserWindow.__blackstageClosedPeerConnections = 0;
     browserWindow.__blackstageGetUserMediaCalls = 0;
+    browserWindow.__blackstageRealtimeClientEvents = [];
     browserWindow.__blackstageRealtimeTransceivers = [];
     window.localStorage.removeItem("blackstage.realtimeAudio.enabled");
     window.localStorage.setItem(
@@ -60,6 +62,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       createDataChannel(label: "oai-events") {
         return {
           label,
+          readyState: "open",
           addEventListener(
             eventName: "message",
             handler: (event: { data: string }) => void
@@ -71,6 +74,9 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
                 });
               };
             }
+          },
+          send(payload: string) {
+            browserWindow.__blackstageRealtimeClientEvents?.push(JSON.parse(payload));
           }
         };
       }
@@ -525,6 +531,11 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
               proposedBy?: string;
               status?: string;
               title?: string;
+              toolCall?: {
+                callId?: string;
+                provider?: string;
+                toolName?: string;
+              };
             };
             type?: string;
           }>;
@@ -537,12 +548,110 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         event.payload?.actionType === "tool_call" &&
         event.payload?.proposedBy === "Realtime voice broker" &&
         event.payload?.status === "pending" &&
+        event.payload?.toolCall?.provider === "openai_realtime" &&
+        event.payload?.toolCall?.callId === "call_realtime_prepare_action" &&
+        event.payload?.toolCall?.toolName === "blackstage.prepare_external_action" &&
         event.payload?.title ===
           "Approve realtime tool: blackstage.prepare_external_action"
     );
   });
 
   expect(toolApprovalEvidence).toBe(true);
+  expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(1);
+  await page
+    .getByTestId("approval-card")
+    .getByRole("button", { name: "Approve" })
+    .click({ force: true });
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Realtime tool result: blackstage.prepare_external_action"
+  );
+  await expect(page.getByTestId("artifact-stack")).toContainText(
+    "Realtime Tool Result: blackstage.prepare_external_action"
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime tool executed locally."
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Realtime tool output returned to the live model."
+  );
+
+  const toolResultEvidence = await page.evaluate(() => {
+    const browserWindow = window as Window & {
+      __blackstageRealtimeClientEvents?: Array<{
+        item?: {
+          call_id?: string;
+          output?: string;
+          type?: string;
+        };
+        response?: {
+          output_modalities?: string[];
+        };
+        type?: string;
+      }>;
+    };
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          stageEvents?: Array<{
+            payload?: {
+              content?: {
+                output?: {
+                  externalSideEffects?: boolean;
+                  status?: string;
+                };
+              };
+              status?: string;
+              title?: string;
+            };
+            type?: string;
+          }>;
+        })
+      : undefined;
+    const clientEvents = browserWindow.__blackstageRealtimeClientEvents ?? [];
+    const functionOutputEvent = clientEvents.find(
+      (event) =>
+        event.type === "conversation.item.create" &&
+        event.item?.type === "function_call_output"
+    );
+    const responseCreateEvent = clientEvents.find(
+      (event) =>
+        event.type === "response.create" &&
+        event.response?.output_modalities?.includes("text")
+    );
+    const parsedOutput =
+      functionOutputEvent?.item?.output &&
+      (JSON.parse(functionOutputEvent.item.output) as {
+        callId?: string;
+        externalSideEffects?: boolean;
+        status?: string;
+      });
+    const resultArtifactWasLogged = (snapshot?.stageEvents ?? []).some(
+      (event) =>
+        event.type === "artifact.created" &&
+        event.payload?.title ===
+          "Realtime Tool Result: blackstage.prepare_external_action" &&
+        event.payload.content?.output?.status === "completed" &&
+        event.payload.content.output.externalSideEffects === false
+    );
+
+    return {
+      callId: functionOutputEvent?.item?.call_id,
+      outputCallId: parsedOutput?.callId,
+      outputStatus: parsedOutput?.status,
+      outputExternalSideEffects: parsedOutput?.externalSideEffects,
+      responseCreateSent: Boolean(responseCreateEvent),
+      resultArtifactWasLogged
+    };
+  });
+
+  expect(toolResultEvidence).toEqual({
+    callId: "call_realtime_prepare_action",
+    outputCallId: "call_realtime_prepare_action",
+    outputStatus: "completed",
+    outputExternalSideEffects: false,
+    responseCreateSent: true,
+    resultArtifactWasLogged: true
+  });
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(1);
   await page.evaluate(() => {
     (

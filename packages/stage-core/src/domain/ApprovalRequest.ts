@@ -16,12 +16,14 @@ export type ApprovalActionType =
 
 export type ApprovalRiskLevel = "low" | "medium" | "high" | "critical";
 
-export type ApprovalStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "edited"
-  | "expired";
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "edited" | "expired";
+
+export type ApprovalToolCall = {
+  provider: "openai_realtime" | "local_harness";
+  callId: string;
+  toolName: string;
+  argumentsJson?: string;
+};
 
 export type ApprovalRequest = {
   id: string;
@@ -37,4 +39,5 @@ export type ApprovalRequest = {
   status: ApprovalStatus;
   createdAt: IsoTimestamp;
   resolvedAt?: IsoTimestamp;
+  toolCall?: ApprovalToolCall;
 };

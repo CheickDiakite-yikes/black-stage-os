@@ -54,6 +54,10 @@ import {
   createDefaultStageWebRealtimeMicPreflight
 } from "../voice/realtimeMicPreflight";
 import {
+  canExecuteStageWebRealtimeTool,
+  createStageWebRealtimeToolExecution
+} from "../voice/realtimeToolExecution";
+import {
   checkStageWebHarnessRunnerProofs,
   checkStageWebHarnessRunnerSnapshot,
   checkStageWebHarnessRunnerReadiness,
@@ -895,6 +899,19 @@ export function App() {
       }
 
       const nextSessionId = sessionId || createStageSession().sessionId;
+      const submittedAt = new Date().toISOString();
+      const intentSubmittedEvent: StageEvent = {
+        type: "intent.submitted",
+        payload: {
+          rawText: intentText,
+          submittedAt,
+          inputMode: source === "voice" ? "voice" : "text"
+        }
+      };
+      const intentResearchEvent = researchEventFromStageEvent(
+        nextSessionId,
+        intentSubmittedEvent
+      );
       const run = createSimulatedStageRun({
         intentText,
         inputMode: source === "voice" ? "voice" : "text",
@@ -905,8 +922,8 @@ export function App() {
       setSessionId(nextSessionId);
       setThread(run.thread);
       setActiveScenario(run.scenario);
-      setResearchEvents([]);
-      setStageEvents([]);
+      setResearchEvents(intentResearchEvent ? [intentResearchEvent] : []);
+      setStageEvents([intentSubmittedEvent]);
       setIsReplaying(false);
       setApprovalExplanationVisible(false);
       scheduleTimedEvents(run.steps);
@@ -1064,6 +1081,90 @@ export function App() {
         emitAssistantSpeech("Approved. Opening the live Realtime edge.", {
           threadId: pendingApproval.threadId
         });
+      }
+      return;
+    }
+
+    const pendingRealtimeToolApproval = thread.approvals
+      .filter(
+        (candidate) =>
+          candidate.status === "pending" && canExecuteStageWebRealtimeTool(candidate)
+      )
+      .at(-1);
+
+    if (pendingRealtimeToolApproval) {
+      const realtimeToolApproval = pendingRealtimeToolApproval;
+      const approvedAt = new Date().toISOString();
+      const execution = createStageWebRealtimeToolExecution(realtimeToolApproval, {
+        executedAt: approvedAt,
+        zIndex: thread.renderObjects.length + 1
+      });
+
+      emitStageEvent({
+        type: "approval.resolved",
+        payload: {
+          approvalId: realtimeToolApproval.id,
+          threadId: realtimeToolApproval.threadId,
+          status: "approved",
+          resolvedAt: approvedAt,
+          userRequestedExplanation: false
+        }
+      });
+
+      if (!execution) {
+        emitStageEvent({
+          type: "agent.progress",
+          payload: {
+            id: `realtime_tool_failed_${Date.now().toString(36)}`,
+            threadId: realtimeToolApproval.threadId,
+            taskId: realtimeToolApproval.toolCall?.callId,
+            agentName: "Realtime tool runner",
+            type: "failed",
+            summary: "Realtime tool could not run.",
+            details: "The requested tool was not in the local approved-tool registry.",
+            timestamp: approvedAt
+          }
+        });
+        setApprovalExplanationVisible(false);
+        return;
+      }
+
+      execution.stageEvents.forEach((event) => emitStageEvent(event));
+
+      const sentToRealtime =
+        realtimeBridgeConnectionRef.current?.sendToolResult?.({
+          callId: execution.functionOutput.callId,
+          output: execution.functionOutput
+        }) === true;
+
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `realtime_tool_output_${Date.now().toString(36)}`,
+          threadId: realtimeToolApproval.threadId,
+          taskId: execution.functionOutput.actionPacketId,
+          agentName: "Realtime tool runner",
+          type: sentToRealtime ? "completed" : "blocked",
+          summary: sentToRealtime
+            ? "Realtime tool output returned to the live model."
+            : "Realtime tool output prepared locally.",
+          details: sentToRealtime
+            ? "The approved local function output was sent through the existing Realtime data channel."
+            : "No writable Realtime data channel was available, so the function output stayed in the local stage trace.",
+          timestamp: approvedAt
+        }
+      });
+      setApprovalExplanationVisible(false);
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech(
+          sentToRealtime
+            ? "Approved. I ran the local tool and returned the result."
+            : "Approved. I ran the local tool and kept the result on stage.",
+          {
+            threadId: realtimeToolApproval.threadId
+          }
+        );
       }
       return;
     }
