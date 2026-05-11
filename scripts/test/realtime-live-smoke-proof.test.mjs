@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
+  createRealtimeSmokeEnvPlan,
+  createRealtimeSmokeSafetyIdentifier,
+  renderRealtimeSmokeEnvPlan
+} from "../prepare-realtime-smoke-env.mjs";
+import {
   REALTIME_SMOKE_PROOF_KIND,
   createRealtimeLiveSmokeProof,
   createRequiredEnvStatus,
@@ -105,5 +110,53 @@ describe("Realtime live smoke proof", () => {
       ),
       "Live Realtime smoke failed with protocol output; raw SDP omitted."
     );
+  });
+});
+
+describe("Realtime live smoke env plan", () => {
+  it("creates stable safety identifiers without exposing the raw repo path", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "blackstage-env-plan-"));
+
+    try {
+      const identifier = createRealtimeSmokeSafetyIdentifier(repoRoot);
+
+      assert.match(identifier, /^blackstage-local-[a-f0-9]{20}$/);
+      assert.equal(identifier.includes(repoRoot), false);
+      assert.equal(identifier, createRealtimeSmokeSafetyIdentifier(repoRoot));
+    } finally {
+      await rm(repoRoot, {
+        recursive: true,
+        force: true
+      });
+    }
+  });
+
+  it("renders shell-only exports without provider credentials", () => {
+    const plan = createRealtimeSmokeEnvPlan({
+      repoRoot: "/tmp/blackstage",
+      createdAt: "2026-05-11T10:00:00.000Z",
+      approvalToken: "token-demo",
+      safetyIdentifier: "blackstage-local-demo",
+      openAiApiKeyStatus: "set"
+    });
+    const rendered = renderRealtimeSmokeEnvPlan(plan);
+
+    assert.equal(plan.writesEnvFile, false);
+    assert.equal(plan.browserReceivesStandardApiKey, false);
+    assert.equal(plan.openAiNetworkCallWouldRunAfterExport, true);
+    assert.match(rendered, /export BLACKSTAGE_REALTIME_LIVE_SMOKE='1'/);
+    assert.match(
+      rendered,
+      /export BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER='blackstage-local-demo'/
+    );
+    assert.match(
+      rendered,
+      /export BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN='token-demo'/
+    );
+    assert.match(
+      rendered,
+      /export BLACKSTAGE_REALTIME_SMOKE_PROOF_PATH='.blackstage\/realtime-smoke\/live-2026-05-11T10-00-00-000Z.json'/
+    );
+    assert.equal(rendered.includes("OPENAI_API_KEY="), false);
   });
 });

@@ -22,6 +22,7 @@
     "lint": "eslint .",
     "scan:secrets": "node scripts/scan-secrets.mjs",
     "preflight:realtime": "node scripts/preflight-realtime-live.mjs",
+    "prepare:realtime-smoke": "node scripts/prepare-realtime-smoke-env.mjs",
     "smoke:realtime": "pnpm --filter @blackstage/voice-core build && pnpm --filter @blackstage/stage-broker build && node scripts/smoke-realtime-live.mjs",
     "test": "pnpm check:workflow && pnpm test:scripts && pnpm -r --if-present test",
     "test:scripts": "node --test scripts/test/*.test.mjs",

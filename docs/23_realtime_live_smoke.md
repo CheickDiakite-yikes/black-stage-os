@@ -48,6 +48,14 @@ The command:
 
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
+To generate the non-API-key arming values for a controlled local shell, run:
+
+```bash
+pnpm prepare:realtime-smoke
+```
+
+The helper prints shell `export` lines for `BLACKSTAGE_REALTIME_LIVE_SMOKE`, a stable hashed safety identifier, a fresh local approval token, and an ignored `.blackstage/` proof path. It does not write an env file, does not print `OPENAI_API_KEY`, and does not make a network call.
+
 ## Redacted Proof File
 
 If you want a local proof packet for the run, set an ignored `.blackstage/` path:
