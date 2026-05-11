@@ -625,8 +625,12 @@ function formatHarnessRunnerPolicy(
       : policy.controlPlane;
   const codingWorkerLabel =
     policy.codingWorker === "openai_codex_cli" ? "Codex CLI" : policy.codingWorker;
+  const agentWorkerLabel =
+    policy.agentWorker === "openai_agents_sdk_manager"
+      ? "Agents SDK manager"
+      : policy.agentWorker;
 
-  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${policy.voiceModel}`;
+  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${agentWorkerLabel} · ${policy.voiceModel}`;
 }
 
 type SpeechRecognitionAlternativeLike = {

@@ -102,5 +102,6 @@ test("Stage Web renders the active harness workflow policy", async ({ page }) =>
   await expect(harnessStatus).toContainText("WORKFLOW.md");
   await expect(harnessStatus).toContainText("Symphony queue");
   await expect(harnessStatus).toContainText("Codex CLI");
+  await expect(harnessStatus).toContainText("Agents SDK manager");
   await expect(harnessStatus).toContainText("gpt-realtime-2");
 });
