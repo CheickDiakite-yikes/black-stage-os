@@ -251,6 +251,7 @@ export function StageShell({
     harnessRunnerSnapshot,
     harnessRunnerProofs
   );
+  const harnessRunnerPolicyStatus = formatHarnessRunnerPolicy(harnessRunnerReadiness);
   const realtimeBrokerStatus = formatRealtimeBrokerReadiness(
     realtimeBrokerReadiness,
     realtimeBridge
@@ -499,6 +500,7 @@ export function StageShell({
         >
           <span>Harness edge</span>
           <strong>{harnessRunnerStatus}</strong>
+          {harnessRunnerPolicyStatus ? <em>{harnessRunnerPolicyStatus}</em> : null}
         </div>
       </form>
       <p className="stage-memory-status">local memory · private</p>
@@ -594,6 +596,25 @@ function formatHarnessRunnerReadiness(
     case "not_configured":
       return "simulation";
   }
+}
+
+function formatHarnessRunnerPolicy(
+  readiness: HarnessRunnerClientReadiness
+): string | undefined {
+  const policy = readiness.workflowPolicy;
+
+  if (readiness.status !== "reachable" || !policy) {
+    return undefined;
+  }
+
+  const controlPlaneLabel =
+    policy.controlPlane === "symphony_style_internal_queue"
+      ? "Symphony queue"
+      : policy.controlPlane;
+  const codingWorkerLabel =
+    policy.codingWorker === "openai_codex_cli" ? "Codex CLI" : policy.codingWorker;
+
+  return `${policy.source} · ${controlPlaneLabel} · ${codingWorkerLabel} · ${policy.voiceModel}`;
 }
 
 type SpeechRecognitionAlternativeLike = {

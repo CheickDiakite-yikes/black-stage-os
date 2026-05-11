@@ -248,7 +248,9 @@ export async function checkStageWebHarnessRunnerSnapshot(
       routeUrl,
       checkedAt: new Date().toISOString(),
       networkAttempted: true,
-      errors: [error instanceof Error ? error.message : "Harness runner snapshot check failed."]
+      errors: [
+        error instanceof Error ? error.message : "Harness runner snapshot check failed."
+      ]
     };
   }
 }
@@ -291,7 +293,9 @@ export async function checkStageWebHarnessRunnerProofs(
       routeUrl,
       checkedAt: new Date().toISOString(),
       networkAttempted: true,
-      errors: [error instanceof Error ? error.message : "Harness runner proofs check failed."]
+      errors: [
+        error instanceof Error ? error.message : "Harness runner proofs check failed."
+      ]
     };
   }
 }
@@ -391,7 +395,9 @@ function interpretStageWebHarnessRunnerProofs(input: {
       routeUrl: input.routeUrl,
       checkedAt,
       networkAttempted: true,
-      errors: ["Harness runner proofs body did not match the expected proof summary list."]
+      errors: [
+        "Harness runner proofs body did not match the expected proof summary list."
+      ]
     };
   }
 
@@ -444,6 +450,13 @@ function readStageWebHarnessEnvValue(): string | undefined {
   const meta = import.meta as ImportMeta & {
     env?: Record<string, string | undefined>;
   };
+  const browserWindow =
+    typeof window === "undefined"
+      ? undefined
+      : (window as Window & { __blackstageHarnessRunnerUrl?: string });
 
-  return meta.env?.[STAGE_WEB_HARNESS_RUNNER_URL_ENV_VAR];
+  return (
+    browserWindow?.__blackstageHarnessRunnerUrl ??
+    meta.env?.[STAGE_WEB_HARNESS_RUNNER_URL_ENV_VAR]
+  );
 }

@@ -1387,6 +1387,12 @@ button:disabled {
   white-space: nowrap;
 }
 
+.harness-runner-status {
+  flex-wrap: wrap;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .realtime-broker-status span,
 .harness-runner-status span {
   color: rgba(239, 228, 210, 0.42);
@@ -1396,6 +1402,14 @@ button:disabled {
 .harness-runner-status strong {
   color: rgba(216, 189, 133, 0.72);
   font-weight: 600;
+}
+
+.harness-runner-status em {
+  flex-basis: 100%;
+  color: rgba(239, 228, 210, 0.46);
+  font-size: 0.56rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
 }
 
 .realtime-broker-status-reachable strong,
