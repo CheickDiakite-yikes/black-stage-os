@@ -42,7 +42,13 @@ export type StageWebRealtimeBridgeState = {
 export type StageWebRealtimeBridgeResult = {
   state: StageWebRealtimeBridgeState;
   stageEvents: StageEvent[];
+  connection?: StageWebRealtimeBridgeConnection;
 };
+
+export type StageWebRealtimeBridgeConnection = Pick<
+  RealtimeWebrtcPeerConnection,
+  "close"
+>;
 
 export type StageWebRealtimeBridgeOptions = {
   readiness: RealtimeBrokerClientReadiness;
@@ -148,6 +154,7 @@ export async function startStageWebRealtimeBridge(
 ): Promise<StageWebRealtimeBridgeResult> {
   const timestamp = options.now?.() ?? new Date().toISOString();
   const emitStageEvents = options.emitStageEvents ?? (() => undefined);
+  let retainedConnection: RealtimeWebrtcPeerConnection | undefined;
   const createPeerConnection =
     options.createPeerConnection ??
     (() =>
@@ -162,12 +169,17 @@ export async function startStageWebRealtimeBridge(
           emitStageEvents(events);
         }
       }));
+  const createRetainedPeerConnection = () => {
+    retainedConnection = createPeerConnection();
+
+    return retainedConnection;
+  };
   const exchange = await exchangeRealtimeWebrtcSdp({
     enabled: options.enabled ?? readStageWebRealtimeWebrtcEnabled(),
     approvedAudioTrack: options.approvedAudioTrack,
     audioTrackApproved: options.audioTrackApproved,
     readiness: options.readiness,
-    createPeerConnection,
+    createPeerConnection: createRetainedPeerConnection,
     fetchBrokerAnswer: async (request) => {
       const approvalPhrase =
         options.approvalPhrase ?? readStageWebRealtimeApprovalPhrase();
@@ -210,7 +222,9 @@ export async function startStageWebRealtimeBridge(
       browserReceivesStandardApiKey: exchange.browserReceivesStandardApiKey,
       errors: exchange.errors
     },
-    stageEvents
+    stageEvents,
+    connection:
+      exchange.status === "connected" ? { close: retainedConnection?.close } : undefined
   };
 }
 

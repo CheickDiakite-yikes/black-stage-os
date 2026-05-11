@@ -46,7 +46,8 @@ import {
   readStageWebRealtimeApprovalPhrase,
   readStageWebRealtimeAudioEnabled,
   shouldStartStageWebRealtimeBridge,
-  startStageWebRealtimeBridge
+  startStageWebRealtimeBridge,
+  type StageWebRealtimeBridgeConnection
 } from "../voice/realtimeWebrtcBridge";
 import {
   checkStageWebRealtimeMicPreflight,
@@ -193,6 +194,9 @@ export function App() {
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
   const realtimeBridgeStartedRef = useRef(false);
+  const realtimeBridgeConnectionRef = useRef<
+    StageWebRealtimeBridgeConnection | undefined
+  >(undefined);
   const timerRefs = useRef<number[]>([]);
 
   const clearTimers = useCallback(() => {
@@ -360,6 +364,8 @@ export function App() {
       }
 
       realtimeBridgeStartedRef.current = true;
+      realtimeBridgeConnectionRef.current?.close?.();
+      realtimeBridgeConnectionRef.current = undefined;
 
       if (readiness.routeUrl) {
         setRealtimeBridge(
@@ -396,12 +402,14 @@ export function App() {
         });
       })().then((bridge) => {
         setRealtimeBridge(bridge.state);
+        realtimeBridgeConnectionRef.current = bridge.connection;
         bridge.stageEvents.forEach((event) => {
           emitStageEvent(event);
         });
 
         if (bridge.state.status !== "connected") {
           realtimeBridgeStartedRef.current = false;
+          realtimeBridgeConnectionRef.current = undefined;
         }
       });
     },
@@ -1002,6 +1010,8 @@ export function App() {
       });
       setApprovalExplanationVisible(false);
       realtimeBridgeStartedRef.current = false;
+      realtimeBridgeConnectionRef.current?.close?.();
+      realtimeBridgeConnectionRef.current = undefined;
       startApprovedRealtimeBridge(pendingApproval.threadId);
 
       if (stageVoiceEnabled) {
@@ -1793,9 +1803,18 @@ export function App() {
     setApprovalExplanationVisible(false);
     setAssistantSpeechText(undefined);
     realtimeBridgeStartedRef.current = false;
+    realtimeBridgeConnectionRef.current?.close?.();
+    realtimeBridgeConnectionRef.current = undefined;
     setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
     cancelStageSpeech();
   }, [clearTimers]);
+
+  useEffect(() => {
+    return () => {
+      realtimeBridgeConnectionRef.current?.close?.();
+      realtimeBridgeConnectionRef.current = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     saveStageSession({
@@ -1822,6 +1841,8 @@ export function App() {
 
     if (!routeUrl) {
       realtimeBridgeStartedRef.current = false;
+      realtimeBridgeConnectionRef.current?.close?.();
+      realtimeBridgeConnectionRef.current = undefined;
       setRealtimeBrokerReadiness(createDefaultStageWebBrokerReadiness());
       setRealtimeBrokerProofs(createDefaultStageWebRealtimeBrokerProofs());
       setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
@@ -1835,6 +1856,8 @@ export function App() {
     setRealtimeBrokerReadiness(createStageWebBrokerCheckingReadiness(routeUrl));
     setRealtimeBrokerProofs(createStageWebRealtimeBrokerProofsChecking(routeUrl));
     setRealtimeBridge(createDefaultStageWebRealtimeBridgeState());
+    realtimeBridgeConnectionRef.current?.close?.();
+    realtimeBridgeConnectionRef.current = undefined;
 
     void checkStageWebRealtimeBrokerReadiness({
       routeUrl

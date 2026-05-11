@@ -24,6 +24,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       __blackstageRealtimeAudioEnabled?: string;
       __blackstageRealtimeBrokerUrl?: string;
       __blackstageRealtimeWebrtcEnabled?: string;
+      __blackstageClosedPeerConnections?: number;
       __blackstageGetUserMediaCalls?: number;
       __blackstageRealtimeTransceivers?: string[];
     };
@@ -32,6 +33,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     browserWindow.__blackstageRealtimeAudioEnabled = "0";
     browserWindow.__blackstageRealtimeBrokerUrl = "http://127.0.0.1:8798";
     browserWindow.__blackstageRealtimeWebrtcEnabled = "1";
+    browserWindow.__blackstageClosedPeerConnections = 0;
     browserWindow.__blackstageGetUserMediaCalls = 0;
     browserWindow.__blackstageRealtimeTransceivers = [];
     window.localStorage.removeItem("blackstage.realtimeAudio.enabled");
@@ -75,7 +77,10 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
 
       async setRemoteDescription() {}
 
-      close() {}
+      close() {
+        browserWindow.__blackstageClosedPeerConnections =
+          (browserWindow.__blackstageClosedPeerConnections ?? 0) + 1;
+      }
     }
 
     Object.defineProperty(window, "RTCPeerConnection", {
@@ -238,12 +243,14 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         })
       : undefined;
     const browserWindow = window as Window & {
+      __blackstageClosedPeerConnections?: number;
       __blackstageRealtimeTransceivers?: string[];
     };
 
     const events = snapshot?.researchEvents ?? [];
 
     return {
+      closedConnections: browserWindow.__blackstageClosedPeerConnections ?? 0,
       transceivers: browserWindow.__blackstageRealtimeTransceivers ?? [],
       bridgeConnected: events.some(
         (event) =>
@@ -262,6 +269,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
 
   expect(bridgeEvidence.bridgeConnected).toBe(true);
   expect(bridgeEvidence.approvalRequested).toBe(true);
+  expect(bridgeEvidence.closedConnections).toBe(0);
   expect(bridgeEvidence.transceivers).toEqual(["audio:recvonly"]);
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect
@@ -290,6 +298,16 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       })
     ])
   );
+  await page.getByRole("button", { name: "Reset" }).click({ force: true });
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          (window as Window & { __blackstageClosedPeerConnections?: number })
+            .__blackstageClosedPeerConnections ?? 0
+      )
+    )
+    .toBe(1);
 });
 
 test("Stage Web attaches local audio only after Realtime approval and ready mic preflight", async ({
