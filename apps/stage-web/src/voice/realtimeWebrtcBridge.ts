@@ -19,6 +19,8 @@ export const STAGE_WEB_REALTIME_APPROVAL_TOKEN_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN";
 export const STAGE_WEB_REALTIME_AUDIO_ENABLED_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED";
+export const STAGE_WEB_REALTIME_TEXT_PROBE_ENV_VAR =
+  "VITE_BLACKSTAGE_REALTIME_TEXT_PROBE";
 
 export type StageWebRealtimeBridgeStatus =
   | "disabled"
@@ -401,6 +403,7 @@ function createBrowserRealtimePeerConnection(
   onMessage: (message: unknown) => void
 ): RealtimeWebrtcPeerConnection {
   const PeerConnection = globalThis.RTCPeerConnection;
+  const textProbe = readStageWebRealtimeTextProbe();
 
   if (!PeerConnection) {
     throw new Error("Browser WebRTC peer connection is unavailable.");
@@ -415,6 +418,11 @@ function createBrowserRealtimePeerConnection(
       channel.addEventListener("message", (event) => {
         onMessage(event.data);
       });
+      if (textProbe) {
+        channel.addEventListener("open", () => {
+          sendStageWebRealtimeTextProbe(channel, textProbe);
+        });
+      }
 
       return {
         label: channel.label
@@ -649,6 +657,106 @@ function readStageWebRealtimeAudioEnvValue(): string | undefined {
   };
 
   return meta.env?.[STAGE_WEB_REALTIME_AUDIO_ENABLED_ENV_VAR];
+}
+
+function readStageWebRealtimeTextProbe(): string | undefined {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeTextProbe?: string;
+  };
+
+  if (runtimeConfig.__blackstageRealtimeTextProbe) {
+    return normalizeStageWebRealtimeTextProbe(
+      runtimeConfig.__blackstageRealtimeTextProbe
+    );
+  }
+
+  try {
+    const localProbe = localStorage.getItem("blackstage.realtime.textProbe");
+
+    if (localProbe) {
+      return normalizeStageWebRealtimeTextProbe(localProbe);
+    }
+  } catch {
+    // Local runtime config is best-effort; Vite env remains the durable path.
+  }
+
+  const meta = import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  };
+
+  return normalizeStageWebRealtimeTextProbe(
+    meta.env?.[STAGE_WEB_REALTIME_TEXT_PROBE_ENV_VAR]
+  );
+}
+
+function normalizeStageWebRealtimeTextProbe(value?: string): string | undefined {
+  const trimmedValue = value?.trim();
+
+  return trimmedValue ? trimmedValue.slice(0, 240) : undefined;
+}
+
+export type StageWebRealtimeTextProbeClientEvent =
+  | {
+      type: "conversation.item.create";
+      event_id: string;
+      item: {
+        type: "message";
+        role: "user";
+        content: Array<{
+          type: "input_text";
+          text: string;
+        }>;
+      };
+    }
+  | {
+      type: "response.create";
+      event_id: string;
+      response: {
+        output_modalities: ["text"];
+        instructions: string;
+        max_output_tokens: 24;
+      };
+    };
+
+export function createStageWebRealtimeTextProbeClientEvents(
+  promptText: string,
+  probeId = stableHash(`${promptText}:${Date.now().toString(36)}`)
+): StageWebRealtimeTextProbeClientEvent[] {
+  const expectedReply = "Blackstage live text proof received.";
+
+  return [
+    {
+      type: "conversation.item.create",
+      event_id: `stage_web_probe_item_${probeId}`,
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: promptText
+          }
+        ]
+      }
+    },
+    {
+      type: "response.create",
+      event_id: `stage_web_probe_response_${probeId}`,
+      response: {
+        output_modalities: ["text"],
+        instructions: `Reply with exactly this text and no extra words: ${expectedReply}`,
+        max_output_tokens: 24
+      }
+    }
+  ];
+}
+
+function sendStageWebRealtimeTextProbe(channel: RTCDataChannel, promptText: string) {
+  const clientEvents = createStageWebRealtimeTextProbeClientEvents(promptText);
+
+  clientEvents.forEach((clientEvent) => {
+    channel.send(JSON.stringify(clientEvent));
+  });
 }
 
 function stableHash(value: string): string {

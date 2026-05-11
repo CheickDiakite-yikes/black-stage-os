@@ -26,6 +26,10 @@ const REQUIRED_ENV_VARS = [
 ];
 const STAGE_HOST = "127.0.0.1";
 const BROKER_ROUTE_PATH = "/api/blackstage/realtime/session";
+const REALTIME_TEXT_PROBE_PROMPT =
+  "Blackstage live text proof request. Keep the reply exact.";
+const REALTIME_TEXT_PROBE_EXPECTED_REPLY =
+  "Blackstage live text proof received.";
 const runSlug = slugifyTimestamp(new Date().toISOString());
 const defaultProofPath = `.blackstage/realtime-smoke/ui-live-${runSlug}.json`;
 const shellLiveSmokeArmedAtStartup = process.env[LIVE_SMOKE_ENV_VAR] === "1";
@@ -108,7 +112,8 @@ async function main() {
         VITE_BLACKSTAGE_REALTIME_BROKER_URL: brokerBaseUrl,
         VITE_BLACKSTAGE_REALTIME_WEBRTC_ENABLED: "1",
         VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN: approvalToken,
-        VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED: "0"
+        VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED: "0",
+        VITE_BLACKSTAGE_REALTIME_TEXT_PROBE: REALTIME_TEXT_PROBE_PROMPT
       }
     });
 
@@ -125,20 +130,23 @@ async function main() {
     });
 
     await page.addInitScript(
-      ({ approvalPhrase, realtimeBrokerUrl }) => {
+      ({ approvalPhrase, realtimeBrokerUrl, textProbe }) => {
         localStorage.clear();
         globalThis.__blackstageRealtimeBrokerUrl = realtimeBrokerUrl;
         globalThis.__blackstageRealtimeWebrtcEnabled = "1";
         globalThis.__blackstageRealtimeApprovalPhrase = approvalPhrase;
         globalThis.__blackstageRealtimeAudioEnabled = "0";
+        globalThis.__blackstageRealtimeTextProbe = textProbe;
         localStorage.setItem("blackstage.realtimeBroker.url", realtimeBrokerUrl);
         localStorage.setItem("blackstage.realtimeWebrtc.enabled", "1");
         localStorage.setItem("blackstage.realtime.approvalPhrase", approvalPhrase);
         localStorage.setItem("blackstage.realtimeAudio.enabled", "0");
+        localStorage.setItem("blackstage.realtime.textProbe", textProbe);
       },
       {
         approvalPhrase: approvalToken,
-        realtimeBrokerUrl: brokerBaseUrl
+        realtimeBrokerUrl: brokerBaseUrl,
+        textProbe: REALTIME_TEXT_PROBE_PROMPT
       }
     );
     await page.goto(stageBaseUrl, {
@@ -165,6 +173,11 @@ async function main() {
       timeoutMs
     );
     await waitForLocatorText(page.getByTestId("stage-presence"), "Listening");
+    const assistantSpeech = await waitForLocatorText(
+      page.getByTestId("assistant-speech"),
+      REALTIME_TEXT_PROBE_EXPECTED_REPLY,
+      timeoutMs
+    );
 
     const stageClass = await page.getByTestId("stage-shell").getAttribute("class");
     const brokerStatus = await page.getByTestId("realtime-broker-status").innerText();
@@ -181,6 +194,7 @@ async function main() {
       localEnv: summarizeLocalEnvLoad(localEnv),
       notes: [
         "Stage Web opened the live Realtime edge from the startup orb after approval.",
+        "The live Realtime data channel returned a provider text event into the Stage assistant speech surface.",
         `Cheap-test guard: timeout capped at ${REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio send is disabled.`,
         `UI screenshot: ${screenshotPath}`
       ]
@@ -194,6 +208,10 @@ async function main() {
           brokerRoute: BROKER_ROUTE_PATH,
           brokerStatus,
           stageListening: stageClass?.includes("stage-listening") ?? false,
+          assistantSpeechLiveTextProof: assistantSpeech.includes(
+            REALTIME_TEXT_PROBE_EXPECTED_REPLY
+          ),
+          assistantSpeech,
           browserReceivesStandardApiKey: false,
           browserSendsAudio: false,
           timeoutMs,

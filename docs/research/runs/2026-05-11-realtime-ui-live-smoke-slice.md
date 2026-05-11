@@ -29,12 +29,21 @@ live real test where the interface can show real magic.
   live edge, reached `live SDP`, and produced redacted proof at
   `.blackstage/realtime-smoke/live-2026-05-11T21-20-10-666Z.json` plus screenshot
   `.blackstage/realtime-smoke/ui-live-2026-05-11T21-20-18-131Z.png`.
+- Added a tiny live text probe over the Realtime data channel after the approved
+  SDP exchange.
+- Fixed the probe to use the Realtime `output_modalities` response field.
+- Ran the armed UI smoke successfully again. It clicked the startup orb, approved
+  the live edge, reached `live SDP`, rendered `Blackstage live text proof
+  received.` in the Stage assistant speech surface, and produced redacted proof
+  at `.blackstage/realtime-smoke/live-2026-05-11T21-56-50-165Z.json` plus
+  screenshot `.blackstage/realtime-smoke/ui-live-2026-05-11T21-56-56-004Z.png`.
 
 ## What Failed Or Needed Human Intervention
 
-The current slice does not yet prove live microphone speech or a real provider
-transcript flowing into Stage objects. It proves the approved UI-to-provider
-Realtime edge with one live Realtime SDP exchange.
+The current slice does not yet prove live microphone speech or a real user
+transcript flowing into Stage objects. It now proves the approved
+UI-to-provider Realtime edge with one live Realtime SDP exchange and one real
+provider text event rendered in the Stage UI.
 
 ## Product Insight
 
@@ -56,4 +65,8 @@ experience.
 - `.blackstage/realtime-smoke/live-2026-05-11T21-20-10-666Z.json` (ignored,
   redacted proof)
 - `.blackstage/realtime-smoke/ui-live-2026-05-11T21-20-18-131Z.png` (ignored
+  screenshot)
+- `.blackstage/realtime-smoke/live-2026-05-11T21-56-50-165Z.json` (ignored,
+  redacted proof)
+- `.blackstage/realtime-smoke/ui-live-2026-05-11T21-56-56-004Z.png` (ignored
   screenshot)
