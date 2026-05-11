@@ -664,6 +664,12 @@ test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) =>
   );
 
   await page.getByRole("button", { name: "Seed round plan" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Approve simulated investor intro prompts",
+    {
+      timeout: 60_000
+    }
+  );
   await page
     .getByTestId("intent-input")
     .fill("remember Investor followups need weekly review");
