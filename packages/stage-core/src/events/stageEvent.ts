@@ -65,7 +65,8 @@ export type UserInterventionPayload = {
     | "expand"
     | "rename"
     | "set_url"
-    | "set_map";
+    | "set_map"
+    | "set_model";
   commandValue?: string;
   commandText?: string;
   commandInputMode?: "voice" | "text";

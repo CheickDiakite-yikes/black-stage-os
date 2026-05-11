@@ -805,6 +805,90 @@ test("Stage Shell v0 recenters the map portal locally without map services", asy
   expect(mapRetargetWasLogged).toBe(true);
 });
 
+test("Stage Shell v0 updates model scenarios locally without provider calls", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+
+  const modelSurface = page.getByTestId("model-surface");
+
+  await expect(modelSurface).toContainText("Reality interface model");
+  await expect(modelSurface).toContainText("approved/exportable");
+
+  await page
+    .getByTestId("intent-input")
+    .fill("set model Artifact to shipped review packet");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(modelSurface).toContainText("Artifact");
+  await expect(modelSurface).toContainText("shipped review packet");
+  await expect(modelSurface).toContainText("local target");
+  await expect(modelSurface).toContainText("user confidence");
+
+  const modelUpdateWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          payload?: {
+            scenarios?: Array<{
+              label?: string;
+              value?: string;
+            }>;
+          };
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          command_action?: string;
+          command_value_redacted?: string;
+        };
+      }>;
+    };
+
+    const commandWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "set_model" &&
+          event.payload.command_value_redacted === "Artifact: shipped review packet"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "model_card" &&
+          event.payload.payload?.scenarios?.some(
+            (scenario) =>
+              scenario.label === "Artifact" &&
+              scenario.value === "shipped review packet"
+          )
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(modelUpdateWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 attaches local context as a private document object", async ({
   page
 }) => {

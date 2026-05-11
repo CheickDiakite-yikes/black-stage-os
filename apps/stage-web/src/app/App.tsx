@@ -81,13 +81,15 @@ type StageCommandAction =
   | "expand"
   | "rename"
   | "set_url"
-  | "set_map";
+  | "set_map"
+  | "set_model";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
   action: StageCommandAction;
   target: StageObject;
   value?: string;
+  field?: string;
 };
 
 const commandFillerWords = new Set([
@@ -430,7 +432,7 @@ export function App() {
           threadId: command.target.threadId,
           interventionType: "redirect",
           commandAction: command.action,
-          commandValue: command.value,
+          commandValue: formatStageCommandValue(command),
           commandInputMode: source === "voice" ? "voice" : "text",
           commandText: intentText,
           targetObjectId: command.target.id,
@@ -1987,6 +1989,12 @@ function parseStageCommand(
     return mapFocusCommand;
   }
 
+  const modelScenarioCommand = parseModelScenarioCommand(intentText, objects);
+
+  if (modelScenarioCommand) {
+    return modelScenarioCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -2093,6 +2101,35 @@ function parseMapPortalFocusCommand(
     action: "set_map",
     target,
     value: nextCenter
+  };
+}
+
+function parseModelScenarioCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:set|update|change)\s+(?:the\s+)?(?:model|interface model|valuation model)(?:\s+(?:scenario|assumption))?\s+(.+?)\s+(?:to|=)\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ?? /^\s*(?:model)\s+(.+?)\s+(?:as|at|to|=)\s+(.+?)\s*$/i.exec(intentText);
+
+  if (!match) {
+    return undefined;
+  }
+
+  const target = objects.find((object) => object.type === "model_card");
+  const scenarioLabel = sanitizeStageObjectTitle(match[1] ?? "");
+  const scenarioValue = sanitizeStageObjectTitle(match[2] ?? "");
+
+  if (!target || !scenarioLabel || !scenarioValue) {
+    return undefined;
+  }
+
+  return {
+    action: "set_model",
+    target,
+    field: scenarioLabel,
+    value: scenarioValue
   };
 }
 
@@ -2257,6 +2294,8 @@ function applyStageCommandToObject(
       return applyBrowserPortalUrlCommand(object, command.value);
     case "set_map":
       return applyMapPortalFocusCommand(object, command.value);
+    case "set_model":
+      return applyModelScenarioCommand(object, command.field, command.value);
   }
 }
 
@@ -2280,7 +2319,17 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Set ${targetTitle} to ${command.value ?? "the requested URL"}.`;
     case "set_map":
       return `Centered ${targetTitle} on ${command.value ?? "the requested focus"}.`;
+    case "set_model":
+      return `Updated ${targetTitle} ${command.field ?? "scenario"} to ${command.value ?? "the requested value"}.`;
   }
+}
+
+function formatStageCommandValue(command: StageCommand): string | undefined {
+  if (command.field && command.value) {
+    return `${command.field}: ${command.value}`;
+  }
+
+  return command.value;
 }
 
 function applyBrowserPortalUrlCommand(
@@ -2364,6 +2413,62 @@ function applyMapPortalFocusCommand(
       guardrail: "Map focus is stored locally; no external map service was called."
     }
   };
+}
+
+function applyModelScenarioCommand(
+  object: StageObject,
+  scenarioLabel: string | undefined,
+  scenarioValue: string | undefined
+): StageObject {
+  if (object.type !== "model_card" || !scenarioLabel || !scenarioValue) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const scenarios = Array.isArray(payload.scenarios)
+    ? payload.scenarios.filter(isObjectPayload)
+    : [];
+  const normalizedLabel = normalizeCommandText(scenarioLabel);
+  let scenarioWasUpdated = false;
+  const nextScenarios = scenarios.map((scenario) => {
+    const currentLabel = formatScenarioLabel(scenario.label);
+
+    if (normalizeCommandText(currentLabel) !== normalizedLabel) {
+      return scenario;
+    }
+
+    scenarioWasUpdated = true;
+
+    return {
+      ...scenario,
+      value: scenarioValue,
+      confidence: "user"
+    };
+  });
+
+  if (!scenarioWasUpdated) {
+    nextScenarios.unshift({
+      label: scenarioLabel,
+      value: scenarioValue,
+      confidence: "user"
+    });
+  }
+
+  return {
+    ...object,
+    state: "expanded",
+    payload: {
+      ...payload,
+      status: "local target",
+      scenarios: nextScenarios.slice(0, 5),
+      guardrail:
+        "Model scenario is stored locally; no external model provider was called."
+    }
+  };
+}
+
+function formatScenarioLabel(value: unknown): string {
+  return typeof value === "string" ? value : "";
 }
 
 function isObjectPayload(value: unknown): value is Record<string, unknown> {
