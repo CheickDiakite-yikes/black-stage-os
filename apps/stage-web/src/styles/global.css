@@ -376,9 +376,7 @@ button:disabled {
     inset 0 0 24px rgba(216, 189, 133, 0.05);
   color: inherit;
   padding: 0;
-  animation:
-    stage-breathe 8.5s ease-in-out infinite,
-    ring-drift 38s linear infinite;
+  animation: stage-breathe 8.5s ease-in-out infinite;
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease,
@@ -1576,12 +1574,16 @@ button:disabled {
   0%,
   100% {
     opacity: 0.78;
-    transform: scale(0.98);
+    box-shadow:
+      0 0 34px rgba(216, 189, 133, 0.075),
+      inset 0 0 22px rgba(216, 189, 133, 0.045);
   }
 
   50% {
     opacity: 1;
-    transform: scale(1.035);
+    box-shadow:
+      0 0 54px rgba(216, 189, 133, 0.14),
+      inset 0 0 28px rgba(216, 189, 133, 0.065);
   }
 }
 
