@@ -33,10 +33,13 @@ import {
   resolveStageWebRealtimeBrokerRouteUrl
 } from "../voice/realtimeBrokerReadiness";
 import {
+  checkStageWebHarnessRunnerProofs,
   checkStageWebHarnessRunnerSnapshot,
   checkStageWebHarnessRunnerReadiness,
+  createDefaultStageWebHarnessProofs,
   createDefaultStageWebHarnessReadiness,
   createDefaultStageWebHarnessSnapshot,
+  createStageWebHarnessProofsChecking,
   createStageWebHarnessSnapshotChecking,
   createStageWebHarnessCheckingReadiness,
   resolveStageWebHarnessRunnerRouteUrl
@@ -117,6 +120,9 @@ export function App() {
   );
   const [harnessRunnerSnapshot, setHarnessRunnerSnapshot] = useState(
     createDefaultStageWebHarnessSnapshot
+  );
+  const [harnessRunnerProofs, setHarnessRunnerProofs] = useState(
+    createDefaultStageWebHarnessProofs
   );
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
@@ -1014,11 +1020,13 @@ export function App() {
     if (!routeUrl) {
       setHarnessRunnerReadiness(createDefaultStageWebHarnessReadiness());
       setHarnessRunnerSnapshot(createDefaultStageWebHarnessSnapshot());
+      setHarnessRunnerProofs(createDefaultStageWebHarnessProofs());
       return;
     }
 
     setHarnessRunnerReadiness(createStageWebHarnessCheckingReadiness(routeUrl));
     setHarnessRunnerSnapshot(createStageWebHarnessSnapshotChecking(routeUrl));
+    setHarnessRunnerProofs(createStageWebHarnessProofsChecking(routeUrl));
 
     void checkStageWebHarnessRunnerReadiness({
       routeUrl
@@ -1036,16 +1044,29 @@ export function App() {
             networkAttempted: readiness.networkAttempted,
             errors: readiness.errors
           });
+          setHarnessRunnerProofs({
+            status: "unavailable",
+            routeUrl,
+            checkedAt: readiness.checkedAt,
+            networkAttempted: readiness.networkAttempted,
+            errors: readiness.errors
+          });
         }
         return;
       }
 
-      const snapshot = await checkStageWebHarnessRunnerSnapshot({
-        routeUrl
-      });
+      const [snapshot, proofs] = await Promise.all([
+        checkStageWebHarnessRunnerSnapshot({
+          routeUrl
+        }),
+        checkStageWebHarnessRunnerProofs({
+          routeUrl
+        })
+      ]);
 
       if (!cancelled) {
         setHarnessRunnerSnapshot(snapshot);
+        setHarnessRunnerProofs(proofs);
       }
     });
 
@@ -1062,6 +1083,7 @@ export function App() {
       activeScenario={activeScenario}
       approvalExplanationVisible={approvalExplanationVisible}
       assistantSpeechText={assistantSpeechText}
+      harnessRunnerProofs={harnessRunnerProofs}
       harnessRunnerReadiness={harnessRunnerReadiness}
       harnessRunnerSnapshot={harnessRunnerSnapshot}
       isReplaying={isReplaying}

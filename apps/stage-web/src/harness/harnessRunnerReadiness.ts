@@ -34,6 +34,31 @@ export type StageWebHarnessRunnerSnapshot = {
   errors: string[];
 };
 
+export type StageWebHarnessRunnerProofsStatus =
+  | "not_configured"
+  | "checking"
+  | "loaded"
+  | "unavailable";
+
+export type StageWebHarnessRunnerProofSummary = {
+  taskId: string;
+  runId: string;
+  status: string;
+  adapterId: string;
+  proofPath: string;
+  writtenAt: string;
+};
+
+export type StageWebHarnessRunnerProofs = {
+  status: StageWebHarnessRunnerProofsStatus;
+  routeUrl?: string;
+  checkedAt: string;
+  networkAttempted: boolean;
+  proofCount?: number;
+  latestProof?: StageWebHarnessRunnerProofSummary;
+  errors: string[];
+};
+
 export function createDefaultStageWebHarnessReadiness(): HarnessRunnerClientReadiness {
   return createHarnessRunnerNotConfiguredReadiness();
 }
@@ -53,6 +78,30 @@ export function createStageWebHarnessSnapshotChecking(
   routeUrl: string,
   checkedAt = new Date().toISOString()
 ): StageWebHarnessRunnerSnapshot {
+  return {
+    status: "checking",
+    routeUrl,
+    checkedAt,
+    networkAttempted: true,
+    errors: []
+  };
+}
+
+export function createDefaultStageWebHarnessProofs(
+  checkedAt = new Date().toISOString()
+): StageWebHarnessRunnerProofs {
+  return {
+    status: "not_configured",
+    checkedAt,
+    networkAttempted: false,
+    errors: []
+  };
+}
+
+export function createStageWebHarnessProofsChecking(
+  routeUrl: string,
+  checkedAt = new Date().toISOString()
+): StageWebHarnessRunnerProofs {
   return {
     status: "checking",
     routeUrl,
@@ -98,6 +147,27 @@ export function resolveStageWebHarnessRunnerSnapshotUrl(
       : url.pathname;
 
     url.pathname = `${normalizedPath}/snapshot`;
+
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+export function resolveStageWebHarnessRunnerProofsUrl(
+  routeUrl: string | undefined
+): string | undefined {
+  if (!routeUrl) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(routeUrl);
+    const normalizedPath = url.pathname.endsWith("/")
+      ? url.pathname.slice(0, -1)
+      : url.pathname;
+
+    url.pathname = `${normalizedPath}/proofs`;
 
     return url.toString();
   } catch {
@@ -183,6 +253,49 @@ export async function checkStageWebHarnessRunnerSnapshot(
   }
 }
 
+export async function checkStageWebHarnessRunnerProofs(
+  options: StageWebHarnessRunnerReadinessOptions = {}
+): Promise<StageWebHarnessRunnerProofs> {
+  const routeUrl = resolveStageWebHarnessRunnerProofsUrl(
+    resolveStageWebHarnessRunnerRouteUrl(options.routeUrl)
+  );
+
+  if (!routeUrl) {
+    return createDefaultStageWebHarnessProofs();
+  }
+
+  try {
+    const response = await (options.fetchImpl ?? fetch)(routeUrl, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      },
+      credentials: "omit"
+    });
+    let body: unknown;
+
+    try {
+      body = await response.json();
+    } catch {
+      body = undefined;
+    }
+
+    return interpretStageWebHarnessRunnerProofs({
+      routeUrl,
+      status: response.status,
+      body
+    });
+  } catch (error) {
+    return {
+      status: "unavailable",
+      routeUrl,
+      checkedAt: new Date().toISOString(),
+      networkAttempted: true,
+      errors: [error instanceof Error ? error.message : "Harness runner proofs check failed."]
+    };
+  }
+}
+
 export function createStageWebHarnessCheckingReadiness(
   routeUrl: string
 ): HarnessRunnerClientReadiness {
@@ -247,6 +360,83 @@ function interpretStageWebHarnessRunnerSnapshot(input: {
     blockedCount,
     totalTaskCount: tasks.length,
     errors: []
+  };
+}
+
+function interpretStageWebHarnessRunnerProofs(input: {
+  routeUrl: string;
+  status: number;
+  body?: unknown;
+  checkedAt?: string;
+}): StageWebHarnessRunnerProofs {
+  const checkedAt = input.checkedAt ?? new Date().toISOString();
+
+  if (input.status !== 200 || !input.body || typeof input.body !== "object") {
+    return {
+      status: "unavailable",
+      routeUrl: input.routeUrl,
+      checkedAt,
+      networkAttempted: true,
+      errors: [`Harness runner proofs check returned HTTP ${input.status}.`]
+    };
+  }
+
+  const candidate = input.body as {
+    proofs?: unknown;
+  };
+
+  if (!Array.isArray(candidate.proofs)) {
+    return {
+      status: "unavailable",
+      routeUrl: input.routeUrl,
+      checkedAt,
+      networkAttempted: true,
+      errors: ["Harness runner proofs body did not match the expected proof summary list."]
+    };
+  }
+
+  const proofs = candidate.proofs
+    .map(parseStageWebHarnessProofSummary)
+    .filter((proof): proof is StageWebHarnessRunnerProofSummary => proof !== undefined);
+
+  return {
+    status: "loaded",
+    routeUrl: input.routeUrl,
+    checkedAt,
+    networkAttempted: true,
+    proofCount: proofs.length,
+    latestProof: proofs[0],
+    errors: []
+  };
+}
+
+function parseStageWebHarnessProofSummary(
+  proof: unknown
+): StageWebHarnessRunnerProofSummary | undefined {
+  if (!proof || typeof proof !== "object") {
+    return undefined;
+  }
+
+  const candidate = proof as Partial<StageWebHarnessRunnerProofSummary>;
+
+  if (
+    typeof candidate.taskId !== "string" ||
+    typeof candidate.runId !== "string" ||
+    typeof candidate.status !== "string" ||
+    typeof candidate.adapterId !== "string" ||
+    typeof candidate.proofPath !== "string" ||
+    typeof candidate.writtenAt !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    taskId: candidate.taskId,
+    runId: candidate.runId,
+    status: candidate.status,
+    adapterId: candidate.adapterId,
+    proofPath: candidate.proofPath,
+    writtenAt: candidate.writtenAt
   };
 }
 

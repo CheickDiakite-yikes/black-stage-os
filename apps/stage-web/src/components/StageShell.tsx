@@ -18,7 +18,10 @@ import { ApprovalCard } from "./ApprovalCard";
 import { ArtifactCard } from "./ArtifactCard";
 import { ResearchCapture } from "./ResearchCapture";
 import { StageObjectCard } from "./StageObjectCard";
-import type { StageWebHarnessRunnerSnapshot } from "../harness/harnessRunnerReadiness";
+import type {
+  StageWebHarnessRunnerProofs,
+  StageWebHarnessRunnerSnapshot
+} from "../harness/harnessRunnerReadiness";
 
 type StageShellProps = {
   thread: IntentThread;
@@ -26,6 +29,7 @@ type StageShellProps = {
   scenarios: StageShellScenario[];
   activeScenario?: StageShellScenario;
   assistantSpeechText?: string;
+  harnessRunnerProofs: StageWebHarnessRunnerProofs;
   harnessRunnerReadiness: HarnessRunnerClientReadiness;
   harnessRunnerSnapshot: StageWebHarnessRunnerSnapshot;
   researchEvents: ResearchEvent[];
@@ -70,6 +74,7 @@ export function StageShell({
   scenarios,
   activeScenario,
   assistantSpeechText,
+  harnessRunnerProofs,
   harnessRunnerReadiness,
   harnessRunnerSnapshot,
   researchEvents,
@@ -226,7 +231,8 @@ export function StageShell({
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
   const harnessRunnerStatus = formatHarnessRunnerReadiness(
     harnessRunnerReadiness,
-    harnessRunnerSnapshot
+    harnessRunnerSnapshot,
+    harnessRunnerProofs
   );
   const realtimeBrokerStatus = formatRealtimeBrokerReadiness(realtimeBrokerReadiness);
 
@@ -469,14 +475,18 @@ function formatRealtimeBrokerReadiness(readiness: RealtimeBrokerClientReadiness)
 
 function formatHarnessRunnerReadiness(
   readiness: HarnessRunnerClientReadiness,
-  snapshot: StageWebHarnessRunnerSnapshot
+  snapshot: StageWebHarnessRunnerSnapshot,
+  proofs: StageWebHarnessRunnerProofs
 ): string {
   switch (readiness.status) {
     case "checking":
       return "checking";
     case "reachable":
       if (snapshot.status === "loaded") {
-        return `${snapshot.openWorkCount ?? 0} open · ${snapshot.reviewCount ?? 0} review`;
+        const proofCount = proofs.status === "loaded" ? (proofs.proofCount ?? 0) : 0;
+        const proofLabel = proofCount === 1 ? "proof" : "proofs";
+
+        return `${snapshot.openWorkCount ?? 0} open · ${snapshot.reviewCount ?? 0} review · ${proofCount} ${proofLabel}`;
       }
 
       return readiness.codexMode === "local_exec" ? "runner live" : "runner mounted";
