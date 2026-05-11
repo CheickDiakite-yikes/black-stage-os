@@ -384,6 +384,10 @@ function MemorySurface({ payload }: { payload: unknown }) {
   const recallResults = Array.isArray(retrieval?.results)
     ? retrieval.results.filter(isRecord)
     : [];
+  const review = isRecord(payload.review) ? payload.review : undefined;
+  const reviewRecords = Array.isArray(review?.records)
+    ? review.records.filter(isRecord)
+    : [];
 
   return (
     <div className="cognitive-surface memory-surface" data-testid="memory-surface">
@@ -407,6 +411,27 @@ function MemorySurface({ payload }: { payload: unknown }) {
             </ol>
           ) : (
             <em>No approved local memory matched.</em>
+          )}
+        </div>
+      ) : null}
+      {review ? (
+        <div className="memory-recall" aria-label="Cross-thread memory review">
+          <span>Cross-thread review</span>
+          <strong>
+            {formatPayloadValue(review.recordCount ?? 0)} approved across{" "}
+            {formatPayloadValue(review.threadCount ?? 0)} thread
+          </strong>
+          {reviewRecords.length > 0 ? (
+            <ol className="memory-records">
+              {reviewRecords.slice(0, 6).map((record) => (
+                <li key={formatPayloadValue(record.id)}>
+                  <span>{formatPayloadValue(record.threadId ?? "thread")}</span>
+                  <strong>{formatPayloadValue(record.summary ?? "")}</strong>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <em>No approved local memories to review.</em>
           )}
         </div>
       ) : null}

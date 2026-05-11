@@ -663,6 +663,32 @@ test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) =>
     "Recalled 1 local memory match."
   );
 
+  await page.getByRole("button", { name: "Seed round plan" }).click();
+  await page
+    .getByTestId("intent-input")
+    .fill("remember Investor followups need weekly review");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("approval-card")).toContainText("Save local memory");
+  await page.getByRole("button", { name: "Approve", exact: true }).click({
+    force: true
+  });
+  await page.getByTestId("intent-input").fill("review memories");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+  await expect(page.getByTestId("memory-surface")).toContainText("Cross-thread review");
+  await expect(page.getByTestId("memory-surface")).toContainText(
+    "Blackstage memory writes stay local"
+  );
+  await expect(page.getByTestId("memory-surface")).toContainText(
+    "Investor followups need weekly review"
+  );
+  await expect(page.getByTestId("agent-activity-feed")).toContainText(
+    "Reviewed 2 approved local memories."
+  );
+
   await page.getByTestId("intent-input").fill("forget explicit approval");
   await page.getByRole("button", { name: "Send" }).click({
     force: true

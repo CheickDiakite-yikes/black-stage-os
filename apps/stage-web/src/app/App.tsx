@@ -94,6 +94,12 @@ const TEXT_CONTEXT_LIMIT = 720;
 const MEMORY_COMMAND_PREFIX = "remember ";
 const FORGET_COMMAND_PREFIXES = ["forget ", "delete memory "];
 const RECALL_COMMAND_PREFIXES = ["recall ", "search memory ", "find memory "];
+const REVIEW_MEMORY_COMMANDS = new Set([
+  "review memory",
+  "review memories",
+  "show memory review",
+  "show memories"
+]);
 const REALTIME_LIVE_APPROVAL_PREFIX = "approval_realtime_live_";
 
 type BlackstageTestWindow = Window & {
@@ -487,13 +493,13 @@ export function App() {
         type: "approval.requested",
         payload: {
           id: `approval_memory_delete_${targetRecord.id}`,
-          threadId: thread.id,
+          threadId: targetRecord.threadId,
           actionType: "memory_delete",
           title: "Delete local memory",
           summary: targetRecord.redactedSummary,
           riskLevel: "medium",
           proposedBy: "Blackstage memory vault",
-          scope: "Local thread memory",
+          scope: `Local thread memory (${targetRecord.threadId})`,
           consequence: "The memory record will be marked deleted in the local vault.",
           undoPath: "Re-submit the remembered fact if deletion was a mistake.",
           status: "pending",
@@ -560,6 +566,46 @@ export function App() {
     [emitAssistantSpeech, emitStageEvent, memoryRecords, stageVoiceEnabled, thread.id]
   );
 
+  const requestMemoryReview = useCallback(
+    (intentText: string) => {
+      if (!parseMemoryReviewCommand(intentText)) {
+        return false;
+      }
+
+      const reviewedAt = new Date().toISOString();
+      const approvedRecords = memoryRecords.filter(
+        (record) => record.status === "approved"
+      );
+
+      emitStageEvent({
+        type: "object.created",
+        payload: createMemoryVaultObject(thread.id, memoryRecords, reviewedAt, {
+          review: {
+            records: approvedRecords
+          }
+        })
+      });
+      emitStageEvent({
+        type: "agent.progress",
+        payload: {
+          id: `memory_review_${Date.now().toString(36)}`,
+          threadId: thread.id,
+          agentName: "Local memory vault",
+          type: "completed",
+          summary:
+            approvedRecords.length > 0
+              ? `Reviewed ${approvedRecords.length} approved local memories.`
+              : "No approved local memories to review.",
+          details: "Cross-thread review shows redacted approved memory records only.",
+          timestamp: reviewedAt
+        }
+      });
+
+      return true;
+    },
+    [emitStageEvent, memoryRecords, thread.id]
+  );
+
   const runIntent = useCallback(
     (
       intentText: string,
@@ -579,6 +625,10 @@ export function App() {
       }
 
       if (!scenarioId && requestMemoryRecall(intentText)) {
+        return;
+      }
+
+      if (!scenarioId && requestMemoryReview(intentText)) {
         return;
       }
 
@@ -621,6 +671,7 @@ export function App() {
       emitAssistantSpeech,
       requestMemoryDelete,
       requestMemoryRecall,
+      requestMemoryReview,
       requestMemoryWrite,
       scheduleTimedEvents,
       sessionId,
@@ -1664,13 +1715,20 @@ function parseMemoryRecallCommand(intentText: string): string | undefined {
   return queryText.length > 0 ? queryText : undefined;
 }
 
+function parseMemoryReviewCommand(intentText: string): boolean {
+  return REVIEW_MEMORY_COMMANDS.has(intentText.trim().toLowerCase());
+}
+
 function createMemoryVaultObject(
   threadId: string,
   records: MemoryVaultRecord[],
   timestamp: string,
-  retrieval?: {
-    query: string;
-    results: RankedMemoryResult[];
+  memoryView?: {
+    query?: string;
+    results?: RankedMemoryResult[];
+    review?: {
+      records: MemoryVaultRecord[];
+    };
   }
 ): StageObject {
   const visibleRecords = records.filter((record) => record.threadId === threadId);
@@ -1704,11 +1762,11 @@ function createMemoryVaultObject(
         summary: record.redactedSummary,
         updatedAt: record.updatedAt
       })),
-      retrieval: retrieval
+      retrieval: memoryView?.query
         ? {
-            query: retrieval.query,
-            resultCount: retrieval.results.length,
-            results: retrieval.results.map((result) => ({
+            query: memoryView.query,
+            resultCount: memoryView.results?.length ?? 0,
+            results: (memoryView.results ?? []).map((result) => ({
               id: result.id,
               score: result.score,
               scope: result.scope,
@@ -1716,6 +1774,22 @@ function createMemoryVaultObject(
               matchedTerms: result.matchedTerms,
               threadMatch: result.threadMatch,
               reason: result.reason
+            }))
+          }
+        : undefined,
+      review: memoryView?.review
+        ? {
+            recordCount: memoryView.review.records.length,
+            threadCount: new Set(
+              memoryView.review.records.map((record) => record.threadId)
+            ).size,
+            records: memoryView.review.records.map((record) => ({
+              id: record.id,
+              threadId: record.threadId,
+              status: record.status,
+              scope: record.scope,
+              summary: record.redactedSummary,
+              updatedAt: record.updatedAt
             }))
           }
         : undefined,
