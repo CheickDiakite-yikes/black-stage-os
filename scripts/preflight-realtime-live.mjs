@@ -1,3 +1,5 @@
+import { loadLocalEnvFile, summarizeLocalEnvLoad } from "./local-env.mjs";
+
 const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 const REQUIRED_ENV_VARS = [
   "OPENAI_API_KEY",
@@ -5,6 +7,7 @@ const REQUIRED_ENV_VARS = [
   "BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN"
 ];
 
+const localEnv = loadLocalEnvFile();
 const liveSmokeArmed = process.env[LIVE_SMOKE_ENV_VAR] === "1";
 const requiredEnv = Object.fromEntries(
   REQUIRED_ENV_VARS.map((envVar) => [
@@ -20,10 +23,15 @@ console.log(
     {
       okToRun,
       liveSmokeArmed,
+      localEnv: summarizeLocalEnvLoad(localEnv),
       requiredEnv,
       missingEnv,
       openAiNetworkCallWouldRun: okToRun,
       browserReceivesStandardApiKey: false,
+      cheapTestGuard: {
+        liveCallRequiresExplicitArm: true,
+        browserSendsAudio: false
+      },
       notes: okToRun
         ? [
             "pnpm smoke:realtime is armed for a live SDP exchange through the local broker.",

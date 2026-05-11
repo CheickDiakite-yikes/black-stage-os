@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { loadLocalEnvFile } from "./local-env.mjs";
 
 export const REALTIME_LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 export const REALTIME_SAFETY_IDENTIFIER_ENV_VAR =
@@ -87,5 +88,6 @@ function slugifyTimestamp(value) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  loadLocalEnvFile();
   console.log(renderRealtimeSmokeEnvPlan(createRealtimeSmokeEnvPlan()));
 }

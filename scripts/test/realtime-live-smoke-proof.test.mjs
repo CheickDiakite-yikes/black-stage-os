@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { loadLocalEnvFile } from "../local-env.mjs";
 import {
   createRealtimeSmokeEnvPlan,
   createRealtimeSmokeSafetyIdentifier,
@@ -35,6 +36,12 @@ describe("Realtime live smoke proof", () => {
       answerBytes: 2400,
       answerSha256Prefix: "abc123ef45ff",
       browserSendsAudio: false,
+      localEnv: {
+        loaded: true,
+        envPath: ".env",
+        loadedEnvVars: ["OPENAI_API_KEY"],
+        skippedEnvVars: []
+      },
       errorMessage: "approval token super-secret-token and sk-proj-secretsecret",
       notes: ["safe evidence only"]
     });
@@ -48,8 +55,85 @@ describe("Realtime live smoke proof", () => {
     assert.equal(proof.browserSendsAudio, false);
     assert.equal(proof.openAiNetworkCallAttempted, true);
     assert.equal(proof.requiredEnv.OPENAI_API_KEY, "set");
+    assert.deepEqual(proof.localEnv, {
+      loaded: true,
+      envPath: ".env",
+      loadedEnvVars: ["OPENAI_API_KEY"],
+      skippedEnvVars: []
+    });
     assert.equal(rawProof.includes("super-secret-token"), false);
     assert.equal(rawProof.includes("sk-proj-secretsecret"), false);
+  });
+
+  it("loads local .env values without returning secret values", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "blackstage-local-env-"));
+    const targetEnv = {};
+
+    try {
+      await writeFile(
+        join(repoRoot, ".env"),
+        [
+          "OPENAI_API_KEY=sk-proj-fakekey123456",
+          "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER='blackstage-local-test'",
+          "IGNORED-WITH-DASH=value"
+        ].join("\n"),
+        "utf8"
+      );
+
+      const result = loadLocalEnvFile({
+        repoRoot,
+        targetEnv
+      });
+      const rawResult = JSON.stringify(result);
+
+      assert.equal(result.loaded, true);
+      assert.deepEqual(result.loadedEnvVars, [
+        "OPENAI_API_KEY",
+        "BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER"
+      ]);
+      assert.equal(targetEnv.OPENAI_API_KEY, "sk-proj-fakekey123456");
+      assert.equal(
+        targetEnv.BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER,
+        "blackstage-local-test"
+      );
+      assert.equal(rawResult.includes("sk-proj-fakekey123456"), false);
+      assert.equal(rawResult.includes("blackstage-local-test"), false);
+    } finally {
+      await rm(repoRoot, {
+        recursive: true,
+        force: true
+      });
+    }
+  });
+
+  it("loads .env.local as the default local fallback", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "blackstage-local-env-"));
+    const targetEnv = {};
+
+    try {
+      await writeFile(
+        join(repoRoot, ".env.local"),
+        "OPENAI_API_KEY=sk-proj-fallback123\n",
+        "utf8"
+      );
+
+      const result = loadLocalEnvFile({
+        repoRoot,
+        targetEnv
+      });
+      const rawResult = JSON.stringify(result);
+
+      assert.equal(result.loaded, true);
+      assert.equal(result.envPath, ".env.local");
+      assert.deepEqual(result.loadedEnvVars, ["OPENAI_API_KEY"]);
+      assert.equal(targetEnv.OPENAI_API_KEY, "sk-proj-fallback123");
+      assert.equal(rawResult.includes("sk-proj-fallback123"), false);
+    } finally {
+      await rm(repoRoot, {
+        recursive: true,
+        force: true
+      });
+    }
   });
 
   it("writes proof files only inside .blackstage", async () => {

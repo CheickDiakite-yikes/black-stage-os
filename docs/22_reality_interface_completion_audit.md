@@ -61,6 +61,12 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 Most recent validation after the root validation gate:
 
+- `git check-ignore -v .env .env.local`: confirmed local env files are ignored by the root `.gitignore`.
+- `pnpm test:scripts`: passed after adding the local `.env` / `.env.local` loader and redacted env/proof tests; no secret values were emitted.
+- `pnpm preflight:realtime`: passed with redacted env readiness; `.env.local` was detected, `OPENAI_API_KEY` was set/skipped without printing a value, and live smoke stayed unarmed unless the live flag, safety identifier, and local approval token are all set.
+- `BLACKSTAGE_REALTIME_LIVE_SMOKE=0 pnpm smoke:realtime`: passed in skip-gated mode with no OpenAI network call, no browser audio, and a redacted proof path when configured.
+- `pnpm exec prettier --check ... && git diff --check`: passed for the touched Realtime smoke scripts, tests, audit, and research files.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 264 tracked files.
 - `pnpm --filter @blackstage/stage-web typecheck`: passed after wiring the disabled-by-default local-audio handoff flag into the Realtime bridge.
 - `pnpm --filter @blackstage/stage-web exec playwright test tests/realtime-bridge.spec.ts`: passed with two browser tests: default Realtime SDP bridge still makes zero `getUserMedia` calls, and explicitly armed local audio calls `getUserMedia` once, attaches one fake audio track, and records an approved audio-track SDP bridge event.
 - `pnpm exec prettier --check ... && git diff --check`: passed for the touched Stage Web, Realtime bridge test, audit, and research files.

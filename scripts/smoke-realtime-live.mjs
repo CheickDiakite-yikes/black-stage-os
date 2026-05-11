@@ -15,6 +15,7 @@ import {
   createSafeRealtimeSmokeErrorMessage,
   writeRealtimeLiveSmokeProof
 } from "./realtime-live-smoke-proof.mjs";
+import { loadLocalEnvFile, summarizeLocalEnvLoad } from "./local-env.mjs";
 
 const LIVE_SMOKE_ENV_VAR = "BLACKSTAGE_REALTIME_LIVE_SMOKE";
 const REQUIRED_ENV_VARS = [
@@ -23,8 +24,10 @@ const REQUIRED_ENV_VARS = [
   STAGE_BROKER_RUN_APPROVAL_TOKEN_ENV_VAR
 ];
 const DEFAULT_TIMEOUT_MS = 30_000;
+const CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS = 15_000;
 
 async function main() {
+  const localEnv = loadLocalEnvFile();
   const requiredEnv = createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS);
   const missingEnvVars = REQUIRED_ENV_VARS.filter(
     (envVar) => !process.env[envVar]?.trim()
@@ -38,10 +41,14 @@ async function main() {
       status: "skipped",
       liveSmokeArmed: false,
       requiredEnv,
+      localEnv: summarizeLocalEnvLoad(localEnv),
       missingEnv: missingEnvVars,
       openAiNetworkCallAttempted: false,
       browserSendsAudio: false,
-      notes: ["Live Realtime smoke was not armed; no OpenAI network call ran."]
+      notes: [
+        "Live Realtime smoke was not armed; no OpenAI network call ran.",
+        "Cheap-test guard: SDP-only, no browser audio."
+      ]
     });
     return;
   }
@@ -108,7 +115,10 @@ async function main() {
       answerBytes: Buffer.byteLength(answerSdp, "utf8"),
       answerSha256Prefix: answerDigest,
       browserSendsAudio: false,
-      notes: ["Live Realtime SDP exchange completed through the local broker."]
+      notes: [
+        "Live Realtime SDP exchange completed through the local broker.",
+        `Cheap-test guard: timeout capped at ${CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio disabled.`
+      ]
     });
 
     console.log(
@@ -121,6 +131,7 @@ async function main() {
           answerSha256Prefix: answerDigest,
           browserReceivesStandardApiKey: false,
           browserSendsAudio: false,
+          timeoutMs: readTimeoutMs(),
           redactedProofPath: proofResult?.proofPath
         },
         null,
@@ -208,10 +219,12 @@ function closeServer(server) {
 function readTimeoutMs() {
   const rawTimeoutMs = process.env.BLACKSTAGE_REALTIME_LIVE_SMOKE_TIMEOUT_MS;
   const parsedTimeoutMs = rawTimeoutMs ? Number(rawTimeoutMs) : DEFAULT_TIMEOUT_MS;
+  const requestedTimeoutMs =
+    Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0
+      ? parsedTimeoutMs
+      : DEFAULT_TIMEOUT_MS;
 
-  return Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0
-    ? parsedTimeoutMs
-    : DEFAULT_TIMEOUT_MS;
+  return Math.min(requestedTimeoutMs, CHEAP_LIVE_SMOKE_TIMEOUT_CAP_MS);
 }
 
 main().catch(async (error) => {
@@ -220,6 +233,7 @@ main().catch(async (error) => {
       status: "failed",
       liveSmokeArmed: process.env[LIVE_SMOKE_ENV_VAR] === "1",
       requiredEnv: createRequiredEnvStatus(process.env, REQUIRED_ENV_VARS),
+      localEnv: summarizeLocalEnvLoad(loadLocalEnvFile()),
       missingEnv: REQUIRED_ENV_VARS.filter((envVar) => !process.env[envVar]?.trim()),
       openAiNetworkCallAttempted:
         process.env[LIVE_SMOKE_ENV_VAR] === "1" &&

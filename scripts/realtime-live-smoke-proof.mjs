@@ -24,6 +24,7 @@ export function createRealtimeLiveSmokeProof(input) {
     browserReceivesStandardApiKey: false,
     browserSendsAudio: Boolean(input.browserSendsAudio),
     requiredEnv: normalizeRequiredEnv(input.requiredEnv ?? {}),
+    localEnv: normalizeLocalEnv(input.localEnv),
     missingEnv: Array.isArray(input.missingEnv) ? input.missingEnv : [],
     offerBytes: normalizeOptionalNumber(input.offerBytes),
     answerBytes: normalizeOptionalNumber(input.answerBytes),
@@ -116,6 +117,30 @@ function normalizeRequiredEnv(requiredEnv) {
       status === "set" ? "set" : "unset"
     ])
   );
+}
+
+function normalizeLocalEnv(localEnv) {
+  if (!localEnv || typeof localEnv !== "object") {
+    return undefined;
+  }
+
+  return {
+    loaded: Boolean(localEnv.loaded),
+    envPath:
+      typeof localEnv.envPath === "string" && localEnv.envPath.trim()
+        ? localEnv.envPath
+        : undefined,
+    loadedEnvVars: normalizeEnvVarList(localEnv.loadedEnvVars),
+    skippedEnvVars: normalizeEnvVarList(localEnv.skippedEnvVars)
+  };
+}
+
+function normalizeEnvVarList(value) {
+  return Array.isArray(value)
+    ? value
+        .filter((envVar) => typeof envVar === "string" && /^[A-Za-z_]/.test(envVar))
+        .slice(0, 32)
+    : [];
 }
 
 function normalizeOptionalNumber(value) {
