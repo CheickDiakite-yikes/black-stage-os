@@ -284,13 +284,11 @@ export function StageShell({
         ? "Voice standby"
         : "Speak";
   const presenceOrbLabel =
-    realtimeArmAvailable && realtimeBridge.status === "disabled"
-      ? "Open live voice edge"
-      : voiceCapture.status === "listening"
-        ? "Listening for intent"
-        : voiceCapture.status === "unavailable"
-          ? "Voice unavailable"
-          : "Start voice input";
+    voiceCapture.status === "listening"
+      ? "Listening for intent"
+      : voiceCapture.status === "unavailable"
+        ? "Voice unavailable"
+        : "Start voice input";
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");

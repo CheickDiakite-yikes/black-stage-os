@@ -232,7 +232,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");
   await expect(page.getByTestId("realtime-arm-button")).toBeEnabled();
   await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
-    "Open live voice edge"
+    "Start voice input"
   );
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(0);
 

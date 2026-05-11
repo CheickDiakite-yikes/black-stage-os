@@ -17,6 +17,7 @@ Continue the active Blackstage goal from the pushed Realtime smoke/proof state a
 - Added an early failure path so browsers that cannot create the required audio section fail before a broker/provider request.
 - Retained the connected peer handle in Stage Web so reset/reconfiguration can close the live bridge explicitly.
 - Let the startup orb request the live Realtime approval when the broker is ready, keeping the visible startup action singular.
+- Kept the startup orb labeled as `Start voice input` even when the Realtime broker is ready, so live-edge wiring does not leak operator language into the first user action.
 - Parsed Realtime speech-start/speech-stop lifecycle events and verified they surface as visible agent labor.
 - Drove a fake Realtime server transcript through the retained data-channel listener and verified it became a normal voice intent run that shaped the Stage Shell plan.
 - Drove a fake Realtime assistant text event through the same listener and verified it surfaced in the Stage speech status instead of remaining only in storage.
@@ -40,7 +41,7 @@ Live bridges also need explicit lifetime ownership. A connected status in serial
 
 The first useful event-streaming proofs should be small: lifecycle events become visible labor, one server transcript over the data channel becomes a real voice intent run, one assistant text event becomes visible Stage speech, one requested tool call becomes one approval card, and one error becomes a failed agent event. That keeps the live path auditable before richer realtime behaviors are turned on.
 
-The live edge should still enter through the same object the user already understands: the orb. Secondary controls can remain as operator fallbacks, but the startup surface should not split the user's first action.
+The live edge should still enter through the same object the user already understands: the orb. Secondary controls can remain as operator fallbacks, but the startup surface should not split or rename the user's first action.
 
 ## Evidence
 

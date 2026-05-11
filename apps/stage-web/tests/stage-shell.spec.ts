@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDirectory, "../../..");
 const screenshotPath = path.join(repoRoot, "artifacts/screenshots/stage-shell-v0.png");
+const startupScenarioLabels = [
+  "Acquisition analysis",
+  "Seed round plan",
+  "Build BlackStage",
+  "Research synthesis"
+];
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -191,7 +197,9 @@ test("Stage Shell v0 opens to the idle orb instead of saved fixture work", async
   );
   await expect(page.getByTestId("intent-capture")).toHaveCSS("opacity", "0");
   await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "none");
-  await expect(page.getByText("Acquisition analysis")).toHaveCount(0);
+  for (const label of startupScenarioLabels) {
+    await expect(page.getByText(label)).toHaveCount(0);
+  }
 
   const storageState = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
@@ -1788,6 +1796,10 @@ test("Stage Shell v0 accepts a spoken final intent when browser speech is availa
   await installFakeSpeechRecognition(page);
 
   await page.goto("/");
+
+  for (const label of startupScenarioLabels) {
+    await expect(page.getByText(label)).toHaveCount(0);
+  }
 
   await page.getByTestId("presence-orb").click({
     force: true
