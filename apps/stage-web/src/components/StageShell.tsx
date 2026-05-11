@@ -18,6 +18,7 @@ import { ApprovalCard } from "./ApprovalCard";
 import { ArtifactCard } from "./ArtifactCard";
 import { ResearchCapture } from "./ResearchCapture";
 import { StageObjectCard } from "./StageObjectCard";
+import type { StageWebHarnessRunnerSnapshot } from "../harness/harnessRunnerReadiness";
 
 type StageShellProps = {
   thread: IntentThread;
@@ -26,6 +27,7 @@ type StageShellProps = {
   activeScenario?: StageShellScenario;
   assistantSpeechText?: string;
   harnessRunnerReadiness: HarnessRunnerClientReadiness;
+  harnessRunnerSnapshot: StageWebHarnessRunnerSnapshot;
   researchEvents: ResearchEvent[];
   realtimeBrokerReadiness: RealtimeBrokerClientReadiness;
   stageEventCount: number;
@@ -69,6 +71,7 @@ export function StageShell({
   activeScenario,
   assistantSpeechText,
   harnessRunnerReadiness,
+  harnessRunnerSnapshot,
   researchEvents,
   realtimeBrokerReadiness,
   stageEventCount,
@@ -221,7 +224,10 @@ export function StageShell({
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
-  const harnessRunnerStatus = formatHarnessRunnerReadiness(harnessRunnerReadiness);
+  const harnessRunnerStatus = formatHarnessRunnerReadiness(
+    harnessRunnerReadiness,
+    harnessRunnerSnapshot
+  );
   const realtimeBrokerStatus = formatRealtimeBrokerReadiness(realtimeBrokerReadiness);
 
   return (
@@ -461,11 +467,18 @@ function formatRealtimeBrokerReadiness(readiness: RealtimeBrokerClientReadiness)
   }
 }
 
-function formatHarnessRunnerReadiness(readiness: HarnessRunnerClientReadiness): string {
+function formatHarnessRunnerReadiness(
+  readiness: HarnessRunnerClientReadiness,
+  snapshot: StageWebHarnessRunnerSnapshot
+): string {
   switch (readiness.status) {
     case "checking":
       return "checking";
     case "reachable":
+      if (snapshot.status === "loaded") {
+        return `${snapshot.openWorkCount ?? 0} open · ${snapshot.reviewCount ?? 0} review`;
+      }
+
       return readiness.codexMode === "dry_run" ? "runner mounted" : "runner standby";
     case "unreachable":
       return "offline";

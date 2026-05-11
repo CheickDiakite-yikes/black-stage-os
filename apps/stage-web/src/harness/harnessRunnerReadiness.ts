@@ -16,8 +16,50 @@ export type StageWebHarnessRunnerReadinessOptions = {
   fetchImpl?: typeof fetch;
 };
 
+export type StageWebHarnessRunnerSnapshotStatus =
+  | "not_configured"
+  | "checking"
+  | "loaded"
+  | "unavailable";
+
+export type StageWebHarnessRunnerSnapshot = {
+  status: StageWebHarnessRunnerSnapshotStatus;
+  routeUrl?: string;
+  checkedAt: string;
+  networkAttempted: boolean;
+  openWorkCount?: number;
+  reviewCount?: number;
+  blockedCount?: number;
+  totalTaskCount?: number;
+  errors: string[];
+};
+
 export function createDefaultStageWebHarnessReadiness(): HarnessRunnerClientReadiness {
   return createHarnessRunnerNotConfiguredReadiness();
+}
+
+export function createDefaultStageWebHarnessSnapshot(
+  checkedAt = new Date().toISOString()
+): StageWebHarnessRunnerSnapshot {
+  return {
+    status: "not_configured",
+    checkedAt,
+    networkAttempted: false,
+    errors: []
+  };
+}
+
+export function createStageWebHarnessSnapshotChecking(
+  routeUrl: string,
+  checkedAt = new Date().toISOString()
+): StageWebHarnessRunnerSnapshot {
+  return {
+    status: "checking",
+    routeUrl,
+    checkedAt,
+    networkAttempted: true,
+    errors: []
+  };
 }
 
 export function resolveStageWebHarnessRunnerRouteUrl(
@@ -35,6 +77,27 @@ export function resolveStageWebHarnessRunnerRouteUrl(
     if (url.pathname === "/" || url.pathname === "") {
       url.pathname = BLACKSTAGE_HARNESS_RUNNER_ROUTE;
     }
+
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+export function resolveStageWebHarnessRunnerSnapshotUrl(
+  routeUrl: string | undefined
+): string | undefined {
+  if (!routeUrl) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(routeUrl);
+    const normalizedPath = url.pathname.endsWith("/")
+      ? url.pathname.slice(0, -1)
+      : url.pathname;
+
+    url.pathname = `${normalizedPath}/snapshot`;
 
     return url.toString();
   } catch {
@@ -77,10 +140,114 @@ export async function checkStageWebHarnessRunnerReadiness(
   }
 }
 
+export async function checkStageWebHarnessRunnerSnapshot(
+  options: StageWebHarnessRunnerReadinessOptions = {}
+): Promise<StageWebHarnessRunnerSnapshot> {
+  const routeUrl = resolveStageWebHarnessRunnerSnapshotUrl(
+    resolveStageWebHarnessRunnerRouteUrl(options.routeUrl)
+  );
+
+  if (!routeUrl) {
+    return createDefaultStageWebHarnessSnapshot();
+  }
+
+  try {
+    const response = await (options.fetchImpl ?? fetch)(routeUrl, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      },
+      credentials: "omit"
+    });
+    let body: unknown;
+
+    try {
+      body = await response.json();
+    } catch {
+      body = undefined;
+    }
+
+    return interpretStageWebHarnessRunnerSnapshot({
+      routeUrl,
+      status: response.status,
+      body
+    });
+  } catch (error) {
+    return {
+      status: "unavailable",
+      routeUrl,
+      checkedAt: new Date().toISOString(),
+      networkAttempted: true,
+      errors: [error instanceof Error ? error.message : "Harness runner snapshot check failed."]
+    };
+  }
+}
+
 export function createStageWebHarnessCheckingReadiness(
   routeUrl: string
 ): HarnessRunnerClientReadiness {
   return createHarnessRunnerCheckingReadiness(routeUrl);
+}
+
+function interpretStageWebHarnessRunnerSnapshot(input: {
+  routeUrl: string;
+  status: number;
+  body?: unknown;
+  checkedAt?: string;
+}): StageWebHarnessRunnerSnapshot {
+  const checkedAt = input.checkedAt ?? new Date().toISOString();
+
+  if (input.status !== 200 || !input.body || typeof input.body !== "object") {
+    return {
+      status: "unavailable",
+      routeUrl: input.routeUrl,
+      checkedAt,
+      networkAttempted: true,
+      errors: [`Harness runner snapshot check returned HTTP ${input.status}.`]
+    };
+  }
+
+  const candidate = input.body as {
+    controlPlane?: {
+      openWorkCount?: unknown;
+      reviewCount?: unknown;
+      blockedCount?: unknown;
+    };
+    snapshot?: {
+      tasks?: unknown;
+    };
+  };
+  const openWorkCount = candidate.controlPlane?.openWorkCount;
+  const reviewCount = candidate.controlPlane?.reviewCount;
+  const blockedCount = candidate.controlPlane?.blockedCount;
+  const tasks = candidate.snapshot?.tasks;
+
+  if (
+    typeof openWorkCount !== "number" ||
+    typeof reviewCount !== "number" ||
+    typeof blockedCount !== "number" ||
+    !Array.isArray(tasks)
+  ) {
+    return {
+      status: "unavailable",
+      routeUrl: input.routeUrl,
+      checkedAt,
+      networkAttempted: true,
+      errors: ["Harness runner snapshot body did not match the expected queue summary."]
+    };
+  }
+
+  return {
+    status: "loaded",
+    routeUrl: input.routeUrl,
+    checkedAt,
+    networkAttempted: true,
+    openWorkCount,
+    reviewCount,
+    blockedCount,
+    totalTaskCount: tasks.length,
+    errors: []
+  };
 }
 
 function readStageWebHarnessEnvValue(): string | undefined {

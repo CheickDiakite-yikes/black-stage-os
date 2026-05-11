@@ -33,8 +33,11 @@ import {
   resolveStageWebRealtimeBrokerRouteUrl
 } from "../voice/realtimeBrokerReadiness";
 import {
+  checkStageWebHarnessRunnerSnapshot,
   checkStageWebHarnessRunnerReadiness,
   createDefaultStageWebHarnessReadiness,
+  createDefaultStageWebHarnessSnapshot,
+  createStageWebHarnessSnapshotChecking,
   createStageWebHarnessCheckingReadiness,
   resolveStageWebHarnessRunnerRouteUrl
 } from "../harness/harnessRunnerReadiness";
@@ -111,6 +114,9 @@ export function App() {
   );
   const [harnessRunnerReadiness, setHarnessRunnerReadiness] = useState(
     createDefaultStageWebHarnessReadiness
+  );
+  const [harnessRunnerSnapshot, setHarnessRunnerSnapshot] = useState(
+    createDefaultStageWebHarnessSnapshot
   );
   const activeRunStartedAtRef = useRef<number | undefined>(undefined);
   const activeTimedEventsRef = useRef<TimedStageEvent[]>([]);
@@ -1007,16 +1013,39 @@ export function App() {
 
     if (!routeUrl) {
       setHarnessRunnerReadiness(createDefaultStageWebHarnessReadiness());
+      setHarnessRunnerSnapshot(createDefaultStageWebHarnessSnapshot());
       return;
     }
 
     setHarnessRunnerReadiness(createStageWebHarnessCheckingReadiness(routeUrl));
+    setHarnessRunnerSnapshot(createStageWebHarnessSnapshotChecking(routeUrl));
 
     void checkStageWebHarnessRunnerReadiness({
       routeUrl
-    }).then((readiness) => {
+    }).then(async (readiness) => {
       if (!cancelled) {
         setHarnessRunnerReadiness(readiness);
+      }
+
+      if (readiness.status !== "reachable") {
+        if (!cancelled) {
+          setHarnessRunnerSnapshot({
+            status: "unavailable",
+            routeUrl,
+            checkedAt: readiness.checkedAt,
+            networkAttempted: readiness.networkAttempted,
+            errors: readiness.errors
+          });
+        }
+        return;
+      }
+
+      const snapshot = await checkStageWebHarnessRunnerSnapshot({
+        routeUrl
+      });
+
+      if (!cancelled) {
+        setHarnessRunnerSnapshot(snapshot);
       }
     });
 
@@ -1034,6 +1063,7 @@ export function App() {
       approvalExplanationVisible={approvalExplanationVisible}
       assistantSpeechText={assistantSpeechText}
       harnessRunnerReadiness={harnessRunnerReadiness}
+      harnessRunnerSnapshot={harnessRunnerSnapshot}
       isReplaying={isReplaying}
       isRunning={isRunning}
       researchEvents={researchEvents}
