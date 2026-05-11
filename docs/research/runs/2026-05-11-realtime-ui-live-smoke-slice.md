@@ -23,12 +23,18 @@ live real test where the interface can show real magic.
 - Writes redacted proof and screenshot artifacts under `.blackstage/` when run.
 - Keeps the browser from receiving the OpenAI key and disables browser audio send
   for this cheap proof.
+- Fixed the live smoke harness to inject the broker URL through Stage Web runtime
+  hooks and to allow the random Vite origin through the local broker.
+- Ran the armed UI smoke successfully. It clicked the startup orb, approved the
+  live edge, reached `live SDP`, and produced redacted proof at
+  `.blackstage/realtime-smoke/live-2026-05-11T21-20-10-666Z.json` plus screenshot
+  `.blackstage/realtime-smoke/ui-live-2026-05-11T21-20-18-131Z.png`.
 
 ## What Failed Or Needed Human Intervention
 
 The current slice does not yet prove live microphone speech or a real provider
 transcript flowing into Stage objects. It proves the approved UI-to-provider
-Realtime edge.
+Realtime edge with one live Realtime SDP exchange.
 
 ## Product Insight
 
@@ -47,3 +53,7 @@ experience.
 - `scripts/smoke-realtime-ui-live.mjs`
 - `package.json`
 - `docs/22_reality_interface_completion_audit.md`
+- `.blackstage/realtime-smoke/live-2026-05-11T21-20-10-666Z.json` (ignored,
+  redacted proof)
+- `.blackstage/realtime-smoke/ui-live-2026-05-11T21-20-18-131Z.png` (ignored
+  screenshot)

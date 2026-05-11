@@ -70,13 +70,15 @@ async function main() {
     BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER: safetyIdentifier,
     OPENAI_API_KEY: openAiApiKey
   } = process.env;
-  const { createStageBrokerRuntimeConfig, createStageBrokerServer } = await import(
-    "../apps/stage-broker/dist/index.js"
-  );
+  const stagePort = await findOpenPort();
+  const stageBaseUrl = `http://${STAGE_HOST}:${stagePort}`;
+  const { createStageBrokerRuntimeConfig, createStageBrokerServer } =
+    await import("../apps/stage-broker/dist/index.js");
   const runtimeConfig = createStageBrokerRuntimeConfig({
     ...process.env,
     BLACKSTAGE_BROKER_HOST: STAGE_HOST,
     BLACKSTAGE_BROKER_PORT: "0",
+    BLACKSTAGE_BROKER_ALLOWED_ORIGINS: stageBaseUrl,
     BLACKSTAGE_REALTIME_LIVE: "1",
     BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN: approvalToken,
     BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER: safetyIdentifier,
@@ -85,7 +87,6 @@ async function main() {
   const brokerServer = createStageBrokerServer({
     runtimeConfig
   });
-  const stagePort = await findOpenPort();
   let viteProcess;
   let browser;
   let openAiNetworkCallAttempted = false;
@@ -100,7 +101,6 @@ async function main() {
 
     const brokerBaseUrl = `http://${runtimeConfig.host}:${brokerAddress.port}`;
     const brokerRouteUrl = `${brokerBaseUrl}${runtimeConfig.routePath}`;
-    const stageBaseUrl = `http://${STAGE_HOST}:${stagePort}`;
 
     viteProcess = await startStageWebVite({
       stagePort,
@@ -124,9 +124,23 @@ async function main() {
       }
     });
 
-    await page.addInitScript(() => {
-      localStorage.clear();
-    });
+    await page.addInitScript(
+      ({ approvalPhrase, realtimeBrokerUrl }) => {
+        localStorage.clear();
+        globalThis.__blackstageRealtimeBrokerUrl = realtimeBrokerUrl;
+        globalThis.__blackstageRealtimeWebrtcEnabled = "1";
+        globalThis.__blackstageRealtimeApprovalPhrase = approvalPhrase;
+        globalThis.__blackstageRealtimeAudioEnabled = "0";
+        localStorage.setItem("blackstage.realtimeBroker.url", realtimeBrokerUrl);
+        localStorage.setItem("blackstage.realtimeWebrtc.enabled", "1");
+        localStorage.setItem("blackstage.realtime.approvalPhrase", approvalPhrase);
+        localStorage.setItem("blackstage.realtimeAudio.enabled", "0");
+      },
+      {
+        approvalPhrase: approvalToken,
+        realtimeBrokerUrl: brokerBaseUrl
+      }
+    );
     await page.goto(stageBaseUrl, {
       waitUntil: "domcontentloaded",
       timeout: timeoutMs
@@ -136,13 +150,20 @@ async function main() {
       force: true,
       timeout: 10_000
     });
-    await waitForLocatorText(page.getByTestId("approval-card"), "Open live Realtime voice edge");
+    await waitForLocatorText(
+      page.getByTestId("approval-card"),
+      "Open live Realtime voice edge"
+    );
     openAiNetworkCallAttempted = true;
     await page.getByRole("button", { name: "Approve", exact: true }).click({
       force: true,
       timeout: 10_000
     });
-    await waitForLocatorText(page.getByTestId("realtime-broker-status"), "live SDP", timeoutMs);
+    await waitForLocatorText(
+      page.getByTestId("realtime-broker-status"),
+      "live SDP",
+      timeoutMs
+    );
     await waitForLocatorText(page.getByTestId("stage-presence"), "Listening");
 
     const stageClass = await page.getByTestId("stage-shell").getAttribute("class");
@@ -337,7 +358,9 @@ async function waitForLocatorText(locator, expectedText, timeoutMs = 10_000) {
     await sleep(250);
   }
 
-  throw new Error(`Timed out waiting for UI text "${expectedText}". Latest text: ${latestText}`);
+  throw new Error(
+    `Timed out waiting for UI text "${expectedText}". Latest text: ${latestText}`
+  );
 }
 
 function findOpenPort() {
