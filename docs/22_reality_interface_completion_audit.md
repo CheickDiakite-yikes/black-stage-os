@@ -27,7 +27,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Begins empty | E2e asserts idle presence says `Speak when ready` in `apps/stage-web/tests/stage-shell.spec.ts` | Covered |
 | Text precision | `intent-input` flow in `StageShell.tsx`; e2e submits text commands and scenarios | Covered |
 | Natural voice input | Web Speech path in `StageShell.tsx`; mocked browser speech e2e | Covered for browser prototype |
-| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and defines a server-mediated WebRTC broker plan, trusted-server request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, browser-safe broker readiness probe, and Realtime-to-Stage event mapper with safety identifier checks | Readiness bridge only |
+| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and defines a server-mediated WebRTC broker plan, trusted-server request envelope, framework-neutral broker route handler, local `apps/stage-broker` server mount, browser-safe broker readiness probe, disabled-by-default browser SDP exchange adapter, and Realtime-to-Stage event mapper with safety identifier checks | SDP contract only |
 | Assistant speech output | Stage voice toggle speaks sparse browser-native status, shows the last spoken line, and records `assistant.speech` research events | Covered locally |
 | Multimodal precision | File attach creates local document objects; image files are accepted as context metadata | Partial |
 | Intent thread | `IntentThread`, local persistence, session export/replay | Covered for v0 |
@@ -54,19 +54,20 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, dry-run Agents SDK manager plan, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
 | Live Codex worker | Dry-run envelope and disabled-by-default local `codex exec` command plan exist; no real Codex subprocess/App Server execution yet | Contract only |
 | Live Agents SDK worker | Dry-run manager-agent plan exists with specialists as tools and approval-gated memory inspection; no live Agents SDK execution yet | Contract only |
-| Live Realtime session | Trusted-server WebRTC request envelope, route handler, local broker server mount, Stage Web readiness client, and event mapper exist, but Stage Web does not exchange SDP and no default live API session runs yet | Readiness bridge only |
+| Live Realtime session | Trusted-server WebRTC request envelope, route handler, local broker server mount, Stage Web readiness client, disabled browser SDP exchange adapter, and event mapper exist, but Stage Web does not invoke the exchange and no default live API session runs yet | SDP contract only |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
 
 ## Evidence From Current Gate
 
-Most recent full validation after the Stage Web broker readiness seam:
+Most recent validation after the disabled browser SDP exchange contract:
 
 - `pnpm typecheck`: passed across 7 of 8 workspace projects.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 17 `voice-core` subtests, 4 `memory-core` subtests, 13 `agent-runtime` subtests, and 5 `stage-broker` server subtests.
+- `pnpm --filter @blackstage/voice-core test`: passed with 20 Realtime subtests.
+- `pnpm test`: passed with 20 `voice-core` subtests, 4 `memory-core` subtests, 13 `agent-runtime` subtests, and 5 `stage-broker` server subtests.
 - `pnpm build`: passed across the sorted workspace build.
 - `pnpm test:e2e`: passed with 9 browser tests in the reduced-motion validation context.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 173 tracked files after final staging.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 175 tracked files after final staging.
 
 Browser validation note: the product keeps its cinematic motion in normal use. Playwright now requests `prefers-reduced-motion: reduce` so the long living-field scenario validates behavior instead of timing out on animation/actionability waits.
 
@@ -74,7 +75,7 @@ Browser validation note: the product keeps its cinematic motion in normal use. P
 
 The goal is not complete yet. The largest remaining gaps are:
 
-1. Live Realtime voice is not connected to Stage Web beyond readiness. The contract, trusted-server request envelope, route handler, local broker server mount, browser-safe readiness client, and Stage event mapper exist, and local browser-native assistant speech works, but there is no SDP exchange or default live Realtime session.
+1. Live Realtime voice is not connected to Stage Web beyond readiness and a disabled SDP contract. The contract, trusted-server request envelope, route handler, local broker server mount, browser-safe readiness client, disabled browser SDP exchange adapter, and Stage event mapper exist, and local browser-native assistant speech works, but Stage Web does not invoke SDP exchange and no default live Realtime session runs.
 2. Live agentic work is not connected. Codex, Agents SDK, and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
@@ -94,4 +95,4 @@ Build the first Stage Web to Realtime SDP bridge while keeping simulation as the
 
 This moves the prototype toward real directed intelligence without putting long-lived API keys in the browser or letting external tools bypass the stage.
 
-Status: Not started. The local `apps/stage-broker` route mount, Stage Web readiness client, and local `Run harness` control are implemented; Stage Web SDP exchange wiring, live Codex, live Agents SDK, Symphony-backed scheduling, and client Realtime session wiring remain incomplete.
+Status: Not started. The local `apps/stage-broker` route mount, Stage Web readiness client, disabled browser SDP exchange adapter, and local `Run harness` control are implemented; Stage Web live exchange invocation, live Codex, live Agents SDK, Symphony-backed scheduling, and full client Realtime session wiring remain incomplete.

@@ -6,4 +6,5 @@ export * from "./realtime/realtimeVoiceEvent";
 export * from "./realtime/realtimeVoiceServerBroker";
 export * from "./realtime/realtimeVoiceSession";
 export * from "./realtime/realtimeVoiceStageMapper";
+export * from "./realtime/realtimeVoiceWebrtcClient";
 export * from "./transcript/transcriptState";

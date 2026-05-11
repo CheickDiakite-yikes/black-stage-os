@@ -17,6 +17,10 @@ import {
 } from "../dist/realtime/realtimeVoiceServerBroker.js";
 import { mapRealtimeVoiceEventToStageEvents } from "../dist/realtime/realtimeVoiceStageMapper.js";
 import {
+  exchangeRealtimeWebrtcSdp,
+  inspectRealtimeWebrtcClientExchangeBlockers
+} from "../dist/realtime/realtimeVoiceWebrtcClient.js";
+import {
   DEFAULT_REALTIME_VOICE_MODEL,
   createRealtimeVoiceSessionConfig,
   inspectRealtimeVoiceSessionSafety
@@ -141,6 +145,117 @@ describe("Realtime voice session contracts", () => {
     assert.equal(readiness.browserSendsAudio, false);
     assert.equal(readiness.browserReceivesStandardApiKey, false);
     assert.deepEqual(readiness.errors, ["connection refused"]);
+  });
+
+  it("blocks browser WebRTC SDP exchange by default before peer or network work", async () => {
+    const readiness = interpretRealtimeBrokerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      status: 200,
+      body: {
+        ok: true,
+        route: "/api/blackstage/realtime/session",
+        liveModeEnabled: false,
+        accepts: "application/sdp",
+        browserSendsAudio: false,
+        browserReceivesStandardApiKey: false,
+        checkedAt: "2026-05-10T00:00:00.000Z"
+      }
+    });
+    let peerCalls = 0;
+    let fetchCalls = 0;
+    const exchange = await exchangeRealtimeWebrtcSdp({
+      readiness,
+      createPeerConnection: () => {
+        peerCalls += 1;
+        throw new Error("should not create peer");
+      },
+      fetchBrokerAnswer: async () => {
+        fetchCalls += 1;
+        throw new Error("should not fetch");
+      }
+    });
+
+    assert.equal(exchange.status, "blocked");
+    assert.equal(exchange.networkAttempted, false);
+    assert.equal(exchange.peerConnectionCreated, false);
+    assert.equal(exchange.browserSendsAudio, false);
+    assert.equal(exchange.browserReceivesStandardApiKey, false);
+    assert.equal(peerCalls, 0);
+    assert.equal(fetchCalls, 0);
+    assert.ok(exchange.errors.some((error) => error.includes("disabled by default")));
+  });
+
+  it("exchanges browser SDP through the broker with injected WebRTC and fetch adapters", async () => {
+    const readiness = interpretRealtimeBrokerReadinessResponse({
+      routeUrl: "http://127.0.0.1:8798/api/blackstage/realtime/session",
+      status: 200,
+      body: {
+        ok: true,
+        route: "/api/blackstage/realtime/session",
+        liveModeEnabled: true,
+        accepts: "application/sdp",
+        browserSendsAudio: false,
+        browserReceivesStandardApiKey: false,
+        checkedAt: "2026-05-10T00:00:00.000Z"
+      }
+    });
+    const peerEvents = [];
+    const exchange = await exchangeRealtimeWebrtcSdp({
+      enabled: true,
+      readiness,
+      createPeerConnection: () => ({
+        createDataChannel(label) {
+          peerEvents.push(`data:${label}`);
+          return {
+            label
+          };
+        },
+        async createOffer() {
+          peerEvents.push("offer");
+          return {
+            type: "offer",
+            sdp: "v=0\r\no=- blackstage-browser-offer\r\n"
+          };
+        },
+        async setLocalDescription(description) {
+          peerEvents.push(`local:${description.type}`);
+        },
+        async setRemoteDescription(description) {
+          peerEvents.push(`remote:${description.type}`);
+          assert.equal(description.sdp, "v=0\r\no=- blackstage-browser-answer\r\n");
+        }
+      }),
+      fetchBrokerAnswer: async (request) => {
+        assert.equal(request.routeUrl, "http://127.0.0.1:8798/api/blackstage/realtime/session");
+        assert.equal(request.headers["content-type"], "application/sdp");
+        assert.equal(request.offerSdp, "v=0\r\no=- blackstage-browser-offer\r\n");
+
+        return {
+          status: 200,
+          answerSdp: "v=0\r\no=- blackstage-browser-answer\r\n"
+        };
+      }
+    });
+
+    assert.equal(exchange.status, "connected");
+    assert.equal(exchange.networkAttempted, true);
+    assert.equal(exchange.peerConnectionCreated, true);
+    assert.equal(exchange.dataChannelName, "oai-events");
+    assert.equal(exchange.browserSendsAudio, false);
+    assert.equal(exchange.browserReceivesStandardApiKey, false);
+    assert.deepEqual(peerEvents, ["data:oai-events", "offer", "local:offer", "remote:answer"]);
+  });
+
+  it("requires a reachable broker before browser SDP exchange can start", () => {
+    const blockers = inspectRealtimeWebrtcClientExchangeBlockers({
+      enabled: true,
+      readiness: createRealtimeBrokerNetworkErrorReadiness(
+        "http://127.0.0.1:8798/api/blackstage/realtime/session",
+        new Error("offline")
+      )
+    });
+
+    assert.ok(blockers.some((error) => error.includes("must be reachable")));
   });
 
   it("keeps the unified WebRTC server broker disabled by default", () => {
