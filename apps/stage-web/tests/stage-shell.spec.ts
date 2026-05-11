@@ -466,6 +466,76 @@ test("Stage Shell v0 adds local document notes without file writes", async ({
   expect(documentNoteWasLogged).toBe(true);
 });
 
+test("Stage Shell v0 adds local timeline milestones without calendar writes", async ({
+  page
+}) => {
+  test.setTimeout(90_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Seed round plan" }).click();
+  const timelineObject = page.getByTestId("stage-object-timeline");
+
+  await expect(timelineObject).toContainText("Four-week cadence");
+  await expect(timelineObject).toContainText("Warm intros");
+
+  await page
+    .getByTestId("intent-input")
+    .fill("add milestone to timeline partner memo dry run");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(timelineObject).toContainText("partner memo dry run");
+  await expect(timelineObject).toContainText("no calendar event was created");
+
+  const timelineMilestoneWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          payload?: {
+            weeks?: string[];
+          };
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          command_action?: string;
+          command_value_redacted?: string;
+        };
+      }>;
+    };
+
+    const commandWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.command_action === "add_timeline_milestone" &&
+          event.payload.command_value_redacted === "partner memo dry run"
+      ) ?? false;
+    const objectWasUpdated =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "timeline" &&
+          event.payload.payload?.weeks?.includes("partner memo dry run")
+      ) ?? false;
+
+    return commandWasLogged && objectWasUpdated;
+  });
+
+  expect(timelineMilestoneWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 prepares approved artifacts as harness action packets", async ({
   page
 }) => {

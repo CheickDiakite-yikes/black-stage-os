@@ -84,7 +84,8 @@ type StageCommandAction =
   | "set_map"
   | "set_model"
   | "run_simulation"
-  | "add_document_note";
+  | "add_document_note"
+  | "add_timeline_milestone";
 type IntentSubmissionSource = "scenario" | "text" | "voice";
 
 type StageCommand = {
@@ -2009,6 +2010,12 @@ function parseStageCommand(
     return documentNoteCommand;
   }
 
+  const timelineMilestoneCommand = parseTimelineMilestoneCommand(intentText, objects);
+
+  if (timelineMilestoneCommand) {
+    return timelineMilestoneCommand;
+  }
+
   const words = normalizeCommandText(intentText).split(" ").filter(Boolean);
   const firstWord = words[0];
   const action = commandActionFromWord(firstWord);
@@ -2210,6 +2217,39 @@ function parseDocumentNoteCommand(
   };
 }
 
+function parseTimelineMilestoneCommand(
+  intentText: string,
+  objects: StageObject[]
+): StageCommand | undefined {
+  const match =
+    /^\s*(?:add|append)\s+(?:a\s+)?(?:timeline\s+)?(?:milestone|cadence item)\s+(?:to|on)\s+(?:the\s+)?(?:timeline|cadence)\s*[:,-]?\s+(.+?)\s*$/i.exec(
+      intentText
+    ) ??
+    /^\s*(?:add|append)\s+(?:a\s+)?timeline\s+(?:milestone|item)\s*[:,-]?\s+(.+?)\s*$/i.exec(
+      intentText
+    );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const target =
+    objects.find(
+      (object) => object.type === "timeline" && object.state === "focused"
+    ) ?? objects.find((object) => object.type === "timeline");
+  const milestoneText = sanitizeStageCommandText(match[1] ?? "");
+
+  if (!target || !milestoneText) {
+    return undefined;
+  }
+
+  return {
+    action: "add_timeline_milestone",
+    target,
+    value: milestoneText
+  };
+}
+
 function commandActionFromWord(
   word: string | undefined
 ): StageCommandAction | undefined {
@@ -2377,6 +2417,8 @@ function applyStageCommandToObject(
       return applySimulationRunCommand(object, command.value);
     case "add_document_note":
       return applyDocumentNoteCommand(object, command.value);
+    case "add_timeline_milestone":
+      return applyTimelineMilestoneCommand(object, command.value);
   }
 }
 
@@ -2406,6 +2448,8 @@ function formatStageCommandConfirmation(command: StageCommand): string {
       return `Ran ${targetTitle} for ${command.value ?? "the requested scenario"}.`;
     case "add_document_note":
       return `Added a note to ${targetTitle}.`;
+    case "add_timeline_milestone":
+      return `Added a milestone to ${targetTitle}.`;
   }
 }
 
@@ -2613,6 +2657,30 @@ function applyDocumentNoteCommand(
         ...sections
       ].slice(0, 6),
       guardrail: "Document note is stored locally on the stage; no file write occurred."
+    }
+  };
+}
+
+function applyTimelineMilestoneCommand(
+  object: StageObject,
+  milestoneText: string | undefined
+): StageObject {
+  if (object.type !== "timeline" || !milestoneText) {
+    return object;
+  }
+
+  const payload = isObjectPayload(object.payload) ? object.payload : {};
+  const weeks = Array.isArray(payload.weeks) ? payload.weeks : [];
+
+  return {
+    ...object,
+    summary: "Local timeline edited on stage; no calendar event was created.",
+    state: "expanded",
+    payload: {
+      ...payload,
+      status: "local edit",
+      weeks: [milestoneText, ...weeks].slice(0, 6),
+      guardrail: "Timeline milestone is stored locally; no calendar event was created."
     }
   };
 }
