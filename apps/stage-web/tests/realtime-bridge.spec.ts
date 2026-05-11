@@ -25,6 +25,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       __blackstageRealtimeBrokerUrl?: string;
       __blackstageRealtimeWebrtcEnabled?: string;
       __blackstageClosedPeerConnections?: number;
+      __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
       __blackstageGetUserMediaCalls?: number;
       __blackstageRealtimeTransceivers?: string[];
     };
@@ -57,7 +58,18 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       createDataChannel(label: "oai-events") {
         return {
           label,
-          addEventListener() {}
+          addEventListener(
+            eventName: "message",
+            handler: (event: { data: string }) => void
+          ) {
+            if (eventName === "message") {
+              browserWindow.__blackstageEmitRealtimeServerEvent = (payload) => {
+                handler({
+                  data: typeof payload === "string" ? payload : JSON.stringify(payload)
+                });
+              };
+            }
+          }
         };
       }
 
@@ -271,6 +283,39 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   expect(bridgeEvidence.approvalRequested).toBe(true);
   expect(bridgeEvidence.closedConnections).toBe(0);
   expect(bridgeEvidence.transceivers).toEqual(["audio:recvonly"]);
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __blackstageEmitRealtimeServerEvent?: (payload: unknown) => void;
+      }
+    ).__blackstageEmitRealtimeServerEvent?.({
+      type: "conversation.item.input_audio_transcription.completed",
+      transcript: "Draft the live session proof object."
+    });
+  });
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+        const snapshot = rawSnapshot
+          ? (JSON.parse(rawSnapshot) as {
+              stageEvents?: Array<{
+                payload?: {
+                  rawText?: string;
+                };
+                type?: string;
+              }>;
+            })
+          : undefined;
+
+        return (snapshot?.stageEvents ?? []).some(
+          (event) =>
+            event.type === "intent.submitted" &&
+            event.payload?.rawText === "Draft the live session proof object."
+        );
+      })
+    )
+    .toBe(true);
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect
     .poll(async () =>

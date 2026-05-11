@@ -16,6 +16,7 @@ Continue the active Blackstage goal from the pushed Realtime smoke/proof state a
 - Added a required `recvonly` audio transceiver for no-mic SDP offers before creating the data channel.
 - Added an early failure path so browsers that cannot create the required audio section fail before a broker/provider request.
 - Retained the connected peer handle in Stage Web so reset/reconfiguration can close the live bridge explicitly.
+- Drove a fake Realtime server transcript through the retained data-channel listener and verified it became a Stage `intent.submitted` event.
 - Kept approved microphone tracks on the explicit approval path instead of adding a transceiver there.
 
 ## What Failed Or Needed Human Intervention
@@ -31,6 +32,8 @@ No-mic Realtime is not the same thing as no audio media. The user-facing promise
 After a live smoke discovers a provider requirement, the production-adjacent browser path must inherit that exact requirement immediately. Otherwise the smoke is only a side proof, not a real integration hardening step.
 
 Live bridges also need explicit lifetime ownership. A connected status in serializable state is not enough; the browser peer handle needs a ref so the data channel can remain alive and be closed intentionally.
+
+The first useful event-streaming proof should be small: one server transcript over the data channel becomes one Stage event. That keeps the live path auditable before richer realtime behaviors are turned on.
 
 ## Evidence
 
