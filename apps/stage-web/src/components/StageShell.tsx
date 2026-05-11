@@ -170,6 +170,11 @@ export function StageShell({
   }
 
   function startVoiceCapture() {
+    if (realtimeArmAvailable && realtimeBridge.status === "disabled") {
+      onArmRealtime();
+      return;
+    }
+
     const SpeechRecognition = getSpeechRecognitionConstructor();
 
     if (!SpeechRecognition || voiceCapture.status === "unavailable") {
@@ -279,11 +284,13 @@ export function StageShell({
         ? "Voice standby"
         : "Speak";
   const presenceOrbLabel =
-    voiceCapture.status === "listening"
-      ? "Listening for intent"
-      : voiceCapture.status === "unavailable"
-        ? "Voice unavailable"
-        : "Start voice input";
+    realtimeArmAvailable && realtimeBridge.status === "disabled"
+      ? "Open live voice edge"
+      : voiceCapture.status === "listening"
+        ? "Listening for intent"
+        : voiceCapture.status === "unavailable"
+          ? "Voice unavailable"
+          : "Start voice input";
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");

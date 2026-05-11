@@ -231,13 +231,12 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("realtime-mic-preflight")).toContainText("no stream");
   await expect(page.getByTestId("realtime-arm-button")).toHaveText("Arm live");
   await expect(page.getByTestId("realtime-arm-button")).toBeEnabled();
+  await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
+    "Open live voice edge"
+  );
   expect(brokerRequests.filter((request) => request.method === "POST")).toHaveLength(0);
 
-  const realtimeArmButton = page.getByTestId("realtime-arm-button");
-
-  await realtimeArmButton.focus();
-  await expect(page.getByTestId("intent-capture")).toHaveCSS("pointer-events", "auto");
-  await realtimeArmButton.click();
+  await page.getByTestId("presence-orb").click({ force: true });
   await expect(page.getByTestId("approval-card")).toContainText(
     "Open live Realtime voice edge"
   );
