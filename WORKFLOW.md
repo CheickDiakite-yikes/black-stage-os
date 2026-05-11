@@ -12,6 +12,7 @@ This file is the repo-owned policy for Blackstage's background agentic harness. 
 ## Workers
 
 - Use Codex CLI or Codex App Server as the coding worker transport for implementation tasks.
+- Select the dry-run Codex transport with `BLACKSTAGE_CODEX_TRANSPORT=cli|app_server`; live execution stays separately gated.
 - Use Agents SDK manager-style plans for non-coding research, artifact, memory, and analysis tasks.
 - Keep specialist agents as tools unless a branch truly needs delegated ownership.
 - Use `gpt-realtime-2` as the Realtime voice target for live voice contracts.

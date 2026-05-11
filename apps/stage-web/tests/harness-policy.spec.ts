@@ -84,6 +84,7 @@ test("Stage Web renders the active harness workflow policy", async ({ page }) =>
         route: "/api/blackstage/harness",
         orchestration: "symphony_style_internal_queue",
         codexMode: "dry_run",
+        codexTransport: "cli",
         agentsSdkMode: "dry_run",
         workflowPolicy,
         localCodexSubprocessEnabled: false,

@@ -211,7 +211,8 @@ The stage event log remains the black-box recorder. Replay should work whether e
     - Blackstage-owned handoff protocol for approved task packets
     - browser mutation and provider credential boundaries set to false
     - dry-run scheduler proof that no live transport is armed
-    - Status: implemented with agent-runtime tests; no live App Server process or network call runs by default.
+    - local runner transport selection with `BLACKSTAGE_CODEX_TRANSPORT=app_server`
+    - Status: implemented with agent-runtime and stage-runner tests; no live App Server process or network call runs by default.
 
 ## Risks
 

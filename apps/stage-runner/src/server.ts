@@ -10,7 +10,10 @@ import {
   type HarnessRunnerReadinessBody
 } from "../../../packages/agent-runtime/dist/harness/harnessRunnerClient.js";
 import { createDryRunAgentsSdkAdapter } from "../../../packages/agent-runtime/dist/harness/agentsSdkAdapter.js";
-import { createDryRunCodexWorkerAdapter } from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
+import {
+  createDryRunCodexWorkerAdapter,
+  type CodexWorkerTransport
+} from "../../../packages/agent-runtime/dist/harness/codexWorkerAdapter.js";
 import { createLocalCodexWorkerAdapter } from "../../../packages/agent-runtime/dist/harness/codexLocalRunner.js";
 import { InMemoryHarnessScheduler } from "../../../packages/agent-runtime/dist/harness/inMemoryHarnessScheduler.js";
 import { createSimulatedHarnessAdapter } from "../../../packages/agent-runtime/dist/harness/simulatedHarnessAdapter.js";
@@ -40,6 +43,7 @@ export const DEFAULT_STAGE_RUNNER_ALLOWED_ORIGINS = [
 export const STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR = "BLACKSTAGE_RUNNER_ALLOWED_ORIGINS";
 export const STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR =
   "BLACKSTAGE_CODEX_SUBPROCESS_ENABLED";
+export const STAGE_RUNNER_CODEX_TRANSPORT_ENV_VAR = "BLACKSTAGE_CODEX_TRANSPORT";
 export const STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR =
   "BLACKSTAGE_CODEX_RUN_APPROVAL_TOKEN";
 export const STAGE_RUNNER_CODEX_APPROVAL_HEADER = "x-blackstage-codex-approval";
@@ -53,6 +57,7 @@ export type StageRunnerRuntimeConfig = {
   routePath: string;
   allowedOrigins: string[];
   codexSubprocessEnabled: boolean;
+  codexTransport: CodexWorkerTransport;
   codexRunApprovalToken?: string;
   workspacePreparationEnabled: boolean;
   repoRoot: string;
@@ -91,6 +96,9 @@ export function createStageRunnerRuntimeConfig(
     routePath: env.BLACKSTAGE_HARNESS_RUNNER_ROUTE ?? BLACKSTAGE_HARNESS_RUNNER_ROUTE,
     allowedOrigins: parseAllowedOrigins(env[STAGE_RUNNER_ALLOWED_ORIGINS_ENV_VAR]),
     codexSubprocessEnabled,
+    codexTransport: codexSubprocessEnabled
+      ? "cli"
+      : parseCodexTransport(env[STAGE_RUNNER_CODEX_TRANSPORT_ENV_VAR]),
     codexRunApprovalToken: env[STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR],
     workspacePreparationEnabled:
       codexSubprocessEnabled || env[STAGE_RUNNER_WORKSPACE_PREP_ENV_VAR] === "1",
@@ -104,6 +112,7 @@ export function createDefaultStageRunnerScheduler(
   options: {
     now?: () => string;
     codexSubprocessEnabled?: boolean;
+    codexTransport?: CodexWorkerTransport;
   } = {}
 ): InMemoryHarnessScheduler {
   const codexAdapter = options.codexSubprocessEnabled
@@ -111,7 +120,9 @@ export function createDefaultStageRunnerScheduler(
         enabled: true,
         executor: createNodeCodexCommandExecutor()
       })
-    : createDryRunCodexWorkerAdapter();
+    : createDryRunCodexWorkerAdapter({
+        transport: options.codexTransport ?? "cli"
+      });
 
   return new InMemoryHarnessScheduler({
     adapters: [
@@ -131,7 +142,8 @@ export function createStageRunnerServer(
     options.scheduler ??
     createDefaultStageRunnerScheduler({
       now: options.now,
-      codexSubprocessEnabled: runtimeConfig.codexSubprocessEnabled
+      codexSubprocessEnabled: runtimeConfig.codexSubprocessEnabled,
+      codexTransport: runtimeConfig.codexTransport
     });
 
   return createServer((request, response) => {
@@ -438,6 +450,9 @@ function createReadinessResponse(
     route: runtimeConfig.routePath,
     orchestration: "symphony_style_internal_queue",
     codexMode: runtimeConfig.codexSubprocessEnabled ? "local_exec" : "dry_run",
+    codexTransport: runtimeConfig.codexSubprocessEnabled
+      ? "cli"
+      : runtimeConfig.codexTransport,
     agentsSdkMode: "dry_run",
     workflowPolicy: createBlackstageWorkflowPolicy(),
     localCodexSubprocessEnabled: runtimeConfig.codexSubprocessEnabled,
@@ -591,6 +606,10 @@ function parseAllowedOrigins(value?: string): string[] {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+function parseCodexTransport(value?: string): CodexWorkerTransport {
+  return value === "app_server" ? "app_server" : "cli";
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

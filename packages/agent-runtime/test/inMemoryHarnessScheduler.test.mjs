@@ -559,6 +559,7 @@ describe("Harness runner readiness client", () => {
         route: BLACKSTAGE_HARNESS_RUNNER_ROUTE,
         orchestration: "symphony_style_internal_queue",
         codexMode: "dry_run",
+        codexTransport: "cli",
         agentsSdkMode: "dry_run",
         workflowPolicy: createBlackstageWorkflowPolicy(),
         localCodexSubprocessEnabled: false,
@@ -572,6 +573,7 @@ describe("Harness runner readiness client", () => {
     assert.equal(readiness.status, "reachable");
     assert.equal(readiness.orchestration, "symphony_style_internal_queue");
     assert.equal(readiness.codexMode, "dry_run");
+    assert.equal(readiness.codexTransport, "cli");
     assert.equal(readiness.workflowPolicy?.source, "WORKFLOW.md");
     assert.deepEqual(readiness.workflowPolicy?.codexTransports, ["cli", "app_server"]);
     assert.equal(

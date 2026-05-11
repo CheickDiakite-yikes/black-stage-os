@@ -1,3 +1,4 @@
+import type { CodexWorkerTransport } from "./codexWorkerAdapter.js";
 import {
   isHarnessWorkflowPolicy,
   type HarnessWorkflowPolicy
@@ -27,6 +28,7 @@ export type HarnessRunnerReadinessBody = {
   route: string;
   orchestration: "symphony_style_internal_queue";
   codexMode: "dry_run" | "local_exec" | "disabled";
+  codexTransport: CodexWorkerTransport;
   agentsSdkMode: "dry_run" | "disabled";
   workflowPolicy: HarnessWorkflowPolicy;
   localCodexSubprocessEnabled: boolean;
@@ -43,6 +45,7 @@ export type HarnessRunnerClientReadiness = {
   networkAttempted: boolean;
   orchestration?: HarnessRunnerReadinessBody["orchestration"];
   codexMode?: HarnessRunnerReadinessBody["codexMode"];
+  codexTransport?: HarnessRunnerReadinessBody["codexTransport"];
   agentsSdkMode?: HarnessRunnerReadinessBody["agentsSdkMode"];
   workflowPolicy?: HarnessWorkflowPolicy;
   localCodexSubprocessEnabled: boolean;
@@ -136,6 +139,7 @@ export function interpretHarnessRunnerReadinessResponse(input: {
       networkAttempted: true,
       orchestration: body.orchestration,
       codexMode: body.codexMode,
+      codexTransport: body.codexTransport,
       agentsSdkMode: body.agentsSdkMode,
       workflowPolicy: body.workflowPolicy,
       localCodexSubprocessEnabled: body.localCodexSubprocessEnabled,
@@ -173,6 +177,7 @@ function parseHarnessRunnerReadinessBody(
     typeof candidate.route !== "string" ||
     candidate.orchestration !== "symphony_style_internal_queue" ||
     !isHarnessRunnerCodexMode(candidate.codexMode) ||
+    !isHarnessRunnerCodexTransport(candidate.codexTransport) ||
     !isHarnessRunnerAgentsSdkMode(candidate.agentsSdkMode) ||
     !isHarnessWorkflowPolicy(candidate.workflowPolicy) ||
     typeof candidate.localCodexSubprocessEnabled !== "boolean" ||
@@ -189,6 +194,7 @@ function parseHarnessRunnerReadinessBody(
     route: candidate.route,
     orchestration: "symphony_style_internal_queue",
     codexMode: candidate.codexMode,
+    codexTransport: candidate.codexTransport,
     agentsSdkMode: candidate.agentsSdkMode,
     workflowPolicy: candidate.workflowPolicy,
     localCodexSubprocessEnabled: candidate.localCodexSubprocessEnabled,
@@ -203,6 +209,12 @@ function isHarnessRunnerCodexMode(
   value: unknown
 ): value is HarnessRunnerReadinessBody["codexMode"] {
   return value === "dry_run" || value === "local_exec" || value === "disabled";
+}
+
+function isHarnessRunnerCodexTransport(
+  value: unknown
+): value is HarnessRunnerReadinessBody["codexTransport"] {
+  return value === "cli" || value === "app_server";
 }
 
 function isHarnessRunnerAgentsSdkMode(

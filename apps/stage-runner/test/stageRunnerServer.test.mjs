@@ -13,6 +13,7 @@ import {
   STAGE_RUNNER_CODEX_APPROVAL_HEADER,
   STAGE_RUNNER_CODEX_RUN_APPROVAL_TOKEN_ENV_VAR,
   STAGE_RUNNER_CODEX_SUBPROCESS_ENV_VAR,
+  STAGE_RUNNER_CODEX_TRANSPORT_ENV_VAR,
   createCodexSubprocessPreview,
   createNodeCodexCommandExecutor,
   createStageRunnerRuntimeConfig,
@@ -65,6 +66,7 @@ describe("Stage runner server", () => {
     assert.equal(body.route, BLACKSTAGE_HARNESS_RUNNER_ROUTE);
     assert.equal(body.orchestration, "symphony_style_internal_queue");
     assert.equal(body.codexMode, "dry_run");
+    assert.equal(body.codexTransport, "cli");
     assert.equal(body.agentsSdkMode, "dry_run");
     assert.equal(body.workflowPolicy.source, "WORKFLOW.md");
     assert.equal(body.workflowPolicy.controlPlane, "symphony_style_internal_queue");
@@ -95,6 +97,7 @@ describe("Stage runner server", () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.codexMode, "local_exec");
+    assert.equal(body.codexTransport, "cli");
     assert.equal(body.workflowPolicy.liveExecutionDefault, "disabled");
     assert.equal(body.workflowPolicy.humanApprovalRequiredForHighImpactActions, true);
     assert.equal(body.localCodexSubprocessEnabled, true);
@@ -277,6 +280,70 @@ describe("Stage runner server", () => {
           event.type === "task.progress" &&
           event.payload?.provider === "openai_codex" &&
           event.payload?.execution_mode === "dry_run"
+      )
+    );
+  });
+
+  it("selects the Codex App Server dry-run handoff transport without live execution", async () => {
+    const runtimeConfig = createStageRunnerRuntimeConfig({
+      [STAGE_RUNNER_CODEX_TRANSPORT_ENV_VAR]: "app_server"
+    });
+    const server = await listen(
+      createStageRunnerServer({
+        runtimeConfig
+      })
+    );
+    const readinessResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}`
+    );
+    const readinessBody = await readinessResponse.json();
+
+    assert.equal(readinessResponse.status, 200);
+    assert.equal(readinessBody.codexMode, "dry_run");
+    assert.equal(readinessBody.codexTransport, "app_server");
+    assert.equal(readinessBody.browserCanRunCodex, false);
+
+    const taskResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/tasks`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          id: "task_app_server_transport",
+          threadId: "thread_build_blackstage",
+          title: "Prepare Codex App Server handoff",
+          objective: "Prove the dry-run App Server handoff transport.",
+          kind: "codex",
+          workspace: {
+            kind: "local",
+            path: ".blackstage/workspaces/task_app_server_transport"
+          }
+        })
+      }
+    );
+
+    assert.equal(taskResponse.status, 202);
+
+    const runResponse = await fetch(
+      `${baseUrl(server)}${BLACKSTAGE_HARNESS_RUNNER_ROUTE}/run-next`,
+      {
+        method: "POST"
+      }
+    );
+    const runBody = await runResponse.json();
+
+    assert.equal(runResponse.status, 200);
+    assert.equal(runBody.run.status, "completed");
+    assert.ok(
+      runBody.snapshot.events.some(
+        (event) =>
+          event.type === "task.progress" &&
+          event.payload?.handoff_protocol ===
+            "blackstage.codex_app_server_handoff.v0" &&
+          event.payload?.transport === "app_server" &&
+          event.payload?.live_transport_armed === false
       )
     );
   });
