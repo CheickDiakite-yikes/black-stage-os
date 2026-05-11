@@ -67,7 +67,10 @@ Most recent validation after the root validation gate:
 - `pnpm preflight:realtime`: passed with redacted env readiness; `.env.local` was detected, `OPENAI_API_KEY` was set/skipped without printing a value, and live smoke stayed unarmed unless the live flag is exported by the shell and the safety identifier plus local approval token are set.
 - `BLACKSTAGE_REALTIME_LIVE_SMOKE=0 pnpm smoke:realtime`: passed in skip-gated mode with no OpenAI network call, no browser audio, and a redacted proof path when configured.
 - `pnpm exec prettier --check ... && git diff --check`: passed for the touched Realtime smoke scripts, tests, audit, and research files.
-- `pnpm scan:secrets`: passed with no high-confidence secrets across 267 tracked files.
+- `pnpm scan:secrets`: passed with no high-confidence secrets across 268 tracked files.
+- `pnpm test`: passed after the cheap Realtime arming-plan slice, including workflow checks, 8 script subtests, 5 memory-core subtests, 28 voice-core Realtime subtests, 17 agent-runtime subtests, 10 stage-broker subtests, and 14 stage-runner subtests.
+- `pnpm typecheck`: passed across 8 of 9 workspace projects.
+- `pnpm lint`: passed.
 - `pnpm --filter @blackstage/stage-web typecheck`: passed after wiring the disabled-by-default local-audio handoff flag into the Realtime bridge.
 - `pnpm --filter @blackstage/stage-web exec playwright test tests/realtime-bridge.spec.ts`: passed with two browser tests: default Realtime SDP bridge still makes zero `getUserMedia` calls, and explicitly armed local audio calls `getUserMedia` once, attaches one fake audio track, and records an approved audio-track SDP bridge event.
 - `pnpm exec prettier --check ... && git diff --check`: passed for the touched Stage Web, Realtime bridge test, audit, and research files.
