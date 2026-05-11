@@ -901,7 +901,8 @@ button:disabled {
 }
 
 .simulation-surface ol,
-.memory-surface ul {
+.memory-surface ul,
+.memory-records {
   display: grid;
   gap: 0.44rem;
   padding: 0;
@@ -932,7 +933,7 @@ button:disabled {
   line-height: 1.42;
 }
 
-.memory-surface li::before {
+.memory-surface ul li::before {
   display: inline-block;
   width: 0.42rem;
   height: 1px;
@@ -940,6 +941,32 @@ button:disabled {
   vertical-align: middle;
   content: "";
   background: rgba(216, 189, 133, 0.54);
+}
+
+.memory-records {
+  margin-top: 0.1rem;
+}
+
+.memory-records li {
+  display: grid;
+  gap: 0.16rem;
+  border: 1px solid rgba(216, 189, 133, 0.12);
+  background: rgba(255, 246, 228, 0.035);
+  padding: 0.48rem 0.54rem;
+}
+
+.memory-records span {
+  color: rgba(216, 189, 133, 0.68);
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.memory-records strong {
+  color: rgba(239, 228, 210, 0.82);
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.35;
 }
 
 .agent-feed {

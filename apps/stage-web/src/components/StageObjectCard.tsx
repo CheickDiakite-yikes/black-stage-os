@@ -330,6 +330,7 @@ function MemorySurface({ payload }: { payload: unknown }) {
   }
 
   const notes = Array.isArray(payload.notes) ? payload.notes : [];
+  const records = Array.isArray(payload.records) ? payload.records.filter(isRecord) : [];
 
   return (
     <div className="cognitive-surface memory-surface" data-testid="memory-surface">
@@ -338,6 +339,16 @@ function MemorySurface({ payload }: { payload: unknown }) {
         <span>{formatPayloadValue(payload.status ?? "private")}</span>
       </div>
       <p>{formatPayloadValue(payload.policy ?? "local-first")}</p>
+      {records.length > 0 ? (
+        <ol className="memory-records" aria-label="Local memory records">
+          {records.slice(0, 4).map((record) => (
+            <li key={formatPayloadValue(record.id)}>
+              <span>{formatPayloadValue(record.status ?? "record")}</span>
+              <strong>{formatPayloadValue(record.summary ?? "")}</strong>
+            </li>
+          ))}
+        </ol>
+      ) : null}
       <ul>
         {notes.slice(0, 4).map((note, index) => (
           <li key={`${index}_${formatPayloadValue(note)}`}>{formatPayloadValue(note)}</li>

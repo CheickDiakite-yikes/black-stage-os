@@ -9,7 +9,9 @@ export type ApprovalActionType =
   | "data_share"
   | "network_access"
   | "code_execution"
-  | "credential_use";
+  | "credential_use"
+  | "memory_write"
+  | "memory_delete";
 
 export type ApprovalRiskLevel = "low" | "medium" | "high" | "critical";
 

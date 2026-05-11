@@ -8,6 +8,7 @@ import type {
   StageObject,
   StageShellScenarioId
 } from "@blackstage/stage-core";
+import type { MemoryVaultRecord } from "@blackstage/memory-core";
 
 const STORAGE_KEY = "blackstage.stageShell.v0";
 
@@ -17,6 +18,7 @@ export type StageSessionSnapshot = {
   currentThread?: IntentThread;
   stageEvents: StageEvent[];
   researchEvents: ResearchEvent[];
+  memoryRecords: MemoryVaultRecord[];
   savedAt: string;
 };
 
@@ -25,6 +27,7 @@ export function createStageSession(sessionId = createSessionId()): StageSessionS
     sessionId,
     stageEvents: [],
     researchEvents: [],
+    memoryRecords: [],
     savedAt: new Date().toISOString()
   };
 }

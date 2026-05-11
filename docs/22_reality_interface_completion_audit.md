@@ -38,7 +38,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Browsers | `browser_portal` validation lane | Simulated |
 | Timelines | `timeline` harness recorder | Covered as local fixture |
 | Simulations | `simulation_card` demo simulator | Simulated |
-| Memories | `memory_card` and memory boundary surfaces | Placeholder/policy only |
+| Memories | Local memory vault supports proposed/approved/rejected/deleted records, redacted inspection payloads, serializable snapshots, and Stage approval-gated `remember` / `forget` commands | Covered locally |
 | Approvals | `ApprovalCard`, approval resolution events, ask-why/reject/approve controls | Covered for v0 |
 | Agent activity | `AgentActivityFeed`, simulated runtime, local harness projection | Covered for v0 |
 | Interruptibility | Stop/resume path preserves pending events; e2e covers pause/resume | Covered for simulated work |
@@ -59,14 +59,14 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 
 ## Evidence From Current Gate
 
-Most recent full validation after the Agents SDK manager-plan slice:
+Most recent full validation after the local memory vault slice:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 4 voice-core subtests and 13 agent-runtime subtests.
+- `pnpm test`: passed with 4 voice-core subtests, 4 memory-core subtests, and 13 agent-runtime subtests.
 - `pnpm build`: passed.
-- `pnpm test:e2e`: passed with 8 browser tests.
-- `pnpm scan:secrets`: passed after the Agents SDK manager-plan slice.
+- `pnpm test:e2e`: passed with 9 browser tests.
+- `pnpm scan:secrets`: passed after the local memory vault slice.
 
 ## Gaps That Block Goal Completion
 
@@ -78,18 +78,19 @@ The goal is not complete yet. The largest remaining gaps are:
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.
 5. Multimodal context is shallow. Attachments become local document objects, but image understanding and richer context parsing are not implemented.
 6. Speech correction is incomplete. Typed object commands work; spoken follow-up manipulation needs a dedicated reliable path.
-7. Memory is only a policy surface. There is no durable personal/project memory store with inspect/delete/approval semantics.
+7. Memory is local-only. It now has approval-gated write/delete semantics and redacted inspection, but no retrieval ranking, cross-thread review UI, or live agent memory policy enforcement yet.
 8. The current visual proof is a browser prototype, not yet a full "computer disappears" environment.
 
 ## Next Highest-Leverage Slice
 
-Build the local harness-to-stage live demo path:
+Build the first live-provider bridge while keeping simulation as the default:
 
-- Add a Stage Shell control to start a local harness run from the current thread.
-- Stream harness events into `stageEvents` in real time instead of projecting a static snapshot.
-- Keep it simulated and local-only.
-- Add e2e coverage proving the harness can be started, blocked by approval, replayed, and inspected.
+- Add a disabled-by-default Realtime broker server path for `gpt-realtime-2` session minting.
+- Keep the browser client on ephemeral Realtime credentials only.
+- Map Realtime text/audio/tool events into the existing Stage event log.
+- Preserve the Codex/Symphony/Agents SDK harness as background labor behind Blackstage-owned approvals.
+- Add contract and e2e coverage proving live mode is explicitly configured, labeled, and still replayable.
 
-This moves the prototype closer to real directed intelligence without prematurely adding live API keys, external tools, or background side effects.
+This moves the prototype toward real directed intelligence without putting long-lived API keys in the browser or letting external tools bypass the stage.
 
-Status: Implemented as the `Run harness` visible-labor control. The run is still simulated and local-only; live Codex, Agents SDK, and Realtime wiring remain incomplete.
+Status: Not started. The local `Run harness` control is implemented; live Codex, Agents SDK, Symphony-backed scheduling, and Realtime session wiring remain incomplete.

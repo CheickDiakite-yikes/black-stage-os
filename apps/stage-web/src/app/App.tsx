@@ -14,6 +14,14 @@ import {
   createSimulatedApprovalContinuation,
   createSimulatedStageRun
 } from "@blackstage/agent-runtime";
+import {
+  approveMemoryRecord,
+  createMemoryWriteDraft,
+  deleteMemoryRecord,
+  findMemoryRecordByText,
+  rejectMemoryRecord,
+  type MemoryVaultRecord
+} from "@blackstage/memory-core";
 import { stageTheme } from "@blackstage/stage-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StageShell } from "../components/StageShell";
@@ -54,6 +62,8 @@ const commandFillerWords = new Set([
 ]);
 
 const TEXT_CONTEXT_LIMIT = 720;
+const MEMORY_COMMAND_PREFIX = "remember ";
+const FORGET_COMMAND_PREFIXES = ["forget ", "delete memory "];
 
 type BlackstageTestWindow = Window & {
   __blackstageTestDelayMultiplier?: number;
@@ -74,6 +84,9 @@ export function App() {
   );
   const [stageEvents, setStageEvents] = useState<StageEvent[]>(
     () => loadedSession?.stageEvents ?? []
+  );
+  const [memoryRecords, setMemoryRecords] = useState<MemoryVaultRecord[]>(
+    () => loadedSession?.memoryRecords ?? []
   );
   const [isRunning, setIsRunning] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -223,8 +236,100 @@ export function App() {
     [emitStageEvent, thread.renderObjects]
   );
 
+  const requestMemoryWrite = useCallback(
+    (intentText: string) => {
+      const memoryText = parseMemoryWriteCommand(intentText);
+
+      if (!memoryText) {
+        return false;
+      }
+
+      const createdAt = new Date().toISOString();
+      const draft = createMemoryWriteDraft({
+        id: `memory_${Date.now().toString(36)}`,
+        threadId: thread.id,
+        summary: memoryText,
+        createdAt
+      });
+      const nextRecords = [...memoryRecords, draft];
+
+      setMemoryRecords(nextRecords);
+      emitStageEvent({
+        type: "object.created",
+        payload: createMemoryVaultObject(thread.id, nextRecords, createdAt)
+      });
+      emitStageEvent({
+        type: "approval.requested",
+        payload: {
+          id: `approval_memory_write_${draft.id}`,
+          threadId: thread.id,
+          actionType: "memory_write",
+          title: "Save local memory",
+          summary: draft.redactedSummary,
+          riskLevel: "medium",
+          proposedBy: "Blackstage memory vault",
+          scope: "Local thread memory",
+          consequence: "The redacted summary will persist in the local Stage Shell snapshot.",
+          undoPath: "Use a forget command to request deletion.",
+          status: "pending",
+          createdAt
+        }
+      });
+
+      return true;
+    },
+    [emitStageEvent, memoryRecords, thread.id]
+  );
+
+  const requestMemoryDelete = useCallback(
+    (intentText: string) => {
+      const targetText = parseMemoryDeleteCommand(intentText);
+
+      if (!targetText) {
+        return false;
+      }
+
+      const targetRecord = findMemoryRecordByText(memoryRecords, targetText);
+
+      if (!targetRecord) {
+        return false;
+      }
+
+      const createdAt = new Date().toISOString();
+
+      emitStageEvent({
+        type: "approval.requested",
+        payload: {
+          id: `approval_memory_delete_${targetRecord.id}`,
+          threadId: thread.id,
+          actionType: "memory_delete",
+          title: "Delete local memory",
+          summary: targetRecord.redactedSummary,
+          riskLevel: "medium",
+          proposedBy: "Blackstage memory vault",
+          scope: "Local thread memory",
+          consequence: "The memory record will be marked deleted in the local vault.",
+          undoPath: "Re-submit the remembered fact if deletion was a mistake.",
+          status: "pending",
+          createdAt
+        }
+      });
+
+      return true;
+    },
+    [emitStageEvent, memoryRecords, thread.id]
+  );
+
   const runIntent = useCallback(
     (intentText: string, scenarioId?: StageShellScenarioId) => {
+      if (!scenarioId && requestMemoryWrite(intentText)) {
+        return;
+      }
+
+      if (!scenarioId && requestMemoryDelete(intentText)) {
+        return;
+      }
+
       if (!scenarioId && applyStageCommand(intentText)) {
         return;
       }
@@ -251,10 +356,86 @@ export function App() {
         });
       }
     },
-    [applyStageCommand, emitAssistantSpeech, scheduleTimedEvents, sessionId, stageVoiceEnabled]
+    [
+      applyStageCommand,
+      emitAssistantSpeech,
+      requestMemoryDelete,
+      requestMemoryWrite,
+      scheduleTimedEvents,
+      sessionId,
+      stageVoiceEnabled
+    ]
   );
 
   const approveCurrentRequest = useCallback(() => {
+    const pendingApproval = thread.approvals
+      .filter((candidate) => candidate.status === "pending")
+      .at(-1);
+
+    if (pendingApproval?.actionType === "memory_write") {
+      const recordId = pendingApproval.id.replace("approval_memory_write_", "");
+      const approvedAt = new Date().toISOString();
+      const nextRecords = memoryRecords.map((record) =>
+        record.id === recordId ? approveMemoryRecord(record, approvedAt) : record
+      );
+
+      setMemoryRecords(nextRecords);
+      emitStageEvent({
+        type: "approval.resolved",
+        payload: {
+          approvalId: pendingApproval.id,
+          threadId: pendingApproval.threadId,
+          status: "approved",
+          resolvedAt: approvedAt,
+          userRequestedExplanation: false
+        }
+      });
+      emitStageEvent({
+        type: "object.updated",
+        payload: createMemoryVaultObject(pendingApproval.threadId, nextRecords, approvedAt)
+      });
+      setApprovalExplanationVisible(false);
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech("Approved. I saved that memory locally.", {
+          threadId: pendingApproval.threadId
+        });
+      }
+      return;
+    }
+
+    if (pendingApproval?.actionType === "memory_delete") {
+      const recordId = pendingApproval.id.replace("approval_memory_delete_", "");
+      const deletedAt = new Date().toISOString();
+      const nextRecords = memoryRecords.map((record) =>
+        record.id === recordId ? deleteMemoryRecord(record, deletedAt) : record
+      );
+
+      setMemoryRecords(nextRecords);
+      emitStageEvent({
+        type: "approval.resolved",
+        payload: {
+          approvalId: pendingApproval.id,
+          threadId: pendingApproval.threadId,
+          status: "approved",
+          resolvedAt: deletedAt,
+          userRequestedExplanation: false
+        }
+      });
+      emitStageEvent({
+        type: "object.updated",
+        payload: createMemoryVaultObject(pendingApproval.threadId, nextRecords, deletedAt)
+      });
+      setApprovalExplanationVisible(false);
+
+      if (stageVoiceEnabled) {
+        emitAssistantSpeech("Approved. I deleted that local memory.", {
+          threadId: pendingApproval.threadId
+        });
+      }
+      return;
+    }
+
     if (!activeScenario) {
       return;
     }
@@ -273,14 +454,24 @@ export function App() {
         threadId: activeScenario.threadId
       });
     }
-  }, [activeScenario, emitAssistantSpeech, emitStageEvent, scheduleTimedEvents, stageVoiceEnabled]);
+  }, [
+    activeScenario,
+    emitAssistantSpeech,
+    emitStageEvent,
+    memoryRecords,
+    scheduleTimedEvents,
+    stageVoiceEnabled,
+    thread.approvals
+  ]);
 
   const rejectCurrentRequest = useCallback(() => {
-    const approval = thread.approvals.find((candidate) => candidate.status === "pending");
+    const approval = thread.approvals.filter((candidate) => candidate.status === "pending").at(-1);
 
     if (!approval) {
       return;
     }
+
+    const rejectedAt = new Date().toISOString();
 
     emitStageEvent({
       type: "approval.resolved",
@@ -288,17 +479,30 @@ export function App() {
         approvalId: approval.id,
         threadId: approval.threadId,
         status: "rejected",
-        resolvedAt: new Date().toISOString(),
+        resolvedAt: rejectedAt,
         userRequestedExplanation: false
       }
     });
+
+    if (approval.actionType === "memory_write") {
+      const recordId = approval.id.replace("approval_memory_write_", "");
+      const nextRecords = memoryRecords.map((record) =>
+        record.id === recordId ? rejectMemoryRecord(record, rejectedAt) : record
+      );
+
+      setMemoryRecords(nextRecords);
+      emitStageEvent({
+        type: "object.updated",
+        payload: createMemoryVaultObject(approval.threadId, nextRecords, rejectedAt)
+      });
+    }
 
     if (stageVoiceEnabled) {
       emitAssistantSpeech("Rejected. I will hold that action.", {
         threadId: approval.threadId
       });
     }
-  }, [emitAssistantSpeech, emitStageEvent, stageVoiceEnabled, thread.approvals]);
+  }, [emitAssistantSpeech, emitStageEvent, memoryRecords, stageVoiceEnabled, thread.approvals]);
 
   const askWhy = useCallback(() => {
     const approval = thread.approvals.find((candidate) => candidate.status === "pending");
@@ -462,6 +666,7 @@ export function App() {
       currentThread: thread,
       stageEvents: nextStageEvents,
       researchEvents: nextResearchEvents,
+      memoryRecords,
       exportedAt
     };
     const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
@@ -476,7 +681,7 @@ export function App() {
     URL.revokeObjectURL(objectUrl);
     setStageEvents(nextStageEvents);
     setResearchEvents(nextResearchEvents);
-  }, [activeScenario?.id, researchEvents, sessionId, stageEvents, thread]);
+  }, [activeScenario?.id, memoryRecords, researchEvents, sessionId, stageEvents, thread]);
 
   const updateStageObject = useCallback(
     (objectId: string, updater: (object: StageObject) => StageObject) => {
@@ -733,6 +938,7 @@ export function App() {
     setActiveScenario(undefined);
     setResearchEvents([]);
     setStageEvents([]);
+    setMemoryRecords([]);
     setPausedEvents([]);
     setIsRunning(false);
     setIsReplaying(false);
@@ -748,9 +954,10 @@ export function App() {
       currentThread: thread,
       stageEvents,
       researchEvents,
+      memoryRecords,
       savedAt: new Date().toISOString()
     });
-  }, [activeScenario?.id, researchEvents, sessionId, stageEvents, thread]);
+  }, [activeScenario?.id, memoryRecords, researchEvents, sessionId, stageEvents, thread]);
 
   useEffect(() => clearTimers, [clearTimers]);
 
@@ -789,6 +996,79 @@ export function App() {
       resumableEventCount={pausedEvents.length}
     />
   );
+}
+
+function parseMemoryWriteCommand(intentText: string): string | undefined {
+  const normalizedIntent = intentText.trim();
+
+  if (!normalizedIntent.toLowerCase().startsWith(MEMORY_COMMAND_PREFIX)) {
+    return undefined;
+  }
+
+  const memoryText = normalizedIntent.slice(MEMORY_COMMAND_PREFIX.length).trim();
+
+  return memoryText.length > 0 ? memoryText : undefined;
+}
+
+function parseMemoryDeleteCommand(intentText: string): string | undefined {
+  const normalizedIntent = intentText.trim();
+  const lowerIntent = normalizedIntent.toLowerCase();
+  const prefix = FORGET_COMMAND_PREFIXES.find((candidate) => lowerIntent.startsWith(candidate));
+
+  if (!prefix) {
+    return undefined;
+  }
+
+  const targetText = normalizedIntent.slice(prefix.length).trim();
+
+  return targetText.length > 0 ? targetText : undefined;
+}
+
+function createMemoryVaultObject(
+  threadId: string,
+  records: MemoryVaultRecord[],
+  timestamp: string
+): StageObject {
+  const visibleRecords = records.filter((record) => record.threadId === threadId);
+  const approvedCount = visibleRecords.filter((record) => record.status === "approved").length;
+  const proposedCount = visibleRecords.filter((record) => record.status === "proposed").length;
+  const deletedCount = visibleRecords.filter((record) => record.status === "deleted").length;
+
+  return {
+    id: "local_memory_vault",
+    threadId,
+    type: "memory_card",
+    title: "Local memory vault",
+    summary: "Inspectable local memory records with approval-gated writes and deletion.",
+    payload: {
+      policy: "approval-gated local memory",
+      status: "private",
+      approvedCount,
+      proposedCount,
+      deletedCount,
+      records: visibleRecords.map((record) => ({
+        id: record.id,
+        status: record.status,
+        scope: record.scope,
+        summary: record.redactedSummary,
+        updatedAt: record.updatedAt
+      })),
+      notes: [
+        "Memory writes require approval.",
+        "Memory deletes require approval.",
+        "Inspection uses redacted summaries."
+      ]
+    },
+    position: {
+      x: 64,
+      y: 28,
+      z: 18
+    },
+    state: "focused",
+    pinned: true,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
 }
 
 function parseStageCommand(intentText: string, objects: StageObject[]): StageCommand | undefined {

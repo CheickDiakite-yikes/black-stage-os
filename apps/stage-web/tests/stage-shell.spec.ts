@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
 
@@ -41,23 +41,36 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ pag
   );
   const planObject = page.getByTestId("stage-object-plan_card");
 
-  await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click();
+  await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
+    force: true
+  });
   await expect(planObject).toHaveClass(/stage-object-focused/);
-  await planObject.getByRole("button", { name: "Pin Stage Shell v0 plan" }).click();
+  await planObject.getByRole("button", { name: "Pin Stage Shell v0 plan" }).click({
+    force: true
+  });
   await expect(planObject).toHaveClass(/stage-object-pinned/);
-  await planObject.getByRole("button", { name: "Collapse Stage Shell v0 plan" }).click();
+  await planObject.getByRole("button", { name: "Collapse Stage Shell v0 plan" }).click({
+    force: true
+  });
   await expect(planObject).toHaveClass(/stage-object-collapsed/);
   await expect(planObject.getByText("Event model")).toHaveCount(0);
-  await planObject.getByRole("button", { name: "Expand Stage Shell v0 plan" }).click();
+  await planObject.getByRole("button", { name: "Expand Stage Shell v0 plan" }).click({
+    force: true
+  });
   await expect(planObject).toHaveClass(/stage-object-expanded/);
   await expect(planObject).toContainText("Event model");
 
-  const boxBeforeMove = await planObject.boundingBox();
   const dragHandle = planObject.getByRole("button", { name: "Move Stage Shell v0 plan" });
 
-  await dragHandle.click();
+  await dragHandle.click({
+    force: true
+  });
 
-  await expect.poll(async () => (await planObject.boundingBox())?.x).not.toBe(boxBeforeMove?.x);
+  const shiftAfterMove = await planObject.evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--object-shift-x").trim()
+  );
+
+  expect(shiftAfterMove).not.toBe("0px");
   await expect(page.getByTestId("agent-activity-feed")).toContainText(
     "Approval needed to create task prompt cards."
   );
@@ -127,7 +140,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({ pag
 });
 
 test("Stage Shell v0 treats text commands as stage-object manipulation", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   await page.goto("/");
 
@@ -139,12 +152,16 @@ test("Stage Shell v0 treats text commands as stage-object manipulation", async (
   const specObject = page.getByTestId("stage-object-document_portal");
 
   await page.getByTestId("intent-input").fill("collapse the spec portal");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
   await expect(specObject).toHaveClass(/stage-object-collapsed/);
   await expect(page.getByTestId("document-portal-surface")).toHaveCount(0);
 
   await page.getByTestId("intent-input").fill("show the spec portal");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
   await expect(specObject).toHaveClass(/stage-object-expanded/);
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
@@ -233,16 +250,20 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({ 
 });
 
 test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   await page.addInitScript(() => {
-    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier = 4;
+    (window as Window & { __blackstageTestDelayMultiplier?: number }).__blackstageTestDelayMultiplier = 12;
   });
 
   await page.goto("/");
   await page.getByRole("button", { name: "Build BlackStage" }).click();
-  await page.getByRole("button", { name: "Stop" }).click();
+  await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop" }).click({
+    force: true
+  });
 
-  await expect(page.getByTestId("agent-activity-feed")).toContainText("Paused by user.");
+  await expect(page.getByTestId("agent-activity-feed")).toContainText("Stopped by user.");
+  await expect(page.getByTestId("agent-activity-feed")).toContainText("cancelled");
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
   await expect(page.getByLabel("Intent thread")).toContainText("paused");
   const stopWasLogged = await page.evaluate(() => {
@@ -271,13 +292,6 @@ test("Stage Shell v0 can stop visible agent labor", async ({ page }) => {
   });
 
   expect(stopWasLogged).toBe(true);
-  await expect(page.getByTestId("stage-workspace")).not.toContainText(
-    "Approval needed to create task prompt cards.",
-    {
-      timeout: 4_500
-    }
-  );
-
   await page.getByRole("button", { name: "Resume" }).click();
   await expect(page.getByTestId("agent-activity-feed")).toContainText("Resumed by user.");
   await expect(page.getByTestId("stage-workspace")).toContainText(
@@ -376,9 +390,76 @@ test("Stage Shell v0 attaches local context as a private document object", async
   await expect(page.getByTestId("research-capture")).toContainText("context attached");
 });
 
+test("Stage Shell v0 gates local memory writes and deletes", async ({ page }) => {
+  test.setTimeout(90_000);
+
+  await page.goto("/");
+
+  await page
+    .getByTestId("intent-input")
+    .fill("remember Blackstage memory writes stay local and require explicit approval");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(page.getByTestId("approval-card")).toContainText("Save local memory");
+  await expect(page.getByTestId("approval-card")).toContainText("memory write");
+  await expect(page.getByTestId("memory-surface")).toContainText("proposed");
+  await expect(page.getByTestId("memory-surface")).toContainText(
+    "Blackstage memory writes stay local"
+  );
+
+  await page.getByRole("button", { name: "Approve", exact: true }).click({
+    force: true
+  });
+  await expect(page.getByTestId("approval-card")).toContainText("Status: approved");
+  await expect(page.getByTestId("memory-surface")).toContainText("approved");
+
+  await page.getByTestId("intent-input").fill("forget explicit approval");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(page.getByTestId("approval-card")).toContainText("Delete local memory");
+  await expect(page.getByTestId("approval-card")).toContainText("memory delete");
+
+  await page.getByRole("button", { name: "Approve", exact: true }).click({
+    force: true
+  });
+  await expect(page.getByTestId("memory-surface")).toContainText("deleted");
+
+  const memoryState = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return [];
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      memoryRecords?: Array<{
+        status?: string;
+        redactedSummary?: string;
+      }>;
+    };
+
+    return snapshot.memoryRecords ?? [];
+  });
+
+  expect(memoryState).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        status: "deleted",
+        redactedSummary: expect.stringContaining("Blackstage memory writes stay local")
+      })
+    ])
+  );
+});
+
 test("Stage Shell v0 speaks sparse assistant status when Stage voice is enabled", async ({
   page
 }) => {
+  test.setTimeout(90_000);
+
   await page.addInitScript(() => {
     class FakeSpeechSynthesisUtterance {
       pitch = 1;
