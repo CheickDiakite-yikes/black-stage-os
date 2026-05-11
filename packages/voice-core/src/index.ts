@@ -1,5 +1,6 @@
 export * from "./capture/voiceCapture";
 export * from "./realtime/realtimeVoiceBroker";
+export * from "./realtime/realtimeVoiceBrokerRoute";
 export * from "./realtime/realtimeVoiceEvent";
 export * from "./realtime/realtimeVoiceServerBroker";
 export * from "./realtime/realtimeVoiceSession";

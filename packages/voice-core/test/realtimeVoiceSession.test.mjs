@@ -4,6 +4,7 @@ import {
   createRealtimeVoiceBrokerPlan,
   inspectRealtimeVoiceBrokerReadiness
 } from "../dist/realtime/realtimeVoiceBroker.js";
+import { handleRealtimeUnifiedWebrtcBrokerRoute } from "../dist/realtime/realtimeVoiceBrokerRoute.js";
 import {
   BLACKSTAGE_REALTIME_BROKER_ROUTE,
   OPENAI_API_KEY_ENV_VAR,
@@ -223,5 +224,153 @@ describe("Realtime voice session contracts", () => {
     assert.equal(stageEvent?.type, "agent.progress");
     assert.equal(stageEvent.payload.type, "failed");
     assert.equal(stageEvent.payload.details, "Realtime connection closed before an answer SDP arrived.");
+  });
+
+  it("rejects unsupported broker route methods before any network exchange", async () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_route",
+      threadId: "thread_build_blackstage"
+    });
+    let exchangeCalls = 0;
+    const response = await handleRealtimeUnifiedWebrtcBrokerRoute(
+      {
+        method: "GET",
+        path: BLACKSTAGE_REALTIME_BROKER_ROUTE,
+        headers: {
+          "content-type": "application/sdp"
+        },
+        body: "v=0\r\n",
+        requestedAt: "2026-05-10T23:56:00.000Z"
+      },
+      {
+        config,
+        exchangeWithOpenAi: async () => {
+          exchangeCalls += 1;
+          return {
+            answerSdp: "should-not-run"
+          };
+        }
+      }
+    );
+
+    assert.equal(response.status, 405);
+    assert.equal(response.headers.allow, "POST");
+    assert.equal(response.networkAttempted, false);
+    assert.equal(exchangeCalls, 0);
+  });
+
+  it("keeps the broker route disabled by default", async () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_route_disabled",
+      threadId: "thread_build_blackstage"
+    });
+    const testRouteCredential = ["test", "route", "credential"].join("-");
+    const response = await handleRealtimeUnifiedWebrtcBrokerRoute(
+      {
+        method: "POST",
+        path: BLACKSTAGE_REALTIME_BROKER_ROUTE,
+        headers: {
+          "content-type": "application/sdp; charset=utf-8"
+        },
+        body: "v=0\r\n",
+        requestedAt: "2026-05-10T23:57:00.000Z"
+      },
+      {
+        config,
+        environment: {
+          openAiApiKey: testRouteCredential,
+          safetyIdentifier: "hashed-user-id"
+        }
+      }
+    );
+    const body = JSON.parse(response.body);
+
+    assert.equal(response.status, 503);
+    assert.equal(response.networkAttempted, false);
+    assert.ok(body.errors.some((error) => error.includes("disabled by default")));
+    assert.doesNotMatch(response.body, new RegExp(testRouteCredential));
+  });
+
+  it("blocks live broker route requests without server safety and key material", async () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_route_missing_env",
+      threadId: "thread_build_blackstage",
+      networkMode: "configured_live"
+    });
+    const response = await handleRealtimeUnifiedWebrtcBrokerRoute(
+      {
+        method: "POST",
+        path: BLACKSTAGE_REALTIME_BROKER_ROUTE,
+        headers: {
+          "content-type": "application/sdp"
+        },
+        body: "v=0\r\n",
+        requestedAt: "2026-05-10T23:58:00.000Z"
+      },
+      {
+        config,
+        environment: {
+          liveModeEnabled: true
+        }
+      }
+    );
+    const body = JSON.parse(response.body);
+
+    assert.equal(response.status, 503);
+    assert.equal(response.networkAttempted, false);
+    assert.ok(body.errors.some((error) => error.includes("safety identifier")));
+    assert.ok(body.errors.some((error) => error.includes(OPENAI_API_KEY_ENV_VAR)));
+  });
+
+  it("exchanges SDP through an injected live broker handler only when enabled", async () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_route_live",
+      threadId: "thread_build_blackstage",
+      networkMode: "configured_live"
+    });
+    const testRouteCredential = ["test", "route", "credential"].join("-");
+    let observedApiKey;
+    const response = await handleRealtimeUnifiedWebrtcBrokerRoute(
+      {
+        method: "POST",
+        path: BLACKSTAGE_REALTIME_BROKER_ROUTE,
+        headers: {
+          "Content-Type": "application/sdp"
+        },
+        body: "v=0\r\no=- blackstage-offer\r\n",
+        requestedAt: "2026-05-10T23:59:00.000Z"
+      },
+      {
+        config,
+        environment: {
+          liveModeEnabled: true,
+          openAiApiKey: testRouteCredential,
+          safetyIdentifier: "hashed-user-id"
+        },
+        exchangeWithOpenAi: async (openAiRequest, exchangeContext) => {
+          observedApiKey = exchangeContext.apiKey;
+          assert.equal(openAiRequest.body.sdp, "v=0\r\no=- blackstage-offer\r\n");
+          assert.equal(openAiRequest.body.session.model, "gpt-realtime-2");
+          assert.equal(openAiRequest.authorization.exposedToBrowser, false);
+
+          return {
+            answerSdp: "v=0\r\no=- blackstage-answer\r\n",
+            responseHeaders: {
+              authorization: "Bearer should-not-leak",
+              "x-openai-request-id": "req_test"
+            }
+          };
+        }
+      }
+    );
+
+    assert.equal(observedApiKey, testRouteCredential);
+    assert.equal(response.status, 200);
+    assert.equal(response.networkAttempted, true);
+    assert.equal(response.headers["content-type"], "application/sdp");
+    assert.equal(response.headers["x-openai-request-id"], "req_test");
+    assert.equal(response.headers.authorization, undefined);
+    assert.equal(response.body, "v=0\r\no=- blackstage-answer\r\n");
+    assert.doesNotMatch(JSON.stringify(response), new RegExp(`${testRouteCredential}|should-not-leak`));
   });
 });
