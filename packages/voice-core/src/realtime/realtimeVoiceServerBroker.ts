@@ -25,6 +25,12 @@ export type RealtimeServerSessionDescriptor = {
   model: typeof DEFAULT_REALTIME_VOICE_MODEL;
   instructions: string;
   audio: {
+    input: {
+      transcription: {
+        model: RealtimeVoiceSessionConfig["inputTranscription"]["model"];
+        language?: string;
+      };
+    };
     output: {
       voice: string;
     };
@@ -136,6 +142,12 @@ export function createRealtimeServerSessionDescriptor(
     model: DEFAULT_REALTIME_VOICE_MODEL,
     instructions: config.instructions,
     audio: {
+      input: {
+        transcription: {
+          model: config.inputTranscription.model,
+          language: config.inputTranscription.language
+        }
+      },
       output: {
         voice: config.voiceName ?? "marin"
       }

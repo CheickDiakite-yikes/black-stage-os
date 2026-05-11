@@ -67,6 +67,15 @@ The first passing armed smoke used a shell-provided safety identifier and approv
 
 Earlier armed attempts returned upstream HTTP 400 until the smoke offer included a `recvonly` audio media section and the server session omitted unsupported `metadata`. The broker now preserves only safe upstream diagnostics: HTTP status, request id when present, and sanitized OpenAI error fields.
 
+`pnpm smoke:realtime-ui` now runs the same live edge through the actual Stage Web
+startup choreography. When shell-armed, it clicks the startup orb, approves the
+live Realtime edge, waits for `live SDP`, verifies a provider text response is
+visible in the Stage assistant speech surface, verifies a provider function call
+for `blackstage_prepare_external_action` becomes a Stage approval card, and
+writes a redacted debug summary with event types, tool names, and elapsed timing.
+The UI smoke still sends no microphone audio, exposes no standard API key to the
+browser, stores no raw payloads in the proof, and stays capped by the cheap guard.
+
 Run `pnpm preflight:realtime` first if you want to confirm that the shell is armed without starting the broker or creating an SDP offer.
 
 To generate the non-API-key arming values for a controlled local shell, run:

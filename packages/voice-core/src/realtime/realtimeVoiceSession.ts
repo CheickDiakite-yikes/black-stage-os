@@ -1,4 +1,5 @@
 export const DEFAULT_REALTIME_VOICE_MODEL = "gpt-realtime-2";
+export const DEFAULT_REALTIME_TRANSCRIPTION_MODEL = "gpt-realtime-whisper";
 export const BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION =
   "blackstage.realtime.instructions.v0";
 
@@ -12,6 +13,11 @@ export type RealtimeVoiceTransport = "webrtc" | "websocket";
 export type RealtimeVoiceNetworkMode = "simulation" | "configured_live";
 
 export type RealtimeVoiceReasoningEffort = "low" | "medium" | "high";
+export type RealtimeVoiceInputTranscriptionModel =
+  | typeof DEFAULT_REALTIME_TRANSCRIPTION_MODEL
+  | "gpt-4o-mini-transcribe"
+  | "gpt-4o-transcribe"
+  | "whisper-1";
 
 export type RealtimeVoicePolicy = {
   requiresServerBroker: true;
@@ -40,6 +46,10 @@ export type RealtimeVoiceSessionConfig = {
   reasoningEffort: RealtimeVoiceReasoningEffort;
   inputModalities: Array<"audio" | "text" | "image">;
   outputModalities: Array<"audio" | "text">;
+  inputTranscription: {
+    model: RealtimeVoiceInputTranscriptionModel;
+    language?: string;
+  };
   policy: RealtimeVoicePolicy;
 };
 
@@ -48,6 +58,8 @@ export type RealtimeVoiceSessionInput = {
   threadId: string;
   instructions?: string;
   model?: RealtimeVoiceModel;
+  inputTranscriptionModel?: RealtimeVoiceInputTranscriptionModel;
+  inputTranscriptionLanguage?: string;
   transport?: RealtimeVoiceTransport;
   networkMode?: RealtimeVoiceNetworkMode;
 };
@@ -93,6 +105,10 @@ export function createRealtimeVoiceSessionConfig(
     reasoningEffort: "medium",
     inputModalities: ["audio", "text", "image"],
     outputModalities: ["audio", "text"],
+    inputTranscription: {
+      model: input.inputTranscriptionModel ?? DEFAULT_REALTIME_TRANSCRIPTION_MODEL,
+      language: input.inputTranscriptionLanguage
+    },
     policy: {
       requiresServerBroker: true,
       forbidsBrowserApiKey: true,

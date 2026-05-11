@@ -27,6 +27,7 @@ import {
 } from "../dist/realtime/realtimeVoiceWebrtcClient.js";
 import {
   BLACKSTAGE_REALTIME_INSTRUCTIONS_VERSION,
+  DEFAULT_REALTIME_TRANSCRIPTION_MODEL,
   DEFAULT_REALTIME_VOICE_MODEL,
   createBlackstageRealtimeInstructionContract,
   createRealtimeVoiceSessionConfig,
@@ -92,6 +93,8 @@ describe("Realtime voice session contracts", () => {
     assert.equal(config.model, "gpt-realtime-2");
     assert.equal(config.networkMode, "simulation");
     assert.deepEqual(config.outputModalities, ["audio", "text"]);
+    assert.equal(config.inputTranscription.model, DEFAULT_REALTIME_TRANSCRIPTION_MODEL);
+    assert.equal(config.inputTranscription.model, "gpt-realtime-whisper");
   });
 
   it("creates a Blackstage-owned realtime instruction contract", () => {
@@ -573,6 +576,10 @@ describe("Realtime voice session contracts", () => {
     assert.equal(request.openAiRequest.body.kind, "multipart_form_data");
     assert.equal(request.openAiRequest.body.sdp, "v=0\r\no=- blackstage-test\r\n");
     assert.equal(request.openAiRequest.body.session.model, "gpt-realtime-2");
+    assert.equal(
+      request.openAiRequest.body.session.audio.input.transcription.model,
+      "gpt-realtime-whisper"
+    );
     assert.equal(request.openAiRequest.body.session.audio.output.voice, "marin");
     assert.equal(request.openAiRequest.body.session.reasoning.effort, "medium");
     assert.equal("metadata" in request.openAiRequest.body.session, false);

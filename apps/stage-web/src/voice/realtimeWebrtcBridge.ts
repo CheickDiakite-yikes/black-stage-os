@@ -21,6 +21,12 @@ export const STAGE_WEB_REALTIME_AUDIO_ENABLED_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED";
 export const STAGE_WEB_REALTIME_TEXT_PROBE_ENV_VAR =
   "VITE_BLACKSTAGE_REALTIME_TEXT_PROBE";
+export const STAGE_WEB_REALTIME_TOOL_PROBE_ENV_VAR =
+  "VITE_BLACKSTAGE_REALTIME_TOOL_PROBE";
+export const STAGE_WEB_REALTIME_DEBUG_ENABLED_ENV_VAR =
+  "VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED";
+export const STAGE_WEB_REALTIME_DEBUG_STORAGE_KEY = "blackstage.realtime.debug.events";
+export const STAGE_WEB_REALTIME_TOOL_PROBE_NAME = "blackstage_prepare_external_action";
 
 export type StageWebRealtimeBridgeStatus =
   | "disabled"
@@ -404,6 +410,10 @@ function createBrowserRealtimePeerConnection(
 ): RealtimeWebrtcPeerConnection {
   const PeerConnection = globalThis.RTCPeerConnection;
   const textProbe = readStageWebRealtimeTextProbe();
+  const toolProbe = readStageWebRealtimeToolProbe();
+  const debugEnabled = readStageWebRealtimeDebugEnabled();
+  const debugStartedAt = Date.now();
+  let toolProbeSent = false;
 
   if (!PeerConnection) {
     throw new Error("Browser WebRTC peer connection is unavailable.");
@@ -416,11 +426,37 @@ function createBrowserRealtimePeerConnection(
       const channel = peerConnection.createDataChannel(label);
 
       channel.addEventListener("message", (event) => {
+        recordStageWebRealtimeDebugEvent("server", event.data, {
+          enabled: debugEnabled,
+          startedAt: debugStartedAt
+        });
         onMessage(event.data);
+        if (
+          toolProbe &&
+          !toolProbeSent &&
+          realtimeDataChannelMessageEndsResponse(event.data)
+        ) {
+          toolProbeSent = true;
+          sendStageWebRealtimeToolProbe(channel, toolProbe, {
+            enabled: debugEnabled,
+            startedAt: debugStartedAt
+          });
+        }
       });
       if (textProbe) {
         channel.addEventListener("open", () => {
-          sendStageWebRealtimeTextProbe(channel, textProbe);
+          sendStageWebRealtimeTextProbe(channel, textProbe, {
+            enabled: debugEnabled,
+            startedAt: debugStartedAt
+          });
+        });
+      } else if (toolProbe) {
+        channel.addEventListener("open", () => {
+          toolProbeSent = true;
+          sendStageWebRealtimeToolProbe(channel, toolProbe, {
+            enabled: debugEnabled,
+            startedAt: debugStartedAt
+          });
         });
       }
 
@@ -501,6 +537,24 @@ function sanitizeRealtimeEventType(eventType: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readStringField(
+  record: Record<string, unknown>,
+  field: string
+): string | undefined {
+  const value = record[field];
+
+  return typeof value === "string" ? value : undefined;
+}
+
+function readRecordField(
+  record: Record<string, unknown>,
+  field: string
+): Record<string, unknown> | undefined {
+  const value = record[field];
+
+  return isRecord(value) ? value : undefined;
 }
 
 function createRealtimeBridgeStageEvents(
@@ -689,6 +743,62 @@ function readStageWebRealtimeTextProbe(): string | undefined {
   );
 }
 
+function readStageWebRealtimeToolProbe(): string | undefined {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeToolProbe?: string;
+  };
+
+  if (runtimeConfig.__blackstageRealtimeToolProbe) {
+    return normalizeStageWebRealtimeTextProbe(
+      runtimeConfig.__blackstageRealtimeToolProbe
+    );
+  }
+
+  try {
+    const localProbe = localStorage.getItem("blackstage.realtime.toolProbe");
+
+    if (localProbe) {
+      return normalizeStageWebRealtimeTextProbe(localProbe);
+    }
+  } catch {
+    // Local runtime config is best-effort; Vite env remains the durable path.
+  }
+
+  const meta = import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  };
+
+  return normalizeStageWebRealtimeTextProbe(
+    meta.env?.[STAGE_WEB_REALTIME_TOOL_PROBE_ENV_VAR]
+  );
+}
+
+function readStageWebRealtimeDebugEnabled(): boolean {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeDebugEnabled?: string;
+  };
+
+  if (runtimeConfig.__blackstageRealtimeDebugEnabled) {
+    return runtimeConfig.__blackstageRealtimeDebugEnabled.trim() === "1";
+  }
+
+  try {
+    const localEnabled = localStorage.getItem("blackstage.realtimeDebug.enabled");
+
+    if (localEnabled) {
+      return localEnabled.trim() === "1";
+    }
+  } catch {
+    // Local runtime config is best-effort; Vite env remains the durable path.
+  }
+
+  const meta = import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  };
+
+  return meta.env?.[STAGE_WEB_REALTIME_DEBUG_ENABLED_ENV_VAR]?.trim() === "1";
+}
+
 function normalizeStageWebRealtimeTextProbe(value?: string): string | undefined {
   const trimmedValue = value?.trim();
 
@@ -717,6 +827,61 @@ export type StageWebRealtimeTextProbeClientEvent =
         max_output_tokens: 24;
       };
     };
+
+export type StageWebRealtimeToolProbeClientEvent =
+  | {
+      type: "conversation.item.create";
+      event_id: string;
+      item: {
+        type: "message";
+        role: "user";
+        content: Array<{
+          type: "input_text";
+          text: string;
+        }>;
+      };
+    }
+  | {
+      type: "response.create";
+      event_id: string;
+      response: {
+        output_modalities: ["text"];
+        instructions: string;
+        tools: Array<{
+          type: "function";
+          name: typeof STAGE_WEB_REALTIME_TOOL_PROBE_NAME;
+          description: string;
+          parameters: {
+            type: "object";
+            additionalProperties: false;
+            properties: {
+              action: {
+                type: "string";
+              };
+              reason: {
+                type: "string";
+              };
+            };
+            required: ["action", "reason"];
+          };
+        }>;
+        tool_choice: {
+          type: "function";
+          name: typeof STAGE_WEB_REALTIME_TOOL_PROBE_NAME;
+        };
+        max_output_tokens: 96;
+      };
+    };
+
+export type StageWebRealtimeDebugEvent = {
+  direction: "client" | "server";
+  type: string;
+  timestamp: string;
+  elapsedMs: number;
+  toolName?: string;
+  callId?: string;
+  textLength?: number;
+};
 
 export function createStageWebRealtimeTextProbeClientEvents(
   promptText: string,
@@ -751,12 +916,195 @@ export function createStageWebRealtimeTextProbeClientEvents(
   ];
 }
 
-function sendStageWebRealtimeTextProbe(channel: RTCDataChannel, promptText: string) {
+export function createStageWebRealtimeToolProbeClientEvents(
+  promptText: string,
+  probeId = stableHash(`${promptText}:${Date.now().toString(36)}`)
+): StageWebRealtimeToolProbeClientEvent[] {
+  return [
+    {
+      type: "conversation.item.create",
+      event_id: `stage_web_tool_probe_item_${probeId}`,
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: promptText
+          }
+        ]
+      }
+    },
+    {
+      type: "response.create",
+      event_id: `stage_web_tool_probe_response_${probeId}`,
+      response: {
+        output_modalities: ["text"],
+        instructions:
+          "Call the provided function exactly once to prepare an approval-gated Blackstage action. Do not answer with normal text.",
+        tools: [
+          {
+            type: "function",
+            name: STAGE_WEB_REALTIME_TOOL_PROBE_NAME,
+            description:
+              "Prepare an approval-gated Blackstage action packet without executing it.",
+            parameters: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                action: {
+                  type: "string"
+                },
+                reason: {
+                  type: "string"
+                }
+              },
+              required: ["action", "reason"]
+            }
+          }
+        ],
+        tool_choice: {
+          type: "function",
+          name: STAGE_WEB_REALTIME_TOOL_PROBE_NAME
+        },
+        max_output_tokens: 96
+      }
+    }
+  ];
+}
+
+function sendStageWebRealtimeTextProbe(
+  channel: RTCDataChannel,
+  promptText: string,
+  debug: {
+    enabled: boolean;
+    startedAt: number;
+  }
+) {
   const clientEvents = createStageWebRealtimeTextProbeClientEvents(promptText);
 
   clientEvents.forEach((clientEvent) => {
+    recordStageWebRealtimeDebugEvent("client", clientEvent, debug);
     channel.send(JSON.stringify(clientEvent));
   });
+}
+
+function sendStageWebRealtimeToolProbe(
+  channel: RTCDataChannel,
+  promptText: string,
+  debug: {
+    enabled: boolean;
+    startedAt: number;
+  }
+) {
+  const clientEvents = createStageWebRealtimeToolProbeClientEvents(promptText);
+
+  clientEvents.forEach((clientEvent) => {
+    recordStageWebRealtimeDebugEvent("client", clientEvent, debug);
+    channel.send(JSON.stringify(clientEvent));
+  });
+}
+
+function realtimeDataChannelMessageEndsResponse(message: unknown): boolean {
+  const payload = parseRealtimeDataChannelPayload(message);
+
+  return isRecord(payload) && payload.type === "response.done";
+}
+
+function recordStageWebRealtimeDebugEvent(
+  direction: StageWebRealtimeDebugEvent["direction"],
+  payload: unknown,
+  debug: {
+    enabled: boolean;
+    startedAt: number;
+  }
+) {
+  if (!debug.enabled) {
+    return;
+  }
+
+  const event = createStageWebRealtimeDebugEvent(direction, payload, debug.startedAt);
+
+  if (!event) {
+    return;
+  }
+
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __blackstageRealtimeDebugEvents?: StageWebRealtimeDebugEvent[];
+  };
+  const events = [
+    ...(runtimeConfig.__blackstageRealtimeDebugEvents ?? readStoredDebugEvents()),
+    event
+  ].slice(-120);
+
+  runtimeConfig.__blackstageRealtimeDebugEvents = events;
+
+  try {
+    localStorage.setItem(STAGE_WEB_REALTIME_DEBUG_STORAGE_KEY, JSON.stringify(events));
+  } catch {
+    // Debug capture is best-effort and must never interrupt the live session.
+  }
+}
+
+function createStageWebRealtimeDebugEvent(
+  direction: StageWebRealtimeDebugEvent["direction"],
+  payload: unknown,
+  startedAt: number
+): StageWebRealtimeDebugEvent | undefined {
+  const parsedPayload = parseRealtimeDataChannelPayload(payload);
+
+  if (!isRecord(parsedPayload) || typeof parsedPayload.type !== "string") {
+    return undefined;
+  }
+
+  const timestamp = new Date().toISOString();
+  const toolName =
+    readStringField(parsedPayload, "name") ??
+    readStringField(readRecordField(parsedPayload, "item") ?? {}, "name");
+  const callId =
+    readStringField(parsedPayload, "call_id") ??
+    readStringField(parsedPayload, "callId") ??
+    readStringField(readRecordField(parsedPayload, "item") ?? {}, "call_id");
+  const text =
+    readStringField(parsedPayload, "text") ??
+    readStringField(parsedPayload, "transcript") ??
+    readStringField(parsedPayload, "delta") ??
+    readStringField(parsedPayload, "arguments");
+
+  return {
+    direction,
+    type: sanitizeRealtimeEventType(parsedPayload.type),
+    timestamp,
+    elapsedMs: Math.max(0, Date.now() - startedAt),
+    toolName: toolName ? sanitizeRealtimeEventType(toolName) : undefined,
+    callId: callId ? sanitizeRealtimeEventType(callId) : undefined,
+    textLength: text ? text.length : undefined
+  };
+}
+
+function readStoredDebugEvents(): StageWebRealtimeDebugEvent[] {
+  try {
+    const rawEvents = localStorage.getItem(STAGE_WEB_REALTIME_DEBUG_STORAGE_KEY);
+    const parsedEvents = rawEvents ? (JSON.parse(rawEvents) as unknown) : undefined;
+
+    return Array.isArray(parsedEvents)
+      ? parsedEvents.filter(isStageWebRealtimeDebugEvent)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function isStageWebRealtimeDebugEvent(
+  event: unknown
+): event is StageWebRealtimeDebugEvent {
+  return (
+    isRecord(event) &&
+    (event.direction === "client" || event.direction === "server") &&
+    typeof event.type === "string" &&
+    typeof event.timestamp === "string" &&
+    typeof event.elapsedMs === "number"
+  );
 }
 
 function stableHash(value: string): string {

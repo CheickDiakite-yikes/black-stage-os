@@ -30,6 +30,7 @@ export function createRealtimeLiveSmokeProof(input) {
     offerBytes: normalizeOptionalNumber(input.offerBytes),
     answerBytes: normalizeOptionalNumber(input.answerBytes),
     answerSha256Prefix: normalizeDigest(input.answerSha256Prefix),
+    debugSummary: normalizeRealtimeDebugSummary(input.debugSummary),
     errorMessage: input.errorMessage
       ? createSafeRealtimeSmokeErrorMessage(input.errorMessage)
       : undefined,
@@ -152,6 +153,37 @@ function normalizeDigest(value) {
   return typeof value === "string" && /^[a-f0-9]{8,64}$/i.test(value)
     ? value
     : undefined;
+}
+
+function normalizeRealtimeDebugSummary(summary) {
+  if (!summary || typeof summary !== "object") {
+    return undefined;
+  }
+
+  return compactObject({
+    eventCount: normalizeOptionalNumber(summary.eventCount),
+    maxElapsedMs: normalizeOptionalNumber(summary.maxElapsedMs),
+    clientEventTypes: normalizeRealtimeEventTypeList(summary.clientEventTypes, 24),
+    serverEventTypes: normalizeRealtimeEventTypeList(summary.serverEventTypes, 48),
+    toolNames: normalizeRealtimeEventTypeList(summary.toolNames, 8),
+    textProofObserved: summary.textProofObserved === true ? true : undefined,
+    toolCallObserved: summary.toolCallObserved === true ? true : undefined,
+    rawPayloadStored: summary.rawPayloadStored === false ? false : undefined
+  });
+}
+
+function normalizeRealtimeEventTypeList(value, limit) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const eventTypes = value
+    .filter((eventType) => typeof eventType === "string")
+    .map((eventType) => eventType.replace(/[^a-zA-Z0-9_.:-]/g, "").slice(0, 96))
+    .filter(Boolean)
+    .slice(0, limit);
+
+  return eventTypes.length > 0 ? eventTypes : undefined;
 }
 
 function normalizeCheapTestGuard(cheapTestGuard) {

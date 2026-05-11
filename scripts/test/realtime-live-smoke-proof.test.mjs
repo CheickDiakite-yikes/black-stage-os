@@ -64,6 +64,20 @@ describe("Realtime live smoke proof", () => {
         loadedEnvVars: ["OPENAI_API_KEY"],
         skippedEnvVars: []
       },
+      debugSummary: {
+        eventCount: 92,
+        maxElapsedMs: 3037,
+        clientEventTypes: ["conversation.item.create", "response.create"],
+        serverEventTypes: [
+          "response.output_text.done",
+          "response.function_call_arguments.done",
+          "invalid raw type with spaces"
+        ],
+        toolNames: ["blackstage_prepare_external_action"],
+        textProofObserved: true,
+        toolCallObserved: true,
+        rawPayloadStored: false
+      },
       errorMessage: "approval token super-secret-token and sk-proj-secretsecret",
       notes: ["safe evidence only"]
     });
@@ -94,6 +108,22 @@ describe("Realtime live smoke proof", () => {
       loadedEnvVars: ["OPENAI_API_KEY"],
       skippedEnvVars: []
     });
+    assert.equal(proof.debugSummary.eventCount, 92);
+    assert.deepEqual(proof.debugSummary.clientEventTypes, [
+      "conversation.item.create",
+      "response.create"
+    ]);
+    assert.deepEqual(proof.debugSummary.serverEventTypes, [
+      "response.output_text.done",
+      "response.function_call_arguments.done",
+      "invalidrawtypewithspaces"
+    ]);
+    assert.deepEqual(proof.debugSummary.toolNames, [
+      "blackstage_prepare_external_action"
+    ]);
+    assert.equal(proof.debugSummary.textProofObserved, true);
+    assert.equal(proof.debugSummary.toolCallObserved, true);
+    assert.equal(proof.debugSummary.rawPayloadStored, false);
     assert.equal(rawProof.includes("super-secret-token"), false);
     assert.equal(rawProof.includes("sk-proj-secretsecret"), false);
   });

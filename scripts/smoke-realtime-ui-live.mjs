@@ -28,8 +28,11 @@ const STAGE_HOST = "127.0.0.1";
 const BROKER_ROUTE_PATH = "/api/blackstage/realtime/session";
 const REALTIME_TEXT_PROBE_PROMPT =
   "Blackstage live text proof request. Keep the reply exact.";
-const REALTIME_TEXT_PROBE_EXPECTED_REPLY =
-  "Blackstage live text proof received.";
+const REALTIME_TEXT_PROBE_EXPECTED_REPLY = "Blackstage live text proof received.";
+const REALTIME_TOOL_PROBE_PROMPT =
+  "Prepare a Blackstage action packet for a live debug proof. The action must stay approval-gated.";
+const REALTIME_TOOL_PROBE_EXPECTED_APPROVAL =
+  "Approve realtime tool: blackstage_prepare_external_action";
 const runSlug = slugifyTimestamp(new Date().toISOString());
 const defaultProofPath = `.blackstage/realtime-smoke/ui-live-${runSlug}.json`;
 const shellLiveSmokeArmedAtStartup = process.env[LIVE_SMOKE_ENV_VAR] === "1";
@@ -113,7 +116,9 @@ async function main() {
         VITE_BLACKSTAGE_REALTIME_WEBRTC_ENABLED: "1",
         VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN: approvalToken,
         VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED: "0",
-        VITE_BLACKSTAGE_REALTIME_TEXT_PROBE: REALTIME_TEXT_PROBE_PROMPT
+        VITE_BLACKSTAGE_REALTIME_TEXT_PROBE: REALTIME_TEXT_PROBE_PROMPT,
+        VITE_BLACKSTAGE_REALTIME_TOOL_PROBE: REALTIME_TOOL_PROBE_PROMPT,
+        VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED: "1"
       }
     });
 
@@ -130,23 +135,28 @@ async function main() {
     });
 
     await page.addInitScript(
-      ({ approvalPhrase, realtimeBrokerUrl, textProbe }) => {
+      ({ approvalPhrase, realtimeBrokerUrl, textProbe, toolProbe }) => {
         localStorage.clear();
         globalThis.__blackstageRealtimeBrokerUrl = realtimeBrokerUrl;
         globalThis.__blackstageRealtimeWebrtcEnabled = "1";
         globalThis.__blackstageRealtimeApprovalPhrase = approvalPhrase;
         globalThis.__blackstageRealtimeAudioEnabled = "0";
         globalThis.__blackstageRealtimeTextProbe = textProbe;
+        globalThis.__blackstageRealtimeToolProbe = toolProbe;
+        globalThis.__blackstageRealtimeDebugEnabled = "1";
         localStorage.setItem("blackstage.realtimeBroker.url", realtimeBrokerUrl);
         localStorage.setItem("blackstage.realtimeWebrtc.enabled", "1");
         localStorage.setItem("blackstage.realtime.approvalPhrase", approvalPhrase);
         localStorage.setItem("blackstage.realtimeAudio.enabled", "0");
         localStorage.setItem("blackstage.realtime.textProbe", textProbe);
+        localStorage.setItem("blackstage.realtime.toolProbe", toolProbe);
+        localStorage.setItem("blackstage.realtimeDebug.enabled", "1");
       },
       {
         approvalPhrase: approvalToken,
         realtimeBrokerUrl: brokerBaseUrl,
-        textProbe: REALTIME_TEXT_PROBE_PROMPT
+        textProbe: REALTIME_TEXT_PROBE_PROMPT,
+        toolProbe: REALTIME_TOOL_PROBE_PROMPT
       }
     );
     await page.goto(stageBaseUrl, {
@@ -178,6 +188,12 @@ async function main() {
       REALTIME_TEXT_PROBE_EXPECTED_REPLY,
       timeoutMs
     );
+    await waitForLocatorText(
+      page.getByTestId("approval-card"),
+      REALTIME_TOOL_PROBE_EXPECTED_APPROVAL,
+      timeoutMs
+    );
+    const debugSummary = await readRealtimeDebugSummary(page);
 
     const stageClass = await page.getByTestId("stage-shell").getAttribute("class");
     const brokerStatus = await page.getByTestId("realtime-broker-status").innerText();
@@ -195,9 +211,11 @@ async function main() {
       notes: [
         "Stage Web opened the live Realtime edge from the startup orb after approval.",
         "The live Realtime data channel returned a provider text event into the Stage assistant speech surface.",
+        "The live Realtime data channel returned a provider tool call into the Stage approval surface.",
         `Cheap-test guard: timeout capped at ${REALTIME_LIVE_SMOKE_TIMEOUT_CAP_MS} ms and browser audio send is disabled.`,
         `UI screenshot: ${screenshotPath}`
-      ]
+      ],
+      debugSummary
     });
 
     console.log(
@@ -211,7 +229,9 @@ async function main() {
           assistantSpeechLiveTextProof: assistantSpeech.includes(
             REALTIME_TEXT_PROBE_EXPECTED_REPLY
           ),
+          realtimeToolCallApprovalProof: debugSummary.toolCallObserved,
           assistantSpeech,
+          debugSummary,
           browserReceivesStandardApiKey: false,
           browserSendsAudio: false,
           timeoutMs,
@@ -277,6 +297,48 @@ async function writeUiSmokeScreenshot(page) {
   });
 
   return proofPath;
+}
+
+async function readRealtimeDebugSummary(page) {
+  return page.evaluate(() => {
+    const rawEvents = localStorage.getItem("blackstage.realtime.debug.events");
+    const parsedEvents = rawEvents ? JSON.parse(rawEvents) : [];
+    const events = Array.isArray(parsedEvents) ? parsedEvents : [];
+    const eventTypes = events
+      .map((event) => (typeof event?.type === "string" ? event.type : undefined))
+      .filter(Boolean);
+    const clientEventTypes = events
+      .filter((event) => event?.direction === "client")
+      .map((event) => event.type);
+    const serverEventTypes = events
+      .filter((event) => event?.direction === "server")
+      .map((event) => event.type);
+    const toolNames = events
+      .map((event) =>
+        typeof event?.toolName === "string" ? event.toolName : undefined
+      )
+      .filter(Boolean);
+    const maxElapsedMs = events.reduce(
+      (maxElapsed, event) =>
+        typeof event?.elapsedMs === "number"
+          ? Math.max(maxElapsed, event.elapsedMs)
+          : maxElapsed,
+      0
+    );
+
+    return {
+      eventCount: events.length,
+      maxElapsedMs,
+      clientEventTypes: Array.from(new Set(clientEventTypes)).slice(0, 24),
+      serverEventTypes: Array.from(new Set(serverEventTypes)).slice(0, 48),
+      toolNames: Array.from(new Set(toolNames)).slice(0, 8),
+      textProofObserved: eventTypes.includes("response.output_text.done"),
+      toolCallObserved:
+        toolNames.includes("blackstage_prepare_external_action") ||
+        eventTypes.includes("response.function_call_arguments.done"),
+      rawPayloadStored: false
+    };
+  });
 }
 
 function listen(server, host) {

@@ -337,6 +337,7 @@ describe("Stage broker server", () => {
       const session = JSON.parse(init.body.get("session"));
       assert.equal(session.type, "realtime");
       assert.equal(session.model, "gpt-realtime-2");
+      assert.equal(session.audio.input.transcription.model, "gpt-realtime-whisper");
       assert.equal(session.audio.output.voice, "marin");
       assert.equal(session.reasoning.effort, "medium");
       assert.equal("metadata" in session, false);
@@ -366,6 +367,11 @@ describe("Stage broker server", () => {
             model: "gpt-realtime-2",
             instructions: "Listen for intent.",
             audio: {
+              input: {
+                transcription: {
+                  model: "gpt-realtime-whisper"
+                }
+              },
               output: {
                 voice: "marin"
               }
@@ -426,6 +432,11 @@ describe("Stage broker server", () => {
                 model: "gpt-realtime-2",
                 instructions: "Listen for intent.",
                 audio: {
+                  input: {
+                    transcription: {
+                      model: "gpt-realtime-whisper"
+                    }
+                  },
                   output: {
                     voice: "marin"
                   }
