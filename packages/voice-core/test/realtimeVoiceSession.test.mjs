@@ -5,6 +5,11 @@ import {
   inspectRealtimeVoiceBrokerReadiness
 } from "../dist/realtime/realtimeVoiceBroker.js";
 import {
+  BLACKSTAGE_REALTIME_BROKER_ROUTE,
+  OPENAI_API_KEY_ENV_VAR,
+  createRealtimeUnifiedWebrtcBrokerRequest
+} from "../dist/realtime/realtimeVoiceServerBroker.js";
+import {
   DEFAULT_REALTIME_VOICE_MODEL,
   createRealtimeVoiceSessionConfig,
   inspectRealtimeVoiceSessionSafety
@@ -80,5 +85,56 @@ describe("Realtime voice session contracts", () => {
         }),
       /safety identifier/
     );
+  });
+
+  it("keeps the unified WebRTC server broker disabled by default", () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_disabled",
+      threadId: "thread_build_blackstage"
+    });
+    const request = createRealtimeUnifiedWebrtcBrokerRequest(config, {
+      requestedAt: "2026-05-10T23:50:00.000Z"
+    });
+
+    assert.equal(request.enabled, false);
+    assert.equal(request.clientContract.path, BLACKSTAGE_REALTIME_BROKER_ROUTE);
+    assert.equal(request.clientContract.browserReceivesStandardApiKey, false);
+    assert.equal(request.clientContract.browserReceivesSafetyIdentifier, false);
+    assert.ok(
+      request.blockedReasons.some((reason) => reason.includes("disabled by default"))
+    );
+    assert.ok(
+      request.blockedReasons.some((reason) => reason.includes("simulation mode"))
+    );
+  });
+
+  it("builds a trusted-server request envelope for live unified WebRTC", () => {
+    const config = createRealtimeVoiceSessionConfig({
+      sessionId: "voice_session_live_request",
+      threadId: "thread_build_blackstage",
+      networkMode: "configured_live",
+      instructions: "Speak only key turns and route every tool call through Blackstage approvals."
+    });
+    const request = createRealtimeUnifiedWebrtcBrokerRequest(config, {
+      requestedAt: "2026-05-10T23:51:00.000Z",
+      clientSdpOffer: "v=0\r\no=- blackstage-test\r\n",
+      liveModeEnabled: true,
+      safetyIdentifier: "hashed-user-id",
+      standardApiKeyAvailable: true
+    });
+
+    assert.equal(request.enabled, true);
+    assert.equal(request.plan.model, "gpt-realtime-2");
+    assert.equal(request.plan.openAiEndpointPath, "/v1/realtime/calls");
+    assert.equal(request.openAiRequest.endpointPath, "/v1/realtime/calls");
+    assert.equal(request.openAiRequest.authorization.envVar, OPENAI_API_KEY_ENV_VAR);
+    assert.equal(request.openAiRequest.authorization.exposedToBrowser, false);
+    assert.equal(request.openAiRequest.safetyIdentifier, "hashed-user-id");
+    assert.equal(request.openAiRequest.body.kind, "multipart_form_data");
+    assert.equal(request.openAiRequest.body.sdp, "v=0\r\no=- blackstage-test\r\n");
+    assert.equal(request.openAiRequest.body.session.model, "gpt-realtime-2");
+    assert.equal(request.openAiRequest.body.session.audio.output.voice, "marin");
+    assert.equal(request.openAiRequest.body.session.metadata.blackstageThreadId, "thread_build_blackstage");
+    assert.equal(request.clientContract.browserReceives, "sdp_answer_only");
   });
 });
