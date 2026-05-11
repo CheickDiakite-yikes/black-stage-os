@@ -11,7 +11,8 @@ export type ApprovalActionType =
   | "code_execution"
   | "credential_use"
   | "memory_write"
-  | "memory_delete";
+  | "memory_delete"
+  | "tool_call";
 
 export type ApprovalRiskLevel = "low" | "medium" | "high" | "critical";
 

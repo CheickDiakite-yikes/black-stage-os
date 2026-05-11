@@ -80,7 +80,11 @@ importers:
 
   packages/stage-ui: {}
 
-  packages/voice-core: {}
+  packages/voice-core:
+    dependencies:
+      '@blackstage/stage-core':
+        specifier: workspace:*
+        version: link:../stage-core
 
 packages:
 

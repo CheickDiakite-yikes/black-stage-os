@@ -16,5 +16,8 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm build && node --test test/realtimeVoiceSession.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@blackstage/stage-core": "workspace:*"
   }
 }

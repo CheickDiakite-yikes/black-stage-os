@@ -27,7 +27,7 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Begins empty | E2e asserts idle presence says `Speak when ready` in `apps/stage-web/tests/stage-shell.spec.ts` | Covered |
 | Text precision | `intent-input` flow in `StageShell.tsx`; e2e submits text commands and scenarios | Covered |
 | Natural voice input | Web Speech path in `StageShell.tsx`; mocked browser speech e2e | Covered for browser prototype |
-| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and defines a server-mediated WebRTC broker plan plus trusted-server request envelope with safety identifier checks | Contract only |
+| Realtime voice foundation | `voice-core` defaults to `gpt-realtime-2`, keeps simulation mode by default, and defines a server-mediated WebRTC broker plan, trusted-server request envelope, and Realtime-to-Stage event mapper with safety identifier checks | Contract only |
 | Assistant speech output | Stage voice toggle speaks sparse browser-native status, shows the last spoken line, and records `assistant.speech` research events | Covered locally |
 | Multimodal precision | File attach creates local document objects; image files are accepted as context metadata | Partial |
 | Intent thread | `IntentThread`, local persistence, session export/replay | Covered for v0 |
@@ -54,25 +54,25 @@ Blackstage is complete only when the repo can demonstrate a working reality inte
 | Background agentic harness | `agent-runtime` scheduler, harness projection, Realtime voice contracts, dry-run Codex worker envelope, disabled local Codex runner seam, dry-run Agents SDK manager plan, internal Symphony control-plane projection, architecture doc | Local simulation/contracts only |
 | Live Codex worker | Dry-run envelope and disabled-by-default local `codex exec` command plan exist; no real Codex subprocess/App Server execution yet | Contract only |
 | Live Agents SDK worker | Dry-run manager-agent plan exists with specialists as tools and approval-gated memory inspection; no live Agents SDK execution yet | Contract only |
-| Live Realtime session | Trusted-server WebRTC request envelope exists, but no server route, client connection, or live API session runs yet | Contract only |
+| Live Realtime session | Trusted-server WebRTC request envelope and event mapper exist, but no server route, client connection, or live API session runs yet | Contract only |
 | External integrations | No email/calendar/browser/computer/file-write integrations beyond local simulated/export behavior | Missing by design |
 
 ## Evidence From Current Gate
 
-Most recent full validation after the Realtime server-broker seam:
+Most recent full validation after the Realtime Stage mapper seam:
 
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
-- `pnpm test`: passed with 6 voice-core subtests, 4 memory-core subtests, and 13 agent-runtime subtests.
+- `pnpm test`: passed with 10 voice-core subtests, 4 memory-core subtests, and 13 agent-runtime subtests.
 - `pnpm build`: passed.
 - `pnpm test:e2e`: passed with 9 browser tests.
-- `pnpm scan:secrets`: passed after the Realtime server-broker seam.
+- `pnpm scan:secrets`: passed after the Realtime Stage mapper seam.
 
 ## Gaps That Block Goal Completion
 
 The goal is not complete yet. The largest remaining gaps are:
 
-1. Live Realtime voice is not connected. The contract and trusted-server request envelope exist, and local browser-native assistant speech works, but there is no server route or live Realtime session.
+1. Live Realtime voice is not connected. The contract, trusted-server request envelope, and Stage event mapper exist, and local browser-native assistant speech works, but there is no server route or live Realtime session.
 2. Live agentic work is not connected. Codex, Agents SDK, and Symphony-inspired orchestration are represented by local contracts and fixtures, not live workers.
 3. Browser, map, model, document, memory, and simulation objects are still simulated or local-only; they are not live controllable portals.
 4. Artifact action is still simulated. The user can edit/approve/export, but cannot safely act on artifacts through a real approved external workflow.

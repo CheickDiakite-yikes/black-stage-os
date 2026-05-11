@@ -9,6 +9,7 @@ import {
   OPENAI_API_KEY_ENV_VAR,
   createRealtimeUnifiedWebrtcBrokerRequest
 } from "../dist/realtime/realtimeVoiceServerBroker.js";
+import { mapRealtimeVoiceEventToStageEvents } from "../dist/realtime/realtimeVoiceStageMapper.js";
 import {
   DEFAULT_REALTIME_VOICE_MODEL,
   createRealtimeVoiceSessionConfig,
@@ -136,5 +137,91 @@ describe("Realtime voice session contracts", () => {
     assert.equal(request.openAiRequest.body.session.audio.output.voice, "marin");
     assert.equal(request.openAiRequest.body.session.metadata.blackstageThreadId, "thread_build_blackstage");
     assert.equal(request.clientContract.browserReceives, "sdp_answer_only");
+  });
+
+  it("maps final realtime transcripts into voice intent submissions", () => {
+    const [stageEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.final_transcript",
+        text: "Build the next investor plan.",
+        timestamp: "2026-05-10T23:52:00.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.equal(stageEvent?.type, "intent.submitted");
+    assert.equal(stageEvent.payload.rawText, "Build the next investor plan.");
+    assert.equal(stageEvent.payload.inputMode, "voice");
+  });
+
+  it("maps realtime assistant speech without storing partial deltas", () => {
+    const partialEvents = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.assistant_delta",
+        textDelta: "Shaping",
+        timestamp: "2026-05-10T23:53:00.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+    const [speechEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.assistant_speech",
+        text: "Intent received. I am shaping the stage.",
+        timestamp: "2026-05-10T23:53:01.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.deepEqual(partialEvents, []);
+    assert.equal(speechEvent?.type, "assistant.speech");
+    assert.equal(speechEvent.payload.text, "Intent received. I am shaping the stage.");
+  });
+
+  it("maps realtime tool calls into Stage approval requests", () => {
+    const [stageEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.tool_call_requested",
+        callId: "call_find_files",
+        toolName: "find_files",
+        requiresApproval: true,
+        timestamp: "2026-05-10T23:54:00.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.equal(stageEvent?.type, "approval.requested");
+    assert.equal(stageEvent.payload.actionType, "tool_call");
+    assert.equal(stageEvent.payload.status, "pending");
+    assert.equal(stageEvent.payload.proposedBy, "Realtime voice broker");
+  });
+
+  it("maps realtime errors into failed agent events", () => {
+    const [stageEvent] = mapRealtimeVoiceEventToStageEvents(
+      {
+        type: "voice.error",
+        message: "Realtime connection closed before an answer SDP arrived.",
+        timestamp: "2026-05-10T23:55:00.000Z"
+      },
+      {
+        sessionId: "voice_session_mapper",
+        threadId: "thread_build_blackstage"
+      }
+    );
+
+    assert.equal(stageEvent?.type, "agent.progress");
+    assert.equal(stageEvent.payload.type, "failed");
+    assert.equal(stageEvent.payload.details, "Realtime connection closed before an answer SDP arrived.");
   });
 });
