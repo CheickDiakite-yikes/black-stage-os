@@ -243,6 +243,12 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
   await expect(page.getByTestId("approval-card")).toContainText("network access");
   await page.getByRole("button", { name: "Approve" }).click({ force: true });
   await expect(page.getByTestId("realtime-broker-status")).toContainText("live SDP");
+  await expect(page.getByTestId("stage-shell")).toHaveClass(/stage-listening/);
+  await expect(page.getByTestId("stage-presence")).toContainText("Listening");
+  await expect(page.getByTestId("stage-presence")).toContainText("Speak when ready");
+  await expect(page.getByTestId("presence-orb")).toHaveAccessibleName(
+    "Listening for intent"
+  );
 
   const bridgeEvidence = await page.evaluate(() => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");

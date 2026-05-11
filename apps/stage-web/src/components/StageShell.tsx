@@ -143,6 +143,7 @@ export function StageShell({
     "--stage-accent": accentColor
   } as CSSProperties;
   const latestApproval = thread.approvals.at(-1);
+  const hasSubmittedIntent = thread.originalIntent.length > 0;
   const isIdleStage = thread.status === "paused" && !thread.originalIntent;
   const visibleObjects = useMemo(
     () =>
@@ -277,18 +278,19 @@ export function StageShell({
   );
 
   const finalTranscript = transcript.segments.at(-1)?.text;
-  const voiceButtonLabel =
-    voiceCapture.status === "listening"
-      ? "Listening"
-      : voiceCapture.status === "unavailable"
-        ? "Voice standby"
-        : "Speak";
-  const presenceOrbLabel =
-    voiceCapture.status === "listening"
-      ? "Listening for intent"
-      : voiceCapture.status === "unavailable"
-        ? "Voice unavailable"
-        : "Start voice input";
+  const realtimeIsListening =
+    realtimeBridge.status === "connecting" || realtimeBridge.status === "connected";
+  const stageIsListening = voiceCapture.status === "listening" || realtimeIsListening;
+  const voiceButtonLabel = stageIsListening
+    ? "Listening"
+    : voiceCapture.status === "unavailable"
+      ? "Voice standby"
+      : "Speak";
+  const presenceOrbLabel = stageIsListening
+    ? "Listening for intent"
+    : voiceCapture.status === "unavailable"
+      ? "Voice unavailable"
+      : "Start voice input";
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
@@ -309,24 +311,25 @@ export function StageShell({
     realtimeArmPending
   );
   const realtimeMicPreflightStatus = formatRealtimeMicPreflight(realtimeMicPreflight);
-  const presenceTitle =
-    voiceCapture.status === "listening"
-      ? "Listening"
-      : isIdleStage
-        ? "Speak when ready"
-        : thread.title;
+  const presenceTitle = stageIsListening
+    ? "Listening"
+    : isIdleStage
+      ? "Speak when ready"
+      : thread.title;
   const presenceObjective =
     voiceCapture.status === "listening"
       ? interimTranscript || "Say the intent. The stage will shape itself around it."
-      : voiceError && isIdleStage
-        ? voiceError
-        : thread.currentObjective;
+      : realtimeIsListening && !hasSubmittedIntent
+        ? "Speak when ready. The stage will shape itself around what you say."
+        : voiceError && isIdleStage
+          ? voiceError
+          : thread.currentObjective;
 
   return (
     <main
       className={`stage-shell ${isIdleStage ? "stage-idle" : "stage-active"} ${
         thread.status === "paused" && !isIdleStage ? "stage-paused" : ""
-      } ${voiceCapture.status === "listening" ? "stage-listening" : ""} ${
+      } ${stageIsListening ? "stage-listening" : ""} ${
         stageVoiceEnabled ? "stage-voice-enabled" : ""
       }`}
       data-testid="stage-shell"
@@ -393,7 +396,7 @@ export function StageShell({
           className="presence-orbit"
           type="button"
           aria-label={presenceOrbLabel}
-          aria-pressed={voiceCapture.status === "listening"}
+          aria-pressed={stageIsListening}
           data-testid="presence-orb"
           disabled={voiceCapture.status === "unavailable"}
           onClick={activatePresenceOrbFromClick}
@@ -501,7 +504,7 @@ export function StageShell({
         <button
           className="voice-affordance"
           type="button"
-          aria-pressed={voiceCapture.status === "listening"}
+          aria-pressed={stageIsListening}
           disabled={voiceCapture.status === "unavailable"}
           onClick={startVoiceCapture}
         >
