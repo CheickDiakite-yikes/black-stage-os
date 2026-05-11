@@ -45,6 +45,21 @@ const checks = [
     file: "docs/21_agentic_harness_architecture.md",
     label: "architecture note references the root workflow policy",
     pattern: /root `WORKFLOW\.md`/
+  },
+  {
+    file: "docs/19_source_notes_codex.md",
+    label: "source notes include the refreshed harness stack",
+    pattern: /## 2026-05-11 Harness Source Refresh/
+  },
+  {
+    file: "docs/19_source_notes_codex.md",
+    label: "source notes keep Symphony as an orchestration reference",
+    pattern: /open-source Codex orchestration reference/
+  },
+  {
+    file: "docs/19_source_notes_codex.md",
+    label: "source notes pin the Realtime voice model",
+    pattern: /`gpt-realtime-2` remains the pinned Realtime voice model/
   }
 ];
 

@@ -1,6 +1,30 @@
 # 19 Source Notes: Codex
 
-These notes summarize official Codex facts used to shape the build pack.
+These notes summarize official Codex and OpenAI agentic-harness facts used to shape the build pack.
+
+Last refreshed: 2026-05-11.
+
+## 2026-05-11 Harness Source Refresh
+
+The current Blackstage harness direction is source-aligned:
+
+- Codex CLI remains the coding worker. It is OpenAI's local coding agent for inspecting repositories, editing files, and running commands in a selected local directory, with sandbox and approval controls owned by the operator.
+- Symphony remains the orchestration reference, not the product UI. It is OpenAI's open-source Codex orchestration reference for turning an issue or task tracker into a control plane, assigning active tasks to agents, isolating work in dedicated workspaces, and returning results for human review.
+- The Agents SDK remains the manager-agent path for non-coding research, artifact, memory, and analysis workflows where Blackstage owns tools, approvals, handoffs, state, and traces.
+- `gpt-realtime-2` remains the pinned Realtime voice model for the live voice path. It is the current target for speech-to-speech realtime sessions, with text, audio, and image input; text and audio output; tool use; and configurable reasoning effort.
+
+Implementation consequence: Blackstage should leverage these upstream pieces behind `WORKFLOW.md`, stage events, approval gates, proof packets, and replayable traces. None of them should replace the black living render field as the user's operating metaphor.
+
+Sources:
+
+- https://developers.openai.com/codex/cli
+- https://github.com/openai/codex
+- https://openai.com/index/open-source-codex-orchestration-symphony/
+- https://github.com/openai/symphony
+- https://developers.openai.com/api/docs/guides/agents
+- https://developers.openai.com/api/docs/guides/agents/orchestration
+- https://developers.openai.com/api/docs/models/gpt-realtime-2
+- https://developers.openai.com/api/docs/guides/realtime-webrtc
 
 ## Codex as coding agent
 
@@ -13,6 +37,7 @@ Source: https://openai.com/index/introducing-codex/
 Codex can be guided by `AGENTS.md` files in the repository. OpenAI recommends including repo layout, commands, conventions, constraints, and definition of done. A concise, practical `AGENTS.md` is better than a long vague one.
 
 Sources:
+
 - https://developers.openai.com/codex/learn/best-practices
 - https://developers.openai.com/codex/guides/agents-md
 
@@ -21,6 +46,7 @@ Sources:
 Codex uses sandbox and approval controls. The sandbox defines what the agent can do technically, while the approval policy determines when Codex must ask before crossing boundaries. This informs the Blackstage approval model and our development workflow.
 
 Sources:
+
 - https://developers.openai.com/codex/agent-approvals-security
 - https://developers.openai.com/codex/concepts/sandboxing
 
