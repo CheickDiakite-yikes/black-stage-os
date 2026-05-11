@@ -386,6 +386,86 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
   expect(dragWasLogged).toBe(true);
 });
 
+test("Stage Shell v0 can undo the last object change from event history", async ({
+  page
+}) => {
+  test.setTimeout(90_000);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Build BlackStage" }).click();
+  await expect(page.getByTestId("document-portal-surface")).toContainText(
+    "Stage Shell v0 spec"
+  );
+
+  const specObject = page.getByTestId("stage-object-document_portal");
+
+  await page
+    .getByTestId("intent-input")
+    .fill("rename the spec portal to Diligence room");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+  await expect(specObject).toContainText("Diligence room");
+
+  await page.getByTestId("intent-input").fill("undo last object change");
+  await page.getByRole("button", { name: "Send" }).click({
+    force: true
+  });
+
+  await expect(specObject).toContainText("Spec portal");
+  await expect(specObject).not.toContainText("Diligence room");
+  await expect(page.getByTestId("assistant-speech")).toContainText(
+    "Reverted Spec portal."
+  );
+
+  const undoWasLogged = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0");
+
+    if (!rawSnapshot) {
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      stageEvents?: Array<{
+        type?: string;
+        payload?: {
+          type?: string;
+          title?: string;
+        };
+      }>;
+      researchEvents?: Array<{
+        eventType?: string;
+        payload?: {
+          intervention_type?: string;
+          command_action?: string;
+          command_text_redacted?: string;
+        };
+      }>;
+    };
+
+    const undoInterventionWasLogged =
+      snapshot.researchEvents?.some(
+        (event) =>
+          event.eventType === "user_intervention" &&
+          event.payload?.intervention_type === "undo" &&
+          event.payload.command_action === "undo_object" &&
+          event.payload.command_text_redacted === "undo last object change"
+      ) ?? false;
+    const revertedObjectWasLogged =
+      snapshot.stageEvents?.some(
+        (event) =>
+          event.type === "object.updated" &&
+          event.payload?.type === "document_portal" &&
+          event.payload.title === "Spec portal"
+      ) ?? false;
+
+    return undoInterventionWasLogged && revertedObjectWasLogged;
+  });
+
+  expect(undoWasLogged).toBe(true);
+});
+
 test("Stage Shell v0 adds local document notes without file writes", async ({
   page
 }) => {

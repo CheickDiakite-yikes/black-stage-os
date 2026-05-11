@@ -455,6 +455,47 @@ export function App() {
     [emitStageEvent, thread.renderObjects]
   );
 
+  const applyUndoLastObjectUpdate = useCallback(
+    (intentText: string, source: IntentSubmissionSource = "text") => {
+      if (!parseUndoLastObjectCommand(intentText)) {
+        return undefined;
+      }
+
+      const undo = findLastObjectUpdateUndo(stageEvents);
+
+      if (!undo) {
+        return undefined;
+      }
+
+      const timestamp = new Date().toISOString();
+
+      emitStageEvent({
+        type: "user.intervention",
+        payload: {
+          interventionId: `intervention_object_undo_${Date.now().toString(36)}`,
+          threadId: undo.previous.threadId,
+          interventionType: "undo",
+          commandAction: "undo_object",
+          commandValue: undo.current.title,
+          commandInputMode: source === "voice" ? "voice" : "text",
+          commandText: intentText,
+          targetObjectId: undo.previous.id,
+          timestamp
+        }
+      });
+      emitStageEvent({
+        type: "object.updated",
+        payload: {
+          ...undo.previous,
+          updatedAt: timestamp
+        }
+      });
+
+      return undo.previous;
+    },
+    [emitStageEvent, stageEvents]
+  );
+
   const applyArtifactRevisionCommand = useCallback(
     (intentText: string, source: IntentSubmissionSource = "text") => {
       const revisionText = parseArtifactRevisionCommand(intentText);
@@ -693,6 +734,17 @@ export function App() {
         return;
       }
 
+      const undoneObject = !scenarioId
+        ? applyUndoLastObjectUpdate(intentText, source)
+        : undefined;
+
+      if (undoneObject) {
+        emitAssistantSpeech(`Reverted ${undoneObject.title}.`, {
+          threadId: undoneObject.threadId
+        });
+        return;
+      }
+
       const revisedArtifact = !scenarioId
         ? applyArtifactRevisionCommand(intentText, source)
         : undefined;
@@ -741,6 +793,7 @@ export function App() {
     [
       applyStageCommand,
       applyArtifactRevisionCommand,
+      applyUndoLastObjectUpdate,
       emitAssistantSpeech,
       requestMemoryDelete,
       requestMemoryRecall,
@@ -1872,6 +1925,41 @@ function parseArtifactRevisionCommand(intentText: string): string | undefined {
   const revisionText = normalizedIntent.slice(prefix.length).trim();
 
   return revisionText.length > 0 ? revisionText : undefined;
+}
+
+function parseUndoLastObjectCommand(intentText: string): boolean {
+  return /^\s*undo(?:\s+(?:the\s+)?)?(?:last\s+)?(?:object\s+)?(?:change|update|edit|command)?\s*$/i.test(
+    intentText
+  );
+}
+
+function findLastObjectUpdateUndo(
+  events: StageEvent[]
+): { current: StageObject; previous: StageObject } | undefined {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const currentEvent = events[index];
+
+    if (currentEvent?.type !== "object.updated") {
+      continue;
+    }
+
+    for (let previousIndex = index - 1; previousIndex >= 0; previousIndex -= 1) {
+      const previousEvent = events[previousIndex];
+
+      if (
+        (previousEvent?.type === "object.updated" ||
+          previousEvent?.type === "object.created") &&
+        previousEvent.payload.id === currentEvent.payload.id
+      ) {
+        return {
+          current: currentEvent.payload,
+          previous: previousEvent.payload
+        };
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function createMemoryVaultObject(
