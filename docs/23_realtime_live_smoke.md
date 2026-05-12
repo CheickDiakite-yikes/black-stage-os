@@ -83,6 +83,9 @@ the result as stage work plus a review artifact, and send a `function_call_outpu
 item back over the already-open data channel when it is writable. The local tool
 result records `externalSideEffects: false` and does not create another broker
 POST, start microphone capture, or store raw provider payloads.
+It now parses the tool's structured `action` and `reason` arguments into the
+local action packet and returned function output while still omitting raw
+argument storage.
 
 Stage Web now also registers the safe
 `blackstage_prepare_external_action` function on the live Realtime session when

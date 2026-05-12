@@ -515,7 +515,11 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     ).__blackstageEmitRealtimeServerEvent?.({
       type: "response.function_call_arguments.done",
       call_id: "call_realtime_prepare_action",
-      name: "blackstage.prepare_external_action"
+      name: "blackstage.prepare_external_action",
+      arguments: JSON.stringify({
+        action: "request confirmatory diligence materials",
+        reason: "validate revenue quality before the acquisition memo"
+      })
     });
   });
   await expect(page.getByTestId("approval-card")).toContainText(
@@ -613,8 +617,10 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
           stageEvents?: Array<{
             payload?: {
               content?: {
+                requestedAction?: string;
                 output?: {
                   externalSideEffects?: boolean;
+                  requestedAction?: string;
                   status?: string;
                 };
               };
@@ -644,8 +650,16 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       (JSON.parse(functionOutputEvent.item.output) as {
         callId?: string;
         externalSideEffects?: boolean;
+        reason?: string;
+        requestedAction?: string;
         status?: string;
       });
+    const resultArtifact = (snapshot?.stageEvents ?? []).find(
+      (event) =>
+        event.type === "artifact.created" &&
+        event.payload?.title ===
+          "Realtime Tool Result: blackstage.prepare_external_action"
+    );
     const resultArtifactWasLogged = (snapshot?.stageEvents ?? []).some(
       (event) =>
         event.type === "artifact.created" &&
@@ -658,6 +672,8 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     return {
       callId: functionOutputEvent?.item?.call_id,
       outputCallId: parsedOutput?.callId,
+      outputReason: parsedOutput?.reason,
+      outputRequestedAction: parsedOutput?.requestedAction,
       outputStatus: parsedOutput?.status,
       outputExternalSideEffects: parsedOutput?.externalSideEffects,
       responseCreateSent: Boolean(responseCreateEvent),
@@ -666,19 +682,23 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
         (tool) =>
           tool.type === "function" && tool.name === "blackstage_prepare_external_action"
       ),
-      resultArtifactWasLogged
+      resultArtifactWasLogged,
+      artifactRequestedAction: resultArtifact?.payload?.content?.requestedAction
     };
   });
 
   expect(toolResultEvidence).toEqual({
     callId: "call_realtime_prepare_action",
     outputCallId: "call_realtime_prepare_action",
+    outputReason: "validate revenue quality before the acquisition memo",
+    outputRequestedAction: "request confirmatory diligence materials",
     outputStatus: "completed",
     outputExternalSideEffects: false,
     responseCreateSent: true,
     sessionToolChoice: "auto",
     sessionToolRegistered: true,
-    resultArtifactWasLogged: true
+    resultArtifactWasLogged: true,
+    artifactRequestedAction: "request confirmatory diligence materials"
   });
   const debugDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export debug" }).click({

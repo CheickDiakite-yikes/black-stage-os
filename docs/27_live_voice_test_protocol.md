@@ -29,9 +29,10 @@ explicitly enabled and approved.
   data channel opens, so a human mic run can ask for an approval-gated action
   without relying on a synthetic probe.
 - Approving the tool card runs the safe local
-  `blackstage.prepare_external_action` adapter, creates visible stage work and a
-  review artifact, and sends a `function_call_output` item back over the
-  existing data channel when it is writable.
+  `blackstage.prepare_external_action` adapter, turns the model's `action` and
+  `reason` arguments into visible stage work plus a review artifact, and sends a
+  `function_call_output` item back over the existing data channel when it is
+  writable.
 - The Research Trace can export a redacted Realtime debug packet with event
   counts, tool-call/output evidence, audio lifecycle counts, first-latency
   markers, elapsed timing, and bridge/mic state. It does not store raw provider
