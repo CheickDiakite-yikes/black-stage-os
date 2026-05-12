@@ -90,6 +90,13 @@ the data channel opens. The probe path can still force that tool for cheap proof
 but a human microphone session no longer depends on the probe to make the first
 safe local tool available.
 
+Latest armed no-mic UI smoke after session-level tool registration passed
+against the live Realtime edge. The redacted debug summary included
+`session.update`, `blackstage.data_channel.open`, provider text output,
+provider function-call arguments, and the registered
+`blackstage_prepare_external_action` tool name; it still reported no browser
+standard API key and no microphone send.
+
 When `blackstage.realtimeDebug.enabled=1` or
 `VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED=1` is enabled, Stage Web also shows a
 quiet Realtime debug block in Research Trace after sanitized events exist. The

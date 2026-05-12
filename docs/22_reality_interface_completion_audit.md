@@ -249,6 +249,12 @@ Latest visual smoke evidence is the idle startup run: temporary Playwright visua
 
 Browser validation note: the product keeps its cinematic motion in normal use. Playwright requests `prefers-reduced-motion: reduce` and runs Stage Web e2e with one worker so the long timer-driven living-field scenarios validate behavior instead of competing for local browser resources.
 
+Latest live edge note: after session-level safe tool registration was added,
+the armed no-mic `pnpm smoke:realtime-ui` path passed against the live Realtime
+edge. Its redacted debug summary observed `session.update`, provider text,
+provider function-call arguments, `blackstage_prepare_external_action`, no
+browser standard API key, and no microphone send.
+
 ## Gaps That Block Goal Completion
 
 The goal is not complete yet. The largest remaining gaps are:
