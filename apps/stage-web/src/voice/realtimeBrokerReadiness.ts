@@ -393,9 +393,11 @@ function readStageWebBrokerEnvValue(): string | undefined {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
-  return meta.env?.[STAGE_WEB_REALTIME_BROKER_URL_ENV_VAR];
+  return (
+    import.meta as ImportMeta & {
+      env?: {
+        VITE_BLACKSTAGE_REALTIME_BROKER_URL?: string;
+      };
+    }
+  ).env?.VITE_BLACKSTAGE_REALTIME_BROKER_URL;
 }

@@ -735,11 +735,13 @@ function readStageWebRealtimeWebrtcEnvValue(): string | undefined {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
-  return meta.env?.[STAGE_WEB_REALTIME_WEBRTC_ENABLED_ENV_VAR];
+  return (
+    import.meta as ImportMeta & {
+      env?: {
+        VITE_BLACKSTAGE_REALTIME_WEBRTC_ENABLED?: string;
+      };
+    }
+  ).env?.VITE_BLACKSTAGE_REALTIME_WEBRTC_ENABLED;
 }
 
 function readStageWebRealtimeApprovalEnvValue(): string | undefined {
@@ -761,11 +763,13 @@ function readStageWebRealtimeApprovalEnvValue(): string | undefined {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
-  return meta.env?.[STAGE_WEB_REALTIME_APPROVAL_TOKEN_ENV_VAR];
+  return (
+    import.meta as ImportMeta & {
+      env?: {
+        VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN?: string;
+      };
+    }
+  ).env?.VITE_BLACKSTAGE_REALTIME_APPROVAL_TOKEN;
 }
 
 function readStageWebRealtimeAudioEnvValue(): string | undefined {
@@ -787,11 +791,13 @@ function readStageWebRealtimeAudioEnvValue(): string | undefined {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
-  return meta.env?.[STAGE_WEB_REALTIME_AUDIO_ENABLED_ENV_VAR];
+  return (
+    import.meta as ImportMeta & {
+      env?: {
+        VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED?: string;
+      };
+    }
+  ).env?.VITE_BLACKSTAGE_REALTIME_AUDIO_ENABLED;
 }
 
 function readStageWebRealtimeTextProbe(): string | undefined {
@@ -815,12 +821,14 @@ function readStageWebRealtimeTextProbe(): string | undefined {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
   return normalizeStageWebRealtimeTextProbe(
-    meta.env?.[STAGE_WEB_REALTIME_TEXT_PROBE_ENV_VAR]
+    (
+      import.meta as ImportMeta & {
+        env?: {
+          VITE_BLACKSTAGE_REALTIME_TEXT_PROBE?: string;
+        };
+      }
+    ).env?.VITE_BLACKSTAGE_REALTIME_TEXT_PROBE
   );
 }
 
@@ -845,12 +853,14 @@ function readStageWebRealtimeToolProbe(): string | undefined {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
   return normalizeStageWebRealtimeTextProbe(
-    meta.env?.[STAGE_WEB_REALTIME_TOOL_PROBE_ENV_VAR]
+    (
+      import.meta as ImportMeta & {
+        env?: {
+          VITE_BLACKSTAGE_REALTIME_TOOL_PROBE?: string;
+        };
+      }
+    ).env?.VITE_BLACKSTAGE_REALTIME_TOOL_PROBE
   );
 }
 
@@ -873,11 +883,15 @@ function readStageWebRealtimeDebugEnabled(): boolean {
     // Local runtime config is best-effort; Vite env remains the durable path.
   }
 
-  const meta = import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  };
-
-  return meta.env?.[STAGE_WEB_REALTIME_DEBUG_ENABLED_ENV_VAR]?.trim() === "1";
+  return (
+    (
+      import.meta as ImportMeta & {
+        env?: {
+          VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED?: string;
+        };
+      }
+    ).env?.VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED?.trim() === "1"
+  );
 }
 
 function normalizeStageWebRealtimeTextProbe(value?: string): string | undefined {

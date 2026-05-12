@@ -109,6 +109,12 @@ pnpm --filter @blackstage/stage-web dev --host 127.0.0.1 --port 4187
 Open `http://127.0.0.1:4187`, click the orb, approve the live Realtime edge,
 and watch for `live SDP` plus Realtime debug counts in Research Trace.
 
+The Stage Web command above should arm the UI directly through `VITE_`
+environment variables. A local visual check on May 12, 2026 verified that the
+idle screen stayed free of startup demo labels, the Realtime edge showed
+`live broker`, and clicking the orb opened the live Realtime approval card
+before any provider call was approved.
+
 To push the function-calling path during this no-mic run, add probe prompts to
 the Stage Web command:
 
