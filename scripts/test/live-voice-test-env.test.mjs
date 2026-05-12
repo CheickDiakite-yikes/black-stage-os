@@ -9,7 +9,7 @@ describe("live voice test env plan", () => {
   it("prints manual broker and Stage Web commands without exposing provider keys", () => {
     const plan = createLiveVoiceTestEnvPlan({
       repoRoot: "/tmp/black-stage-os",
-      approvalToken: "approval-demo",
+      approvalToken: "ok",
       safetyIdentifier: "blackstage-local-demo",
       openAiApiKeyStatus: "set"
     });
@@ -30,10 +30,7 @@ describe("live voice test env plan", () => {
       rendered,
       /export BLACKSTAGE_REALTIME_SAFETY_IDENTIFIER='blackstage-local-demo'/
     );
-    assert.match(
-      rendered,
-      /export BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN='approval-demo'/
-    );
+    assert.match(rendered, /export BLACKSTAGE_REALTIME_RUN_APPROVAL_TOKEN='ok'/);
     assert.match(
       rendered,
       /VITE_BLACKSTAGE_REALTIME_BROKER_URL='http:\/\/127\.0\.0\.1:8798'/

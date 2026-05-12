@@ -462,6 +462,12 @@ function createBrowserRealtimePeerConnection(
           startedAt: debugStartedAt
         });
       };
+      const registerDefaultTool = () => {
+        sendStageWebRealtimeToolRegistration(dataChannel, {
+          enabled: debugEnabled,
+          startedAt: debugStartedAt
+        });
+      };
 
       dataChannel.addEventListener("message", (event) => {
         recordStageWebRealtimeDebugEvent("server", event.data, {
@@ -484,6 +490,7 @@ function createBrowserRealtimePeerConnection(
       if (textProbe) {
         const handleOpen = () => {
           recordDataChannelOpen();
+          registerDefaultTool();
           sendStageWebRealtimeTextProbe(dataChannel, textProbe, {
             enabled: debugEnabled,
             startedAt: debugStartedAt
@@ -498,6 +505,7 @@ function createBrowserRealtimePeerConnection(
       } else if (toolProbe) {
         const handleOpen = () => {
           recordDataChannelOpen();
+          registerDefaultTool();
           toolProbeSent = true;
           sendStageWebRealtimeToolProbe(dataChannel, toolProbe, {
             enabled: debugEnabled,
@@ -513,8 +521,12 @@ function createBrowserRealtimePeerConnection(
       } else {
         if (dataChannel.readyState === "open") {
           recordDataChannelOpen();
+          registerDefaultTool();
         } else {
-          dataChannel.addEventListener("open", recordDataChannelOpen);
+          dataChannel.addEventListener("open", () => {
+            recordDataChannelOpen();
+            registerDefaultTool();
+          });
         }
       }
 
@@ -916,24 +928,7 @@ export type StageWebRealtimeToolProbeClientEvent =
       response: {
         output_modalities: ["text"];
         instructions: string;
-        tools: Array<{
-          type: "function";
-          name: typeof STAGE_WEB_REALTIME_TOOL_PROBE_NAME;
-          description: string;
-          parameters: {
-            type: "object";
-            additionalProperties: false;
-            properties: {
-              action: {
-                type: "string";
-              };
-              reason: {
-                type: "string";
-              };
-            };
-            required: ["action", "reason"];
-          };
-        }>;
+        tools: Array<StageWebRealtimePrepareActionToolDefinition>;
         tool_choice: {
           type: "function";
           name: typeof STAGE_WEB_REALTIME_TOOL_PROBE_NAME;
@@ -941,6 +936,36 @@ export type StageWebRealtimeToolProbeClientEvent =
         max_output_tokens: 96;
       };
     };
+
+export type StageWebRealtimePrepareActionToolDefinition = {
+  type: "function";
+  name: typeof STAGE_WEB_REALTIME_TOOL_PROBE_NAME;
+  description: string;
+  parameters: {
+    type: "object";
+    additionalProperties: false;
+    properties: {
+      action: {
+        type: "string";
+        description: string;
+      };
+      reason: {
+        type: "string";
+        description: string;
+      };
+    };
+    required: ["action", "reason"];
+  };
+};
+
+export type StageWebRealtimeToolRegistrationClientEvent = {
+  type: "session.update";
+  event_id: string;
+  session: {
+    tools: [StageWebRealtimePrepareActionToolDefinition];
+    tool_choice: "auto";
+  };
+};
 
 export type StageWebRealtimeToolResultClientEvent =
   | {
@@ -1122,27 +1147,7 @@ export function createStageWebRealtimeToolProbeClientEvents(
         output_modalities: ["text"],
         instructions:
           "Call the provided function exactly once to prepare an approval-gated Blackstage action. Do not answer with normal text.",
-        tools: [
-          {
-            type: "function",
-            name: STAGE_WEB_REALTIME_TOOL_PROBE_NAME,
-            description:
-              "Prepare an approval-gated Blackstage action packet without executing it.",
-            parameters: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                action: {
-                  type: "string"
-                },
-                reason: {
-                  type: "string"
-                }
-              },
-              required: ["action", "reason"]
-            }
-          }
-        ],
+        tools: [createStageWebRealtimePrepareActionToolDefinition()],
         tool_choice: {
           type: "function",
           name: STAGE_WEB_REALTIME_TOOL_PROBE_NAME
@@ -1151,6 +1156,44 @@ export function createStageWebRealtimeToolProbeClientEvents(
       }
     }
   ];
+}
+
+export function createStageWebRealtimeToolRegistrationClientEvent(
+  registrationId = stableHash(`${STAGE_WEB_REALTIME_TOOL_PROBE_NAME}:${Date.now()}`)
+): StageWebRealtimeToolRegistrationClientEvent {
+  return {
+    type: "session.update",
+    event_id: `stage_web_tool_registration_${registrationId}`,
+    session: {
+      tools: [createStageWebRealtimePrepareActionToolDefinition()],
+      tool_choice: "auto"
+    }
+  };
+}
+
+export function createStageWebRealtimePrepareActionToolDefinition(): StageWebRealtimePrepareActionToolDefinition {
+  return {
+    type: "function",
+    name: STAGE_WEB_REALTIME_TOOL_PROBE_NAME,
+    description:
+      "Prepare an approval-gated Blackstage action packet without executing external side effects.",
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        action: {
+          type: "string",
+          description:
+            "The action the user wants prepared for human review, not executed."
+        },
+        reason: {
+          type: "string",
+          description: "Why this action should be prepared inside Blackstage."
+        }
+      },
+      required: ["action", "reason"]
+    }
+  };
 }
 
 export function createStageWebRealtimeToolResultClientEvents(
@@ -1210,6 +1253,19 @@ function sendStageWebRealtimeToolProbe(
     recordStageWebRealtimeDebugEvent("client", clientEvent, debug);
     channel.send(JSON.stringify(clientEvent));
   });
+}
+
+function sendStageWebRealtimeToolRegistration(
+  channel: RTCDataChannel,
+  debug: {
+    enabled: boolean;
+    startedAt: number;
+  }
+) {
+  const clientEvent = createStageWebRealtimeToolRegistrationClientEvent();
+
+  recordStageWebRealtimeDebugEvent("client", clientEvent, debug);
+  channel.send(JSON.stringify(clientEvent));
 }
 
 function sendStageWebRealtimeToolResult(
@@ -1287,7 +1343,8 @@ function createStageWebRealtimeDebugEvent(
   const timestamp = new Date().toISOString();
   const toolName =
     readStringField(parsedPayload, "name") ??
-    readStringField(readRecordField(parsedPayload, "item") ?? {}, "name");
+    readStringField(readRecordField(parsedPayload, "item") ?? {}, "name") ??
+    readFirstSessionToolName(parsedPayload);
   const callId =
     readStringField(parsedPayload, "call_id") ??
     readStringField(parsedPayload, "callId") ??
@@ -1320,6 +1377,16 @@ function readStoredDebugEvents(): StageWebRealtimeDebugEvent[] {
   } catch {
     return [];
   }
+}
+
+function readFirstSessionToolName(
+  parsedPayload: Record<string, unknown>
+): string | undefined {
+  const session = readRecordField(parsedPayload, "session");
+  const tools = session?.tools;
+  const [firstTool] = Array.isArray(tools) ? tools : [];
+
+  return isRecord(firstTool) ? readStringField(firstTool, "name") : undefined;
 }
 
 function isStageWebRealtimeDebugEvent(

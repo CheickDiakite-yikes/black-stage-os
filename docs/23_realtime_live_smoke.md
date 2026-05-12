@@ -84,6 +84,12 @@ item back over the already-open data channel when it is writable. The local tool
 result records `externalSideEffects: false` and does not create another broker
 POST, start microphone capture, or store raw provider payloads.
 
+Stage Web now also registers the safe
+`blackstage_prepare_external_action` function on the live Realtime session when
+the data channel opens. The probe path can still force that tool for cheap proof,
+but a human microphone session no longer depends on the probe to make the first
+safe local tool available.
+
 When `blackstage.realtimeDebug.enabled=1` or
 `VITE_BLACKSTAGE_REALTIME_DEBUG_ENABLED=1` is enabled, Stage Web also shows a
 quiet Realtime debug block in Research Trace after sanitized events exist. The

@@ -25,6 +25,9 @@ explicitly enabled and approved.
 - Realtime provider text can render into the Stage assistant speech surface.
 - Realtime provider tool calls for `blackstage_prepare_external_action` become
   Stage approval cards.
+- Stage Web registers that safe tool on the Realtime session as soon as the
+  data channel opens, so a human mic run can ask for an approval-gated action
+  without relying on a synthetic probe.
 - Approving the tool card runs the safe local
   `blackstage.prepare_external_action` adapter, creates visible stage work and a
   review artifact, and sends a `function_call_output` item back over the
@@ -182,6 +185,7 @@ The live test is a pass when:
 - provider speech or text appears on the stage without chat chrome;
 - at least one provider tool call becomes an approval;
 - approval creates visible local work and an artifact;
+- the debug export shows the session-level safe tool registration;
 - debug export records first-response, tool-call, tool-output, and audio timing
   evidence without raw payloads.
 
