@@ -249,6 +249,14 @@ Latest visual smoke evidence is the idle startup run: temporary Playwright visua
 
 Browser validation note: the product keeps its cinematic motion in normal use. Playwright requests `prefers-reduced-motion: reduce` and runs Stage Web e2e with one worker so the long timer-driven living-field scenarios validate behavior instead of competing for local browser resources.
 
+Latest rendering checkpoint: the active workspace is now being pushed from a
+panel-like demo grid toward a spatial render field. Render objects sit in a
+responsive constellation, carry type-specific light accents, and have e2e
+coverage proving the intent, plan, and document objects are spatially arranged
+instead of merely present in the DOM. The next visual gap is taste-reviewing the
+active field after a real voice session and continuing to reduce any residual
+dashboard feeling.
+
 Latest live edge note: after session-level safe tool registration was added,
 the armed no-mic `pnpm smoke:realtime-ui` path passed against the live Realtime
 edge. Its redacted debug summary observed `session.update`, provider text,

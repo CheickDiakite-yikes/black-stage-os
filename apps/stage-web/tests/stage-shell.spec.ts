@@ -266,6 +266,51 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "Local runtime only"
   );
   const planObject = page.getByTestId("stage-object-plan_card");
+  const renderFieldEvidence = await page.evaluate(() => {
+    const constellation = document.querySelector<HTMLElement>(
+      ".stage-object-constellation"
+    );
+    const intentObject = document.querySelector<HTMLElement>(
+      '[data-testid="stage-object-intent_card"]'
+    );
+    const planObjectElement = document.querySelector<HTMLElement>(
+      '[data-testid="stage-object-plan_card"]'
+    );
+    const documentObject = document.querySelector<HTMLElement>(
+      '[data-testid="stage-object-document_portal"]'
+    );
+
+    if (!constellation || !intentObject || !planObjectElement || !documentObject) {
+      return null;
+    }
+
+    const intentRect = intentObject.getBoundingClientRect();
+    const planRect = planObjectElement.getBoundingClientRect();
+    const documentRect = documentObject.getBoundingClientRect();
+
+    return {
+      columns: getComputedStyle(constellation)
+        .gridTemplateColumns.split(" ")
+        .filter(Boolean).length,
+      documentAccent: getComputedStyle(documentObject)
+        .getPropertyValue("--object-accent")
+        .trim(),
+      intentAccent: getComputedStyle(intentObject)
+        .getPropertyValue("--object-accent")
+        .trim(),
+      planRightOfIntent: planRect.left > intentRect.left + 80,
+      documentBelowIntent: documentRect.top > intentRect.top + 80
+    };
+  });
+
+  if (!renderFieldEvidence) {
+    throw new Error("Stage render field evidence was not available.");
+  }
+
+  expect(renderFieldEvidence.columns).toBeGreaterThanOrEqual(6);
+  expect(renderFieldEvidence.documentAccent).not.toBe(renderFieldEvidence.intentAccent);
+  expect(renderFieldEvidence.planRightOfIntent).toBe(true);
+  expect(renderFieldEvidence.documentBelowIntent).toBe(true);
 
   await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
     force: true
