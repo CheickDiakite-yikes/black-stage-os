@@ -159,6 +159,40 @@ export function StageShell({
       ),
     [thread.renderObjects]
   );
+  const fieldPhases = useMemo(() => {
+    const countByType = (types: Array<(typeof visibleObjects)[number]["type"]>) =>
+      visibleObjects.filter((object) => types.includes(object.type)).length;
+
+    return [
+      {
+        label: "Intent",
+        value: countByType(["intent_card"])
+      },
+      {
+        label: "Plan",
+        value: countByType(["plan_card", "model_card", "simulation_card"])
+      },
+      {
+        label: "Evidence",
+        value: countByType([
+          "document_portal",
+          "browser_portal",
+          "map_portal",
+          "memory_card",
+          "research_note"
+        ])
+      },
+      {
+        label: "Approval",
+        value: thread.approvals.filter((approval) => approval.status === "pending")
+          .length
+      },
+      {
+        label: "Artifact",
+        value: thread.artifacts.length
+      }
+    ];
+  }, [thread.approvals, thread.artifacts.length, visibleObjects]);
 
   function submitIntent(
     nextIntent = intentText,
@@ -431,6 +465,24 @@ export function StageShell({
         aria-label="Dynamic render objects"
         data-testid="stage-workspace"
       >
+        <div
+          className="stage-field-orientation"
+          aria-label="Thread topology"
+          data-testid="stage-field-orientation"
+        >
+          <div className="field-orientation-title">
+            <span>Thread map</span>
+            <strong>{visibleObjects.length} objects</strong>
+          </div>
+          <ol>
+            {fieldPhases.map((phase) => (
+              <li key={phase.label}>
+                <span>{phase.label}</span>
+                <strong>{phase.value}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
         <div className="stage-object-constellation">
           {visibleObjects.map((object) => (
             <StageObjectCard

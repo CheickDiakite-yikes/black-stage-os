@@ -247,15 +247,20 @@ Most recent validation after the root validation gate:
 
 Latest visual smoke evidence is the idle startup run: temporary Playwright visual smoke at `http://127.0.0.1:5175/` verified the first screen is the living field plus orb, `Speak when ready`, and local memory status with no visible demo shortcut UI, and saved the screenshot outside the repo at `/tmp/blackstage-idle-start-voice-input.png`. The orb-first listening smoke remains covered by the spoken-intent e2e path.
 
-Browser validation note: the product keeps its cinematic motion in normal use. Playwright requests `prefers-reduced-motion: reduce` and runs Stage Web e2e with one worker so the long timer-driven living-field scenarios validate behavior instead of competing for local browser resources.
+Browser validation note: active rendering QA now uses the Codex in-app Browser
+plugin for local visual checks. The e2e suite still uses Playwright as the test
+runner, but manual rendered validation should prefer Browser-plugin screenshots,
+DOM snapshots, and console logs before any standalone Playwright fallback.
 
 Latest rendering checkpoint: the active workspace is now being pushed from a
-panel-like demo grid toward a spatial render field. Render objects sit in a
-responsive constellation, carry type-specific light accents, and have e2e
-coverage proving the intent, plan, and document objects are spatially arranged
-instead of merely present in the DOM. The next visual gap is taste-reviewing the
-active field after a real voice session and continuing to reduce any residual
-dashboard feeling.
+panel-like demo grid toward an organized render field. The active stage now has
+a compact thread topology, a larger primary plan/display object, supporting
+evidence objects, a cleaner command rail, type-specific light accents, and
+short-viewport rules that hide secondary chrome before it collides with the
+work. E2e coverage proves the intent, plan, and document objects are spatially
+arranged instead of merely present in the DOM. The next visual gap is
+taste-reviewing the active field after a real voice session and continuing to
+make object organization feel more intelligent.
 
 Latest live edge note: after session-level safe tool registration was added,
 the armed no-mic `pnpm smoke:realtime-ui` path passed against the live Realtime

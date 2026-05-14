@@ -540,6 +540,26 @@ button:disabled {
   padding: 1rem 1.05rem;
 }
 
+.stage-active .thread-console {
+  width: min(24rem, calc(100vw - 3rem));
+  padding: 0.78rem 0.9rem;
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.72), rgba(0, 0, 0, 0.44)),
+    radial-gradient(circle at 0% 0%, rgba(216, 189, 133, 0.11), transparent 8rem);
+  box-shadow:
+    0 18px 58px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.stage-active .thread-console p {
+  overflow: hidden;
+  margin-top: 0.42rem;
+  color: rgba(239, 228, 210, 0.67);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stage-idle .thread-console,
 .stage-idle .stage-workspace,
 .stage-idle .research-capture {
@@ -657,12 +677,13 @@ button:disabled {
 
 .stage-workspace {
   position: absolute;
-  inset: 7.6rem 1.6rem 6.35rem;
+  inset: 6.65rem 1.6rem 6.35rem;
   z-index: 4;
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(19rem, 27vw, 25rem);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   grid-template-areas:
+    "orientation feed"
     "objects feed"
     "objects approval"
     "objects artifacts";
@@ -670,6 +691,99 @@ button:disabled {
   align-items: start;
   perspective: 1200px;
   pointer-events: none;
+}
+
+.stage-field-orientation {
+  grid-area: orientation;
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.26fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  border: 1px solid rgba(216, 189, 133, 0.12);
+  background:
+    linear-gradient(90deg, rgba(12, 12, 12, 0.54), rgba(0, 0, 0, 0.18)),
+    radial-gradient(circle at 12% 50%, rgba(216, 189, 133, 0.08), transparent 11rem);
+  padding: 0.72rem 0.82rem;
+  pointer-events: auto;
+}
+
+.field-orientation-title {
+  display: grid;
+  gap: 0.18rem;
+  color: rgba(216, 189, 133, 0.72);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.field-orientation-title strong {
+  color: rgba(239, 228, 210, 0.82);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+.stage-field-orientation ol {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.stage-field-orientation ol::before {
+  position: absolute;
+  top: 50%;
+  left: 0.35rem;
+  right: 0.35rem;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(216, 189, 133, 0.24),
+    transparent
+  );
+}
+
+.stage-field-orientation li {
+  position: relative;
+  display: grid;
+  min-height: 2.4rem;
+  align-content: center;
+  gap: 0.16rem;
+  border: 1px solid rgba(216, 189, 133, 0.12);
+  background: rgba(0, 0, 0, 0.42);
+  padding: 0.46rem 0.5rem;
+}
+
+.stage-field-orientation li::before {
+  position: absolute;
+  top: 50%;
+  left: -0.18rem;
+  width: 0.34rem;
+  aspect-ratio: 1;
+  content: "";
+  background: var(--stage-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(216, 189, 133, 0.38);
+  transform: translateY(-50%);
+}
+
+.stage-field-orientation li span {
+  color: rgba(216, 189, 133, 0.7);
+  font-size: 0.54rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.stage-field-orientation li strong {
+  color: rgba(255, 246, 228, 0.9);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 0.98rem;
+  font-weight: 400;
 }
 
 .stage-workspace::before,
@@ -717,15 +831,15 @@ button:disabled {
 .stage-object-constellation {
   grid-area: objects;
   display: grid;
-  max-height: calc(100vh - 14.2rem);
+  max-height: calc(100vh - 14.8rem);
   grid-auto-flow: dense;
-  grid-auto-rows: minmax(2.55rem, auto);
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: minmax(2.35rem, auto);
+  grid-template-columns: repeat(14, minmax(0, 1fr));
   gap: 0.95rem;
   align-content: start;
   min-height: 100%;
   overflow: auto;
-  padding: 0 min(5vw, 4rem) 4.6rem;
+  padding: 0 min(3vw, 2.5rem) 4.6rem;
   scrollbar-width: none;
   pointer-events: auto;
 }
@@ -776,42 +890,65 @@ button:disabled {
 }
 
 .stage-object:nth-child(1) {
-  grid-column: 1 / span 5;
-  --field-y: 0.2rem;
+  grid-column: span 4;
 }
 
 .stage-object:nth-child(2) {
-  grid-column: 7 / span 5;
-  --field-y: 1.35rem;
+  grid-column: span 7;
 }
 
 .stage-object:nth-child(3) {
-  grid-column: 2 / span 5;
-  margin-top: -0.25rem;
-  --field-y: 0.75rem;
+  grid-column: span 5;
 }
 
 .stage-object:nth-child(4) {
-  grid-column: 6 / span 6;
-  --field-y: 2.05rem;
+  grid-column: span 5;
 }
 
 .stage-object:nth-child(5) {
-  grid-column: 1 / span 4;
-  --field-y: 1.1rem;
+  grid-column: span 4;
 }
 
 .stage-object:nth-child(6) {
-  grid-column: 5 / span 4;
-  --field-y: -0.35rem;
+  grid-column: span 4;
 }
 
 .stage-object:nth-child(7) {
-  grid-column: 9 / span 4;
-  --field-y: 1.55rem;
+  grid-column: span 4;
 }
 
 .stage-object:nth-child(n + 8) {
+  grid-column: span 4;
+}
+
+.stage-object.stage-object-intent_card {
+  grid-column: 1 / span 4;
+  --field-y: 0.35rem;
+}
+
+.stage-object.stage-object-plan_card {
+  grid-column: 5 / span 8;
+  min-height: 16.8rem;
+  padding: 1.18rem;
+  --field-y: 0;
+}
+
+.stage-object.stage-object-document_portal {
+  grid-column: 2 / span 6;
+  --field-y: 0.25rem;
+}
+
+.stage-object.stage-object-browser_portal,
+.stage-object.stage-object-map_portal,
+.stage-object.stage-object-model_card,
+.stage-object.stage-object-simulation_card {
+  grid-column: span 5;
+}
+
+.stage-object.stage-object-codex_task_card,
+.stage-object.stage-object-memory_card,
+.stage-object.stage-object-research_note,
+.stage-object.stage-object-timeline {
   grid-column: span 4;
 }
 
@@ -874,6 +1011,25 @@ button:disabled {
     0 24px 90px rgba(0, 0, 0, 0.56),
     0 0 40px var(--object-halo),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.stage-object.stage-object-plan_card h2 {
+  font-size: clamp(1.35rem, 2.2vw, 1.95rem);
+}
+
+.stage-object.stage-object-plan_card p {
+  max-width: 38rem;
+}
+
+.stage-object.stage-object-plan_card .object-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1.1rem;
+}
+
+.stage-object.stage-object-plan_card .object-list li {
+  border: 1px solid rgba(216, 189, 133, 0.1);
+  background: rgba(255, 246, 228, 0.026);
+  padding: 0.52rem 0.58rem;
 }
 
 .stage-object-dragging {
@@ -1356,7 +1512,7 @@ button:disabled {
 
 .agent-feed {
   grid-area: feed;
-  max-height: min(48vh, 31rem);
+  max-height: min(44vh, 26rem);
   overflow: auto;
   pointer-events: auto;
 }
@@ -1384,16 +1540,29 @@ button:disabled {
 }
 
 .agent-event {
+  position: relative;
   display: grid;
-  grid-template-columns: 5.2rem minmax(0, 1fr);
+  grid-template-columns: 4.65rem minmax(0, 1fr);
   gap: 0.8rem;
-  padding-top: 0.7rem;
-  border-top: 1px solid rgba(216, 189, 133, 0.1);
+  padding: 0.72rem 0 0.72rem 0.72rem;
+  border-top: 0;
+  border-left: 1px solid rgba(216, 189, 133, 0.12);
 }
 
 .agent-event:first-child {
-  padding-top: 0;
-  border-top: 0;
+  padding-top: 0.1rem;
+}
+
+.agent-event::before {
+  position: absolute;
+  top: 1rem;
+  left: -0.22rem;
+  width: 0.36rem;
+  aspect-ratio: 1;
+  content: "";
+  background: rgba(216, 189, 133, 0.72);
+  border-radius: 50%;
+  box-shadow: 0 0 11px rgba(216, 189, 133, 0.24);
 }
 
 .agent-event-type {
@@ -1420,6 +1589,15 @@ button:disabled {
     0 24px 90px rgba(0, 0, 0, 0.58),
     0 0 32px rgba(216, 170, 88, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.stage-active .approval-card,
+.stage-active .agent-feed,
+.stage-active .artifact-workbench,
+.stage-active .artifact-card {
+  background:
+    linear-gradient(180deg, rgba(12, 12, 12, 0.7), rgba(0, 0, 0, 0.46)),
+    radial-gradient(circle at 0% 0%, rgba(216, 189, 133, 0.075), transparent 11rem);
 }
 
 .approval-grid {
@@ -1455,6 +1633,7 @@ button:disabled {
   display: grid;
   gap: 0.8rem;
   min-height: 0;
+  max-height: min(31vh, 21rem);
   overflow: auto;
   pointer-events: auto;
 }
@@ -1505,6 +1684,22 @@ button:disabled {
   max-height: min(30rem, calc(100vh - 12rem));
   overflow: auto;
   padding: 0.9rem;
+}
+
+.stage-active .research-capture {
+  width: min(16rem, calc(100vw - 3rem));
+  max-height: 6.35rem;
+  opacity: 0.68;
+  transition:
+    max-height 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.stage-active .research-capture:hover,
+.stage-active .research-capture:focus-within {
+  max-height: min(30rem, calc(100vh - 12rem));
+  opacity: 1;
 }
 
 .research-capture p {
@@ -1977,12 +2172,26 @@ button:disabled {
 @media (min-width: 641px) and (max-width: 1100px) {
   .stage-workspace {
     inset: 7.2rem 1.2rem 6.1rem;
-    grid-template-columns: minmax(0, 1fr) minmax(17.5rem, 22rem);
+    grid-template-columns: minmax(0, 1fr) minmax(14.5rem, 16rem);
+    gap: 0.72rem;
+  }
+
+  .stage-field-orientation {
+    grid-template-columns: 1fr;
+    padding: 0.62rem;
+  }
+
+  .stage-field-orientation ol {
+    gap: 0.36rem;
+  }
+
+  .stage-field-orientation li {
+    padding-inline: 0.42rem;
   }
 
   .stage-object-constellation {
     grid-template-columns: repeat(8, minmax(0, 1fr));
-    padding: 0 1rem 4rem;
+    padding: 0 0.4rem 4rem;
   }
 
   .stage-object:nth-child(1),
@@ -2000,6 +2209,93 @@ button:disabled {
   .stage-object:nth-child(7),
   .stage-object:nth-child(n + 8) {
     grid-column: span 4;
+  }
+
+  .stage-object.stage-object-intent_card,
+  .stage-object.stage-object-document_portal {
+    grid-column: 1 / span 4;
+  }
+
+  .stage-object.stage-object-plan_card {
+    grid-column: 5 / span 4;
+    min-height: 15rem;
+  }
+
+  .agent-feed,
+  .approval-card,
+  .artifact-card,
+  .artifact-workbench {
+    padding: 0.82rem;
+  }
+
+  .agent-event {
+    grid-template-columns: 1fr;
+    gap: 0.34rem;
+  }
+}
+
+@media (min-width: 641px) and (max-height: 720px) {
+  .stage-active .thread-console {
+    width: min(20rem, calc(100vw - 3rem));
+  }
+
+  .stage-workspace {
+    inset: 4.3rem 1rem 1rem;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "objects feed"
+      "objects approval"
+      "objects artifacts";
+  }
+
+  .stage-object-constellation {
+    max-height: calc(100vh - 5.4rem);
+    padding-bottom: 1rem;
+  }
+
+  .stage-field-orientation {
+    display: none;
+  }
+
+  .stage-object,
+  .agent-feed,
+  .approval-card,
+  .artifact-card,
+  .artifact-workbench {
+    padding: 0.78rem;
+  }
+
+  .stage-object.stage-object-plan_card {
+    min-height: 12.6rem;
+  }
+
+  .stage-object.stage-object-plan_card h2 {
+    font-size: clamp(1.18rem, 2vw, 1.48rem);
+  }
+
+  .stage-object.stage-object-plan_card .object-list {
+    gap: 0.42rem;
+    margin-top: 0.82rem;
+  }
+
+  .stage-object h2,
+  .approval-card h2,
+  .artifact-card h2 {
+    margin-top: 0.54rem;
+  }
+
+  .stage-active .research-capture {
+    display: none;
+  }
+
+  .stage-active .intent-capture {
+    display: none;
+  }
+
+  .stage-active .stage-voice-reply,
+  .stage-active .realtime-broker-status,
+  .stage-active .harness-runner-status {
+    display: none;
   }
 }
 
@@ -2051,11 +2347,23 @@ button:disabled {
     width: 100%;
     grid-template-columns: 1fr;
     grid-template-areas:
+      "orientation"
       "objects"
       "feed"
       "approval"
       "artifacts";
     margin-top: 1rem;
+  }
+
+  .stage-field-orientation {
+    grid-template-columns: 1fr;
+    padding: 0.7rem;
+  }
+
+  .stage-field-orientation ol {
+    grid-template-columns: repeat(5, minmax(4.75rem, 1fr));
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
   }
 
   .stage-active .stage-workspace {
@@ -2083,7 +2391,18 @@ button:disabled {
   .stage-object:nth-child(5),
   .stage-object:nth-child(6),
   .stage-object:nth-child(7),
-  .stage-object:nth-child(n + 8) {
+  .stage-object:nth-child(n + 8),
+  .stage-object.stage-object-intent_card,
+  .stage-object.stage-object-plan_card,
+  .stage-object.stage-object-document_portal,
+  .stage-object.stage-object-browser_portal,
+  .stage-object.stage-object-map_portal,
+  .stage-object.stage-object-model_card,
+  .stage-object.stage-object-simulation_card,
+  .stage-object.stage-object-codex_task_card,
+  .stage-object.stage-object-memory_card,
+  .stage-object.stage-object-research_note,
+  .stage-object.stage-object-timeline {
     grid-column: 1 / -1;
     margin-top: 0;
     --field-x: 0px;
@@ -2095,6 +2414,15 @@ button:disabled {
   .stage-object-focused,
   .stage-object-pinned {
     --object-scale: 1.01;
+  }
+
+  .stage-object.stage-object-plan_card {
+    min-height: 0;
+    padding: 1rem;
+  }
+
+  .stage-object.stage-object-plan_card .object-list {
+    grid-template-columns: 1fr;
   }
 
   .stage-object .object-chrome {
@@ -2116,6 +2444,10 @@ button:disabled {
   .agent-event {
     grid-template-columns: 1fr;
     gap: 0.28rem;
+  }
+
+  .stage-active .research-capture {
+    max-height: 5.6rem;
   }
 
   .presence-orbit {

@@ -259,6 +259,8 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Stage Shell v0 plan"
   );
+  await expect(page.getByTestId("stage-field-orientation")).toContainText("Thread map");
+  await expect(page.getByTestId("stage-field-orientation")).toContainText("Evidence");
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Stage Shell v0 spec"
   );
