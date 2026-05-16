@@ -281,8 +281,17 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const documentObject = document.querySelector<HTMLElement>(
       '[data-testid="stage-object-document_portal"]'
     );
+    const sceneField = document.querySelector<HTMLElement>(
+      '[data-testid="stage-scene-field"]'
+    );
 
-    if (!constellation || !intentObject || !planObjectElement || !documentObject) {
+    if (
+      !constellation ||
+      !intentObject ||
+      !planObjectElement ||
+      !documentObject ||
+      !sceneField
+    ) {
       return null;
     }
 
@@ -300,15 +309,36 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       first.bottom > second.top;
 
     return {
-      columns: getComputedStyle(constellation)
-        .gridTemplateColumns.split(" ")
-        .filter(Boolean).length,
+      constellationDisplay: getComputedStyle(constellation).display,
+      constellationPosition: getComputedStyle(constellation).position,
       documentAccent: getComputedStyle(documentObject)
         .getPropertyValue("--object-accent")
         .trim(),
       intentAccent: getComputedStyle(intentObject)
         .getPropertyValue("--object-accent")
         .trim(),
+      intentSceneX: Number(intentObject.style.getPropertyValue("--scene-x")),
+      planSceneX: Number(planObjectElement.style.getPropertyValue("--scene-x")),
+      planSceneY: Number(planObjectElement.style.getPropertyValue("--scene-y")),
+      documentSceneY: Number(documentObject.style.getPropertyValue("--scene-y")),
+      planSceneDepth: Number(
+        planObjectElement.style.getPropertyValue("--scene-depth")
+      ),
+      sceneEdgeCount: Number(sceneField.dataset.edgeCount ?? 0),
+      sceneNodeCount: Number(sceneField.dataset.nodeCount ?? 0),
+      sceneHasFocalStage: Boolean(sceneField.querySelector(".scene-focal-stage")),
+      sceneHasFramesEdge: Boolean(
+        sceneField.querySelector('[data-scene-relationship="frames"]')
+      ),
+      sceneHasSupportEdge: Boolean(
+        sceneField.querySelector('[data-scene-relationship="supports"]')
+      ),
+      sceneHasIntentHalo: Boolean(
+        sceneField.querySelector('[data-scene-cluster="intent"]')
+      ),
+      sceneHasPrimaryHalo: Boolean(
+        sceneField.querySelector('[data-scene-cluster="primary_work"]')
+      ),
       planRightOfIntent: planRect.left > intentRect.left + 80,
       documentBelowIntent: documentRect.top > intentRect.top + 80,
       objectsDoNotOverlap:
@@ -327,8 +357,23 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     throw new Error("Stage render field evidence was not available.");
   }
 
-  expect(renderFieldEvidence.columns).toBeGreaterThanOrEqual(6);
+  expect(renderFieldEvidence.constellationDisplay).toBe("block");
+  expect(renderFieldEvidence.constellationPosition).toBe("relative");
   expect(renderFieldEvidence.documentAccent).not.toBe(renderFieldEvidence.intentAccent);
+  expect(renderFieldEvidence.planSceneX).toBeGreaterThan(
+    renderFieldEvidence.intentSceneX
+  );
+  expect(renderFieldEvidence.documentSceneY).toBeGreaterThan(
+    renderFieldEvidence.planSceneY
+  );
+  expect(renderFieldEvidence.planSceneDepth).toBeGreaterThan(80);
+  expect(renderFieldEvidence.sceneEdgeCount).toBeGreaterThanOrEqual(2);
+  expect(renderFieldEvidence.sceneNodeCount).toBeGreaterThanOrEqual(3);
+  expect(renderFieldEvidence.sceneHasFocalStage).toBe(true);
+  expect(renderFieldEvidence.sceneHasFramesEdge).toBe(true);
+  expect(renderFieldEvidence.sceneHasSupportEdge).toBe(true);
+  expect(renderFieldEvidence.sceneHasIntentHalo).toBe(true);
+  expect(renderFieldEvidence.sceneHasPrimaryHalo).toBe(true);
   expect(renderFieldEvidence.planRightOfIntent).toBe(true);
   expect(renderFieldEvidence.documentBelowIntent).toBe(true);
   expect(renderFieldEvidence.objectsDoNotOverlap).toBe(true);

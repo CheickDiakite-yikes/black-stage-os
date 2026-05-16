@@ -1,5 +1,6 @@
 import {
   createIdleIntentThread,
+  getStageShellScenario,
   type AgentEvent,
   type ApprovalRequest,
   type Artifact,
@@ -212,6 +213,7 @@ export function App() {
   const realtimeStageEventHandlerRef = useRef<
     ((stageEvent: StageEvent) => void) | undefined
   >(undefined);
+  const startupIntentAppliedRef = useRef(false);
   const timerRefs = useRef<number[]>([]);
 
   const clearTimers = useCallback(() => {
@@ -938,15 +940,37 @@ export function App() {
         scenarioId,
         sessionId: nextSessionId
       });
+      const instantStageEvents = shouldUseInstantStageEvents()
+        ? run.steps.map((step) => step.event)
+        : undefined;
 
       setSessionId(nextSessionId);
-      setThread(run.thread);
       setActiveScenario(run.scenario);
-      setResearchEvents(intentResearchEvent ? [intentResearchEvent] : []);
-      setStageEvents([intentSubmittedEvent]);
       setIsReplaying(false);
       setApprovalExplanationVisible(false);
-      scheduleTimedEvents(run.steps);
+
+      if (instantStageEvents) {
+        const instantThread = instantStageEvents.reduce(
+          (nextThread, stageEvent) => applyStageEventToThread(nextThread, stageEvent),
+          run.thread
+        );
+        const instantResearchEvents = instantStageEvents
+          .map((stageEvent) => researchEventFromStageEvent(nextSessionId, stageEvent))
+          .filter((event): event is ResearchEvent => Boolean(event));
+
+        clearTimers();
+        activeRunStartedAtRef.current = undefined;
+        activeTimedEventsRef.current = [];
+        setThread(instantThread);
+        setResearchEvents(instantResearchEvents);
+        setStageEvents(instantStageEvents);
+        setIsRunning(false);
+      } else {
+        setThread(run.thread);
+        setResearchEvents(intentResearchEvent ? [intentResearchEvent] : []);
+        setStageEvents([intentSubmittedEvent]);
+        scheduleTimedEvents(run.steps);
+      }
 
       if (stageVoiceEnabled) {
         emitAssistantSpeech("Intent received. I am shaping the stage.", {
@@ -964,11 +988,48 @@ export function App() {
       requestMemoryReview,
       requestMemoryWrite,
       scheduleTimedEvents,
+      clearTimers,
       sessionId,
       startLocalHarnessRun,
       stageVoiceEnabled
     ]
   );
+
+  useEffect(() => {
+    if (startupIntentAppliedRef.current) {
+      return;
+    }
+
+    const startupParams = new URLSearchParams(window.location.search);
+    const startupIntent = startupParams.get("stageIntent");
+    const startupScenarioId = startupParams.get("stageScenario");
+
+    if (startupScenarioId) {
+      try {
+        const startupScenario = getStageShellScenario(
+          startupScenarioId as StageShellScenarioId
+        );
+
+        startupIntentAppliedRef.current = true;
+        runIntent(startupIntent?.trim() || startupScenario.intent, startupScenario.id, {
+          source: "scenario"
+        });
+      } catch (error) {
+        console.warn(error);
+      }
+
+      return;
+    }
+
+    if (!startupIntent?.trim()) {
+      return;
+    }
+
+    startupIntentAppliedRef.current = true;
+    runIntent(startupIntent, undefined, {
+      source: "text"
+    });
+  }, [runIntent]);
 
   useEffect(() => {
     realtimeStageEventHandlerRef.current = (stageEvent) => {
@@ -3659,11 +3720,21 @@ function normalizeCommandText(text: string): string {
 }
 
 function scaleStageEventDelay(delayMs: number): number {
-  const multiplier = (window as BlackstageTestWindow).__blackstageTestDelayMultiplier;
+  const urlMultiplier = Number(
+    new URLSearchParams(window.location.search).get("stageDelayMultiplier")
+  );
+  const multiplier =
+    Number.isFinite(urlMultiplier) && urlMultiplier > 0
+      ? urlMultiplier
+      : (window as BlackstageTestWindow).__blackstageTestDelayMultiplier;
 
   if (!multiplier || multiplier <= 0 || !Number.isFinite(multiplier)) {
     return delayMs;
   }
 
   return Math.round(delayMs * multiplier);
+}
+
+function shouldUseInstantStageEvents(): boolean {
+  return new URLSearchParams(window.location.search).get("stageInstant") === "1";
 }

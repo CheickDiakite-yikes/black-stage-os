@@ -1,5 +1,54 @@
 # First Long-Running Goal: Stage Shell v0 After Prompt 1
 
+## 2026-05-15 Goal Amendment: Render Field First
+
+The active `/goal` remains open, but the success bar is now explicitly
+rendering-first. Stage Shell v0 is not done merely because intent, events,
+approvals, artifacts, and live voice hooks exist. It must prove the core
+Blackstage thesis: the black field itself organizes intelligence.
+
+Current priority order:
+
+1. The startup state is an empty, living, voice-first field: one orb, one calm
+   instruction, no demo buttons, no dashboard chrome.
+2. After intent, the field must form a cinematic scene graph: one dominant focal
+   work object, supporting evidence orbiting it, visible relationships, depth,
+   floor/ring anchoring, and calm telemetry.
+3. Approval must feel like a central ritual object, not just a sidebar card.
+4. Agent labor must become an inspectable geometric/progress field that can
+   expand into the audit feed.
+5. The UI fails if it reads as a dark dashboard, card collage, or demo scenario
+   picker even when the backend loop works.
+
+Use `docs/28_cinematic_rendering_system.md` as the current rendering north star.
+Validate visual slices with the Browser plugin against the attached reference
+video vocabulary: black material field, central orb, focal artifact,
+relationship geometry, reflective stage floor, and progressive object
+materialization.
+
+## 2026-05-16 Checkpoint: Scene Field Interaction Slice
+
+Shipped a verified rendering slice toward the goal:
+
+- The visible stage now includes a manifest-driven `StageSceneField` with
+  cluster halos, focal floor/horizon cues, relationship vectors, and dense
+  constellation mode.
+- Startup remains orb-first with no visible demo scenario buttons.
+- The Build BlackStage scenario can be loaded through hidden QA parameters for
+  Browser validation without adding product chrome.
+- Object focus and direct dragging remain replayable after the cinematic
+  placement changes.
+- Voice startup works from the orb/Speak affordance for local browser speech,
+  while explicitly configured live Realtime still routes through visible
+  approval before the live edge opens.
+- The command dock geometry is stable; hover/focus no longer moves the Speak
+  target during active work.
+- The artifact workbench chooses the newest artifact by timestamp so approved
+  artifacts stay active even if old draft events arrive late.
+- Validation passed: `pnpm typecheck`, `pnpm lint`, `pnpm test`,
+  `pnpm build`, `pnpm test:e2e` (28/28), `pnpm scan:secrets`, and Browser
+  plugin geometry QA for initial and approved active states.
+
 Paste this into Codex CLI after installing the goal-mode add-on, running `/status`, and reviewing the pre-goal `/plan`.
 
 ```text

@@ -39,7 +39,14 @@ function ArtifactStack({
   onPrepareArtifactAction,
   onSaveArtifact
 }: ArtifactCardProps) {
-  const orderedArtifacts = useMemo(() => [...artifacts].reverse(), [artifacts]);
+  const orderedArtifacts = useMemo(
+    () =>
+      [...artifacts].sort(
+        (leftArtifact, rightArtifact) =>
+          artifactTimestamp(rightArtifact) - artifactTimestamp(leftArtifact)
+      ),
+    [artifacts]
+  );
   const activeArtifact = orderedArtifacts[0];
   const [draftBody, setDraftBody] = useState(() =>
     artifactToEditableText(activeArtifact)
@@ -114,6 +121,18 @@ function ArtifactStack({
       ))}
     </section>
   );
+}
+
+function artifactTimestamp(artifact: Artifact): number {
+  const updatedAt = Date.parse(artifact.updatedAt);
+
+  if (Number.isFinite(updatedAt)) {
+    return updatedAt;
+  }
+
+  const createdAt = Date.parse(artifact.createdAt);
+
+  return Number.isFinite(createdAt) ? createdAt : 0;
 }
 
 function ArtifactContent({ content }: { content: unknown }) {

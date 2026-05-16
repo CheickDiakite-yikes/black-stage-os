@@ -81,6 +81,11 @@ export type StageSceneSubstrate = {
 };
 
 export type StageSceneTransform = {
+  /**
+   * Stage-space percentages, where 0/0 is the upper-left of the render field.
+   * Drag offsets stay on the StageObject itself; these coordinates are the
+   * semantic scene anchor used by the renderer.
+   */
   x: number;
   y: number;
   z: number;
@@ -132,14 +137,26 @@ type StageSceneClassification = Pick<
 
 export function createStageSceneManifest(thread: IntentThread): StageSceneManifest {
   const renderObjects = thread.renderObjects.filter(
-    (object) => object.state !== "hidden"
+    (object) =>
+      object.state !== "hidden" &&
+      object.type !== "approval_card" &&
+      object.type !== "artifact_card"
   );
-  const focalObject =
-    renderObjects.find((object) => object.state === "focused") ??
-    findPrimaryObject(renderObjects);
-  const nodes = renderObjects.map((object, index) =>
-    createStageSceneNode(object, index, focalObject?.id)
-  );
+  const focalObject = findFocalObject(renderObjects);
+  const clusterCounts = createClusterCounter();
+  const nodes = renderObjects.map((object, index) => {
+    const classification = classifyStageObject(object);
+    const clusterIndex = clusterCounts[classification.clusterId];
+    clusterCounts[classification.clusterId] += 1;
+
+    return createStageSceneNode(
+      object,
+      index,
+      clusterIndex,
+      focalObject?.id,
+      classification
+    );
+  });
   const primaryNode = nodes.find((node) => node.role === "primary_display") ?? nodes[0];
 
   return {
@@ -173,11 +190,11 @@ export function createStageSceneManifest(thread: IntentThread): StageSceneManife
 function createStageSceneNode(
   object: StageObject,
   index: number,
-  focalObjectId: string | undefined
+  clusterIndex: number,
+  focalObjectId: string | undefined,
+  classification: StageSceneClassification
 ): StageSceneNode {
-  const classification = classifyStageObject(object);
   const isFocal = object.id === focalObjectId;
-  const objectPosition = object.position ?? { x: 0, y: 0, z: index };
 
   return {
     id: `scene_node_${object.id}`,
@@ -188,20 +205,108 @@ function createStageSceneNode(
     priority: isFocal
       ? Math.max(classification.priority, 100)
       : classification.priority,
-    transform: {
-      x: objectPosition.x,
-      y: objectPosition.y,
-      z: objectPosition.z ?? index,
-      scale: isFocal ? 1.08 : object.state === "collapsed" ? 0.82 : 1,
-      rotateX: classification.role === "primary_display" ? 0 : -1.5,
-      rotateY:
-        classification.clusterId === "evidence"
-          ? -2.5
-          : classification.clusterId === "artifact"
-            ? 2.5
-            : 0
-    }
+    transform: resolveStageTransform(object, index, clusterIndex, classification, isFocal)
   };
+}
+
+function createClusterCounter(): Record<StageSceneClusterId, number> {
+  return {
+    intent: 0,
+    primary_work: 0,
+    evidence: 0,
+    approval: 0,
+    artifact: 0,
+    telemetry: 0
+  };
+}
+
+function resolveStageTransform(
+  object: StageObject,
+  index: number,
+  clusterIndex: number,
+  classification: StageSceneClassification,
+  isFocal: boolean
+): StageSceneTransform {
+  const collapsedScale = object.state === "collapsed" ? 0.76 : 1;
+  const primaryAnchors = [
+    { x: 61, y: 35, z: 88, scale: 0.98, rotateX: 0, rotateY: 0 },
+    { x: 90, y: 34, z: 66, scale: 0.62, rotateX: -3.5, rotateY: 7 },
+    { x: 39, y: 68, z: 62, scale: 0.58, rotateX: -5, rotateY: -3 },
+    { x: 76, y: 58, z: 58, scale: 0.58, rotateX: -5, rotateY: 7 }
+  ];
+  const artifactAnchors = [
+    { x: 70, y: 77, z: 52, scale: 0.72, rotateX: -5, rotateY: 4 },
+    { x: 87, y: 64, z: 56, scale: 0.68, rotateX: -4.5, rotateY: 7 },
+    { x: 87, y: 82, z: 48, scale: 0.66, rotateX: -6, rotateY: 8 },
+    { x: 62, y: 88, z: 40, scale: 0.62, rotateX: -7, rotateY: 3 }
+  ];
+  const anchor =
+    classification.clusterId === "intent"
+      ? { x: 18, y: 28, z: 58, scale: 0.82, rotateX: -3, rotateY: -7 }
+      : classification.clusterId === "primary_work"
+        ? primaryAnchors[clusterIndex % primaryAnchors.length]
+        : classification.clusterId === "evidence"
+          ? resolveEvidenceAnchor(object, clusterIndex)
+          : classification.clusterId === "approval"
+            ? { x: 78, y: 47, z: 94, scale: 0.92, rotateX: -2, rotateY: 6 }
+            : classification.clusterId === "artifact"
+              ? artifactAnchors[clusterIndex % artifactAnchors.length]
+              : {
+                  x: 17 + (clusterIndex % 2) * 7,
+                  y: 82,
+                  z: 24 + index,
+                  scale: 0.72,
+                  rotateX: -7,
+                  rotateY: -5
+                };
+
+  return {
+    x: clampStageCoordinate(anchor.x),
+    y: clampStageCoordinate(anchor.y),
+    z: anchor.z + (isFocal ? 16 : 0),
+    scale: Number((anchor.scale * collapsedScale * (isFocal ? 1.06 : 1)).toFixed(2)),
+    rotateX: anchor.rotateX,
+    rotateY: anchor.rotateY
+  };
+}
+
+function resolveEvidenceAnchor(
+  object: StageObject,
+  clusterIndex: number
+): Omit<StageSceneTransform, "rotateX" | "rotateY"> &
+  Pick<StageSceneTransform, "rotateX" | "rotateY"> {
+  const fallbackAnchors = [
+    { x: 18, y: 75, z: 44, scale: 0.74, rotateX: -5.5, rotateY: -7 },
+    { x: 37, y: 73, z: 40, scale: 0.68, rotateX: -6, rotateY: -3 },
+    { x: 82, y: 72, z: 42, scale: 0.68, rotateX: -5.5, rotateY: 6 },
+    { x: 18, y: 91, z: 30, scale: 0.58, rotateX: -7, rotateY: -6 },
+    { x: 37, y: 90, z: 28, scale: 0.56, rotateX: -7, rotateY: -2 },
+    { x: 58, y: 90, z: 27, scale: 0.56, rotateX: -7, rotateY: 3 },
+    { x: 82, y: 88, z: 25, scale: 0.56, rotateX: -7, rotateY: 7 }
+  ];
+
+  switch (object.type) {
+    case "document_portal":
+      return { x: 18, y: 75, z: 44, scale: 0.74, rotateX: -5.5, rotateY: -7 };
+    case "browser_portal":
+      return { x: 52, y: 80, z: 42, scale: 0.6, rotateX: -6.5, rotateY: 0 };
+    case "map_portal":
+      return { x: 58, y: 90, z: 34, scale: 0.56, rotateX: -7, rotateY: 3 };
+    case "memory_card":
+      return { x: 82, y: 94, z: 30, scale: 0.54, rotateX: -7.5, rotateY: 7 };
+    case "timeline":
+      return { x: 18, y: 91, z: 30, scale: 0.56, rotateX: -7, rotateY: -6 };
+    case "research_note":
+      return clusterIndex % 2 === 0
+        ? { x: 37, y: 90, z: 28, scale: 0.54, rotateX: -7, rotateY: -2 }
+        : { x: 27, y: 84, z: 38, scale: 0.56, rotateX: -6.5, rotateY: -5 };
+    default:
+      return fallbackAnchors[clusterIndex % fallbackAnchors.length];
+  }
+}
+
+function clampStageCoordinate(value: number): number {
+  return Math.min(94, Math.max(6, value));
 }
 
 function classifyStageObject(object: StageObject): StageSceneClassification {
@@ -437,6 +542,17 @@ function findPrimaryObject(objects: StageObject[]): StageObject | undefined {
     objects.find((object) => object.type === "plan_card") ??
     objects.find((object) => object.type === "model_card") ??
     objects.find((object) => object.type === "document_portal") ??
+    objects[0]
+  );
+}
+
+function findFocalObject(objects: StageObject[]): StageObject | undefined {
+  return (
+    objects.find(
+      (object) => object.state === "focused" && object.type !== "intent_card"
+    ) ??
+    findPrimaryObject(objects) ??
+    objects.find((object) => object.state === "focused") ??
     objects[0]
   );
 }

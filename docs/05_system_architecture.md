@@ -112,11 +112,31 @@ the cinematic state of the stage:
 - camera depth, tilt, parallax, and focal object
 - substrate material, liquidity, bloom, and grain
 - object roles, clusters, materials, contours, and motion cues
+- stage-space object coordinates, depth, scale, and tilt
 - semantic edges between intent, evidence, approvals, and artifacts
 
 This is the Blackstage-specific equivalent of a guarded render spec. It keeps
 dynamic rendering replayable and auditable while allowing the visual layer to
 become much more fluid.
+
+### StageSceneField
+
+Stage Web renders the manifest through `StageSceneField`, a non-interactive SVG
+and CSS field layer behind the readable DOM objects. The field draws semantic
+cluster halos, a focal stage floor, horizon energy, and relationship paths while
+documents, approvals, artifacts, and controls remain accessible DOM surfaces
+above it.
+
+The current field uses semantic stage-space coordinates from the manifest so the
+active surface behaves like a cinematic scene instead of a CSS grid. The next
+renderer upgrade should bind edges to measured object geometry after layout so
+the vector layer feels physically attached to the objects it explains.
+
+Control-bearing objects stay on a 2D DOM plane for reliable hit testing. Depth
+is represented by manifest scale, halos, vector relationships, floor rings, and
+material treatment rather than by CSS 3D transforms on interactive cards.
+Likewise, active command controls use stable geometry so voice startup and
+artifact actions remain reachable while the render field animates.
 
 ### IntentThread
 
@@ -139,6 +159,10 @@ type IntentThread = {
   researchSessionId?: string;
 };
 ```
+
+Artifact surfaces are ordered by artifact timestamps for active workbench focus.
+This keeps replayed or late old draft events from stealing focus away from a
+newer approved or exported artifact.
 
 ### StageObject
 

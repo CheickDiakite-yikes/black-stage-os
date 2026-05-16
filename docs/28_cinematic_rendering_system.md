@@ -37,6 +37,44 @@ layer still treats objects too much like arranged panels. The next render system
 must make organization intelligence visible through motion, hierarchy, depth,
 and material.
 
+## Reference Video 2 Frame Read
+
+Source: `/Users/cheickdiakite/Downloads/Create_a_cinematic_futuristic (1).mp4`.
+Observed at 1280x720, 24fps, 8 seconds.
+
+Granular read:
+
+1. `00:00-00:02` starts as an almost empty black field. The interaction affordance
+   is one central orb plus a small instruction. The field is already alive:
+   constellation lines, orbit rings, fine grain, and soft star nodes imply depth
+   before any app UI exists.
+2. `00:02-00:03` materializes one dominant document artifact from the field. The
+   artifact is not a card in a grid; it is a lit object sitting on a reflective
+   stage with surrounding agent telemetry.
+3. `00:03-00:04` grows supporting instruments around the dominant object: map,
+   lists, charts, radial gauges, and tables. The intelligence is organized by
+   focal hierarchy, not equal-sized panels.
+4. `00:04-00:05` focus pulls into the central analytical surface. Background
+   instruments remain visible but subordinate, and the stage floor ring anchors
+   the user’s eye.
+5. `00:05-00:06` a high-impact action interrupts the analysis as an approval
+   ritual. The rest of the field dims behind it. The question sits above the
+   object; the object becomes the action.
+6. `00:06-00:08` the action object resolves into a geometric labor field:
+   pyramids, crystals, orbits, progress dots, and small agent labels. This is the
+   key lesson: completion should become a visible work state, not a toast or a
+   sidebar.
+
+Engineering implications:
+
+- The renderer needs one focal object at a time.
+- The field needs stage coordinates, depth, floor rings, and relationship paths.
+- Supporting objects should orbit the focal object instead of stacking in rows.
+- Approval should dim the field and become a central ritual object.
+- Agent labor needs a geometric/telemetry form, not only feed rows.
+- Browser visual QA must compare screenshots against this reference vocabulary,
+  not merely check that elements exist.
+
 ## Architecture
 
 ### 1. Source Of Truth: Intent Thread
@@ -143,11 +181,38 @@ Status: started.
 
 ### Phase 1: Fluid DOM/SVG Renderer
 
+Status: started.
+
 - Replace rectangular-card dominance with scene-role surfaces.
 - Add SVG contour/edge layer generated from manifest edges.
 - Add material-specific object skins.
 - Add focus-pull transitions when the primary object changes.
 - Keep readable DOM surfaces for documents and approvals.
+
+Current implementation:
+
+- `StageSceneField` renders a vector layer from `StageSceneManifest`.
+- Manifest edges become luminous SVG paths such as `frames`, `supports`,
+  `requests_approval`, and `produces`.
+- Manifest transforms now carry semantic stage-space `x`, `y`, `z`, `scale`,
+  and tilt values so object placement comes from the scene compiler instead of
+  CSS grid coincidence.
+- Manifest clusters become halos for intent, primary work, evidence, approval,
+  artifact, and telemetry.
+- `StageSceneField` renders a focal floor/horizon system under the primary
+  object, giving the field a stage, not just a background.
+- DOM objects remain the readable/control-bearing surfaces above the field, but
+  they are positioned as luminous islands around the focal work object.
+- Stage object cards intentionally use 2D hit-testable transforms for the
+  control-bearing DOM surface. Depth is carried by manifest scale, halo,
+  vector-field geometry, floor rings, and material treatment rather than by
+  browser 3D transforms that can misalign child controls.
+- In active mode, the command dock keeps stable geometry. Secondary controls
+  stay quiet instead of expanding the dock on hover, so Speak remains a reliable
+  click target while the field is animating.
+- Artifact workbench focus is sorted by artifact timestamps, not event arrival
+  order, so late old draft events cannot pull focus away from a newer approved
+  artifact.
 
 ### Phase 2: Liquid Substrate
 
@@ -181,11 +246,43 @@ Status: started.
 6. Manual visual QA should use the Browser plugin; automated behavior remains in
    the Playwright e2e suite.
 
+## Local Visual QA Entrypoints
+
+The product should not show demo scenario buttons in the startup UI. For repeat
+visual QA, Stage Web supports hidden query parameters:
+
+- `?stageScenario=build_blackstage` starts a known scenario without visible demo
+  chrome.
+- `?stageIntent=<text>` starts a freeform intent.
+- `?stageInstant=1` applies the scenario event stream immediately for cheap
+  screenshot checks.
+- `?stageDelayMultiplier=0.02` keeps the timed stream but accelerates it for
+  local testing.
+
+These are QA/deep-link controls, not user-facing navigation. They exist so
+Browser validation can repeatedly inspect active render fields while the real
+startup experience remains the empty orb field.
+
+Latest Browser-plugin QA for the Build BlackStage scenario:
+
+- Initial state: 3 objects, 3 scene nodes, 2 scene edges, no object overlaps,
+  no command-dock overlaps, Speak hit target resolves to the button.
+- Approved state: 14 objects, 14 scene nodes, 11 scene edges, dense
+  constellation mode active, approved artifact workbench visible, no object
+  overlaps, no command-dock overlaps, Speak hit target still resolves to the
+  button.
+
 ## Next Slice
 
-Build the Phase 1 SVG/vector field:
+Make the vector field more alive without sacrificing readability:
 
-- `StageSceneField` component in Stage Web.
-- Use manifest nodes and edges to draw luminous relations.
-- Make primary/supporting/approval/artifact clusters visibly connected.
-- Add Browser-plugin screenshots to compare against the video contact sheet.
+- Add focus-pull transitions when the primary object changes.
+- Move approval from right rail to a central ritual state when a pending
+  approval exists, while keeping explicit buttons accessible.
+- Turn agent labor into a geometric/progress constellation that can expand into
+  the full audit feed.
+- Capture real object geometry after layout and map SVG edges to actual object
+  centers instead of semantic approximations.
+- Add a compact manifest/debug overlay for live sessions.
+- Add Browser-plugin screenshots against idle, compact active, and full desktop
+  active states.

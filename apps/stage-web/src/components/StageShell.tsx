@@ -13,12 +13,17 @@ import {
   type VoiceCapturePreflight,
   type VoiceCaptureState
 } from "@blackstage/voice-core";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  CSSProperties,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent
+} from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgentActivityFeed } from "./AgentActivityFeed";
 import { ApprovalCard } from "./ApprovalCard";
 import { ArtifactCard } from "./ArtifactCard";
 import { ResearchCapture } from "./ResearchCapture";
+import { StageSceneField } from "./StageSceneField";
 import { StageObjectCard } from "./StageObjectCard";
 import type {
   StageWebHarnessRunnerProofs,
@@ -147,6 +152,7 @@ export function StageShell({
   const [voiceError, setVoiceError] = useState<string | undefined>();
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
   const presenceOrbPointerStartedRef = useRef(false);
+  const voiceButtonPointerStartedRef = useRef(false);
   const stageStyle = {
     "--stage-accent": accentColor
   } as CSSProperties;
@@ -184,14 +190,17 @@ export function StageShell({
   }
 
   function startVoiceCapture() {
-    if (realtimeArmAvailable && realtimeBridge.status === "disabled") {
+    const SpeechRecognition = getSpeechRecognitionConstructor();
+
+    if (
+      realtimeArmAvailable &&
+      realtimeBridge.status === "disabled"
+    ) {
       onArmRealtime();
       return;
     }
 
-    const SpeechRecognition = getSpeechRecognitionConstructor();
-
-    if (!SpeechRecognition || voiceCapture.status === "unavailable") {
+    if (!SpeechRecognition) {
       setVoiceError("Speech capture is not available in this browser.");
       return;
     }
@@ -269,6 +278,34 @@ export function StageShell({
   function activatePresenceOrbFromClick() {
     if (presenceOrbPointerStartedRef.current) {
       presenceOrbPointerStartedRef.current = false;
+      return;
+    }
+
+    startVoiceCapture();
+  }
+
+  function activateVoiceButton(event?: ReactPointerEvent<HTMLButtonElement>) {
+    event?.preventDefault();
+    voiceButtonPointerStartedRef.current = Boolean(event);
+    startVoiceCapture();
+  }
+
+  function activateVoiceButtonFromMouseDown(
+    event: ReactMouseEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+
+    if (voiceButtonPointerStartedRef.current) {
+      return;
+    }
+
+    voiceButtonPointerStartedRef.current = true;
+    startVoiceCapture();
+  }
+
+  function activateVoiceButtonFromClick() {
+    if (voiceButtonPointerStartedRef.current) {
+      voiceButtonPointerStartedRef.current = false;
       return;
     }
 
@@ -443,6 +480,7 @@ export function StageShell({
         data-stage-layout={stageScene.layoutMode}
         data-testid="stage-workspace"
       >
+        <StageSceneField scene={stageScene} />
         <div
           className="stage-field-orientation"
           aria-label="Thread topology"
@@ -461,7 +499,12 @@ export function StageShell({
             ))}
           </ol>
         </div>
-        <div className="stage-object-constellation">
+        <div
+          className={`stage-object-constellation ${
+            visibleObjects.length >= 10 ? "stage-object-constellation-dense" : ""
+          }`}
+          data-object-count={visibleObjects.length}
+        >
           {visibleObjects.map((object) => (
             <StageObjectCard
               key={object.id}
@@ -544,7 +587,9 @@ export function StageShell({
           type="button"
           aria-pressed={stageIsListening}
           disabled={!voiceInputAvailable}
-          onClick={startVoiceCapture}
+          onClick={activateVoiceButtonFromClick}
+          onMouseDown={activateVoiceButtonFromMouseDown}
+          onPointerDown={activateVoiceButton}
         >
           {voiceButtonLabel}
         </button>

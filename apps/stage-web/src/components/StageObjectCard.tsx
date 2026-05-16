@@ -1,5 +1,9 @@
 import type { StageObject, StageSceneNode } from "@blackstage/stage-core";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  CSSProperties,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent
+} from "react";
 import { useEffect, useRef, useState } from "react";
 
 type StageObjectCardProps = {
@@ -69,23 +73,25 @@ export function StageObjectCard({
   const objectStyle = {
     "--object-shift-x": `${visibleShift.x}px`,
     "--object-shift-y": `${visibleShift.y}px`,
+    "--scene-x": `${sceneNode?.transform.x ?? 50}`,
+    "--scene-y": `${sceneNode?.transform.y ?? 50}`,
     "--scene-depth": `${sceneNode?.transform.z ?? object.position?.z ?? 0}`,
-    "--scene-priority": `${sceneNode?.priority ?? 50}`
+    "--scene-priority": `${sceneNode?.priority ?? 50}`,
+    "--scene-rotate-x": `${sceneNode?.transform.rotateX ?? 0}`,
+    "--scene-rotate-y": `${sceneNode?.transform.rotateY ?? 0}`,
+    "--scene-scale": `${sceneNode?.transform.scale ?? 1}`
   } as CSSProperties;
 
-  function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    const dragStart = {
-      pointerX: event.clientX,
-      pointerY: event.clientY,
-      objectX: object.position?.x ?? 0,
-      objectY: object.position?.y ?? 0
-    };
+  function beginWindowDrag(dragStart: {
+    pointerX: number;
+    pointerY: number;
+    objectX: number;
+    objectY: number;
+  }) {
     dragStartRef.current = dragStart;
     setIsDragging(true);
 
-    const moveWindowDrag = (moveEvent: PointerEvent) => {
+    const moveWindowDrag = (moveEvent: PointerEvent | MouseEvent) => {
       const nextX = dragStart.objectX + moveEvent.clientX - dragStart.pointerX;
       const nextY = dragStart.objectY + moveEvent.clientY - dragStart.pointerY;
 
@@ -103,6 +109,12 @@ export function StageObjectCard({
     const cleanupWindowDrag = () => {
       window.removeEventListener("pointermove", moveWindowDrag);
       window.removeEventListener("pointerup", endWindowDrag);
+      window.removeEventListener("mousemove", moveWindowDrag);
+      window.removeEventListener("mouseup", endWindowDrag);
+      document.removeEventListener("pointermove", moveWindowDrag);
+      document.removeEventListener("pointerup", endWindowDrag);
+      document.removeEventListener("mousemove", moveWindowDrag);
+      document.removeEventListener("mouseup", endWindowDrag);
       dragCleanupRef.current = undefined;
     };
 
@@ -110,6 +122,37 @@ export function StageObjectCard({
     dragCleanupRef.current = cleanupWindowDrag;
     window.addEventListener("pointermove", moveWindowDrag);
     window.addEventListener("pointerup", endWindowDrag);
+    window.addEventListener("mousemove", moveWindowDrag);
+    window.addEventListener("mouseup", endWindowDrag);
+    document.addEventListener("pointermove", moveWindowDrag);
+    document.addEventListener("pointerup", endWindowDrag);
+    document.addEventListener("mousemove", moveWindowDrag);
+    document.addEventListener("mouseup", endWindowDrag);
+  }
+
+  function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    beginWindowDrag({
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      objectX: object.position?.x ?? 0,
+      objectY: object.position?.y ?? 0
+    });
+  }
+
+  function startMouseDrag(event: ReactMouseEvent<HTMLButtonElement>) {
+    if (dragStartRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    beginWindowDrag({
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      objectX: object.position?.x ?? 0,
+      objectY: object.position?.y ?? 0
+    });
   }
 
   function moveDrag(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -222,6 +265,7 @@ export function StageObjectCard({
           onPointerMove={moveDrag}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
+          onMouseDown={startMouseDrag}
         >
           <span aria-hidden="true">⋮⋮</span>
         </button>
