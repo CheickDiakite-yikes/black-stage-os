@@ -65,6 +65,21 @@ Continued the rendering-first goal after the scene-field slice:
 - Added e2e coverage for zone metadata/flow and post-approval all-object
   overlap checks, including command-dock clearance.
 
+## 2026-05-16 Checkpoint: Approval Ritual And Labor Field Slice
+
+Continued the rendering-first goal by moving approval/labor meaning into the
+field instead of leaving it only as rail content:
+
+- Added `StageRitualField`, a central non-interactive layer above
+  `StageSceneField`.
+- Recent agent events now render as a geometric labor orbit in the field.
+- The latest approval renders as an approval threshold in the field, while the
+  right rail remains the only explicit approve/reject/ask-why control surface.
+- Added e2e and Browser-plugin geometry checks so the threshold does not cover
+  the focal plan object or command dock in pending or approved states.
+- Preserved the orb-first startup contract and kept hidden QA parameters as the
+  only scenario entrypoint for repeat visual validation.
+
 Paste this into Codex CLI after installing the goal-mode add-on, running `/status`, and reviewing the pre-goal `/plan`.
 
 ```text

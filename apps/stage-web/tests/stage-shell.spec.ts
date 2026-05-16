@@ -302,6 +302,16 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       '[data-testid="intent-capture"]'
     );
     const commandRect = intentCapture?.getBoundingClientRect();
+    const ritualField = document.querySelector<HTMLElement>(
+      '[data-testid="stage-ritual-field"]'
+    );
+    const laborNodes = document.querySelectorAll<HTMLElement>(
+      '[data-testid="stage-labor-node"]'
+    );
+    const approvalThreshold = document.querySelector<HTMLElement>(
+      '[data-testid="stage-approval-threshold"]'
+    );
+    const approvalThresholdRect = approvalThreshold?.getBoundingClientRect();
     const overlaps = (first: DOMRect, second: DOMRect) =>
       first.left < second.right &&
       first.right > second.left &&
@@ -321,9 +331,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       planSceneX: Number(planObjectElement.style.getPropertyValue("--scene-x")),
       planSceneY: Number(planObjectElement.style.getPropertyValue("--scene-y")),
       documentSceneY: Number(documentObject.style.getPropertyValue("--scene-y")),
-      planSceneDepth: Number(
-        planObjectElement.style.getPropertyValue("--scene-depth")
-      ),
+      planSceneDepth: Number(planObjectElement.style.getPropertyValue("--scene-depth")),
       sceneEdgeCount: Number(sceneField.dataset.edgeCount ?? 0),
       sceneNodeCount: Number(sceneField.dataset.nodeCount ?? 0),
       sceneZoneCount: Number(sceneField.dataset.zoneCount ?? 0),
@@ -345,6 +353,18 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       sceneHasPrimaryHalo: Boolean(
         sceneField.querySelector('[data-scene-cluster="primary_work"]')
       ),
+      ritualExists: Boolean(ritualField),
+      ritualHasApproval: ritualField?.dataset.hasApproval === "true",
+      ritualEventCount: Number(ritualField?.dataset.eventCount ?? 0),
+      laborNodeCount: laborNodes.length,
+      thresholdStatus: approvalThreshold?.dataset.approvalStatus,
+      thresholdDoesNotCoverPlan: approvalThresholdRect
+        ? !overlaps(approvalThresholdRect, planRect)
+        : false,
+      thresholdDoesNotCoverCommand:
+        approvalThresholdRect && commandRect
+          ? !overlaps(approvalThresholdRect, commandRect)
+          : false,
       planRightOfIntent: planRect.left > intentRect.left + 80,
       documentBelowIntent: documentRect.top > intentRect.top + 80,
       objectsDoNotOverlap:
@@ -384,6 +404,10 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(renderFieldEvidence.sceneHasSupportEdge).toBe(true);
   expect(renderFieldEvidence.sceneHasIntentHalo).toBe(true);
   expect(renderFieldEvidence.sceneHasPrimaryHalo).toBe(true);
+  expect(renderFieldEvidence.ritualExists).toBe(true);
+  expect(renderFieldEvidence.ritualHasApproval).toBe(false);
+  expect(renderFieldEvidence.ritualEventCount).toBeGreaterThanOrEqual(2);
+  expect(renderFieldEvidence.laborNodeCount).toBeGreaterThanOrEqual(2);
   expect(renderFieldEvidence.planRightOfIntent).toBe(true);
   expect(renderFieldEvidence.documentBelowIntent).toBe(true);
   expect(renderFieldEvidence.objectsDoNotOverlap).toBe(true);
@@ -430,6 +454,47 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   await expect(page.getByTestId("artifact-stack")).toContainText(
     "Codex Task Brief: Build Stage Shell v0"
   );
+  const pendingRitualEvidence = await page.evaluate(() => {
+    const overlaps = (first: DOMRect, second: DOMRect) =>
+      !(
+        first.right <= second.left ||
+        second.right <= first.left ||
+        first.bottom <= second.top ||
+        second.bottom <= first.top
+      );
+    const ritualField = document.querySelector<HTMLElement>(
+      '[data-testid="stage-ritual-field"]'
+    );
+    const approvalThreshold = document.querySelector<HTMLElement>(
+      '[data-testid="stage-approval-threshold"]'
+    );
+    const planObjectElement = document.querySelector<HTMLElement>(
+      '[data-testid="stage-object-plan_card"]'
+    );
+    const intentCapture = document.querySelector<HTMLElement>(
+      '[data-testid="intent-capture"]'
+    );
+    const thresholdRect = approvalThreshold?.getBoundingClientRect();
+    const planRect = planObjectElement?.getBoundingClientRect();
+    const commandRect = intentCapture?.getBoundingClientRect();
+
+    return {
+      ritualHasApproval: ritualField?.dataset.hasApproval === "true",
+      laborNodeCount: document.querySelectorAll('[data-testid="stage-labor-node"]')
+        .length,
+      thresholdStatus: approvalThreshold?.dataset.approvalStatus,
+      thresholdDoesNotCoverPlan:
+        thresholdRect && planRect ? !overlaps(thresholdRect, planRect) : false,
+      thresholdDoesNotCoverCommand:
+        thresholdRect && commandRect ? !overlaps(thresholdRect, commandRect) : false
+    };
+  });
+
+  expect(pendingRitualEvidence.ritualHasApproval).toBe(true);
+  expect(pendingRitualEvidence.laborNodeCount).toBeGreaterThanOrEqual(4);
+  expect(pendingRitualEvidence.thresholdStatus).toBe("pending");
+  expect(pendingRitualEvidence.thresholdDoesNotCoverPlan).toBe(true);
+  expect(pendingRitualEvidence.thresholdDoesNotCoverCommand).toBe(true);
 
   await page.getByRole("button", { name: "Approve", exact: true }).click({
     force: true
@@ -463,6 +528,10 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       const objectOverlaps: Array<[string, string]> = [];
       const commandDock = document.querySelector<HTMLElement>(".intent-capture");
       const commandRect = commandDock?.getBoundingClientRect();
+      const approvalThreshold = workspace.querySelector<HTMLElement>(
+        '[data-testid="stage-approval-threshold"]'
+      );
+      const approvalThresholdRect = approvalThreshold?.getBoundingClientRect();
 
       for (let firstIndex = 0; firstIndex < objectRects.length; firstIndex += 1) {
         for (
@@ -470,9 +539,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           secondIndex < objectRects.length;
           secondIndex += 1
         ) {
-          if (
-            overlaps(objectRects[firstIndex].rect, objectRects[secondIndex].rect)
-          ) {
+          if (overlaps(objectRects[firstIndex].rect, objectRects[secondIndex].rect)) {
             objectOverlaps.push([
               objectRects[firstIndex].title,
               objectRects[secondIndex].title
@@ -483,19 +550,26 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
       return {
         activeZoneCount: Number(
-          workspace
-            .querySelector<HTMLElement>(".stage-scene-field")
-            ?.dataset.activeZoneCount ?? 0
+          workspace.querySelector<HTMLElement>(".stage-scene-field")?.dataset
+            .activeZoneCount ?? 0
         ),
         hasArtifactZone: Boolean(
           workspace.querySelector('[data-scene-zone="artifact_output"]')
         ),
         hasZoneFlow: Boolean(workspace.querySelector(".scene-zone-flow")),
+        approvedThresholdStatus: approvalThreshold?.dataset.approvalStatus,
+        laborNodeCount: workspace.querySelectorAll('[data-testid="stage-labor-node"]')
+          .length,
         objectCount: objectRects.length,
         objectOverlaps,
         commandOverlaps: commandRect
           ? objectRects
               .filter((object) => overlaps(object.rect, commandRect))
+              .map((object) => object.title)
+          : [],
+        thresholdObjectOverlaps: approvalThresholdRect
+          ? objectRects
+              .filter((object) => overlaps(object.rect, approvalThresholdRect))
               .map((object) => object.title)
           : []
       };
@@ -505,8 +579,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.activeZoneCount).toBeGreaterThanOrEqual(4);
   expect(approvedFieldEvidence.hasArtifactZone).toBe(true);
   expect(approvedFieldEvidence.hasZoneFlow).toBe(true);
+  expect(approvedFieldEvidence.approvedThresholdStatus).toBe("approved");
+  expect(approvedFieldEvidence.laborNodeCount).toBeGreaterThanOrEqual(7);
   expect(approvedFieldEvidence.objectOverlaps).toEqual([]);
   expect(approvedFieldEvidence.commandOverlaps).toEqual([]);
+  expect(approvedFieldEvidence.thresholdObjectOverlaps).toEqual([]);
   await expect(page.getByTestId("browser-portal-surface")).toContainText(
     "blackstage://validation/stage-shell-v0"
   );
@@ -716,7 +793,9 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
     y: initialStoredPosition.y + 18
   };
 
-  await expect.poll(async () => readObjectShift(planObject)).toEqual(expectedVisibleShift);
+  await expect
+    .poll(async () => readObjectShift(planObject))
+    .toEqual(expectedVisibleShift);
 
   const dragWasLogged = await page.evaluate((expected) => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
@@ -993,9 +1072,16 @@ test("Stage Shell v0 prepares approved artifacts as harness action packets", asy
   await expect(page.getByTestId("approval-card")).toContainText(
     "Create three Codex task prompts"
   );
-  await page.getByRole("button", { name: "Approve", exact: true }).click({
-    force: true
-  });
+  await page
+    .getByTestId("approval-card")
+    .getByRole("button", { name: "Approve", exact: true })
+    .click({
+      force: true
+    });
+  await expect(page.getByTestId("approval-card")).toContainText("Approval resolved");
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Task 3: Research instrumentation"
+  );
   await expect(page.getByTestId("artifact-workbench")).toContainText("approved");
 
   await page

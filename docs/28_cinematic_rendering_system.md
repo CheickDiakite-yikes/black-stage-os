@@ -220,6 +220,16 @@ Current implementation:
 - The approved desktop scene now has an e2e geometry gate for all visible
   objects and the command dock, preventing secondary work/task objects from
   drifting back across the focal plan card.
+- `StageRitualField` now renders a central, non-interactive ritual layer above
+  the scene field and below the control-bearing DOM surfaces. It turns recent
+  agent events into a quiet geometric labor orbit and mirrors the latest
+  approval as an approval threshold inside the field.
+- The right rail still owns the explicit approval buttons and audit copy. The
+  central threshold is visual/spatial intelligence, not a second control
+  surface, so high-impact actions remain accessible and unambiguous.
+- Browser geometry QA now checks that pending and approved approval-threshold
+  states do not cover the focal plan object or the command dock, and that the
+  approved scene keeps object, command, and threshold collisions at zero.
 
 ### Phase 2: Liquid Substrate
 
@@ -274,20 +284,25 @@ Latest Browser-plugin QA for the Build BlackStage scenario:
 
 - Initial state: 3 objects, 3 scene nodes, 2 scene edges, no object overlaps,
   no command-dock overlaps, Speak hit target resolves to the button.
+- Pending approval state: one approval button remains in the right-rail control
+  surface, the central approval threshold is visible in the field, 4 labor
+  nodes are visible, and the threshold does not cover the focal plan or command
+  dock.
 - Approved state: 14 objects, 14 scene nodes, 11 scene edges, dense
   constellation mode active, approved artifact workbench visible, no object
-  overlaps, no command-dock overlaps, Speak hit target still resolves to the
-  button.
+  overlaps, no command-dock overlaps, no approval-threshold/object overlaps,
+  Speak hit target still resolves to the button.
 
 ## Next Slice
 
 Make the vector field more alive without sacrificing readability:
 
 - Add focus-pull transitions when the primary object changes.
-- Move approval from right rail to a central ritual state when a pending
-  approval exists, while keeping explicit buttons accessible.
-- Turn agent labor into a geometric/progress constellation that can expand into
-  the full audit feed.
+- Make the central approval threshold feel more like the action object itself:
+  dim the field, focus the camera, and let the relevant object become the
+  approval instrument while preserving one explicit approval control surface.
+- Evolve the current labor orbit into a richer geometric/progress constellation
+  that can expand into the full audit feed.
 - Capture real object geometry after layout and map SVG edges to actual object
   centers instead of semantic approximations.
 - Add a compact manifest/debug overlay for live sessions.

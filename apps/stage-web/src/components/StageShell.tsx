@@ -23,8 +23,9 @@ import { AgentActivityFeed } from "./AgentActivityFeed";
 import { ApprovalCard } from "./ApprovalCard";
 import { ArtifactCard } from "./ArtifactCard";
 import { ResearchCapture } from "./ResearchCapture";
-import { StageSceneField } from "./StageSceneField";
 import { StageObjectCard } from "./StageObjectCard";
+import { StageRitualField } from "./StageRitualField";
+import { StageSceneField } from "./StageSceneField";
 import type {
   StageWebHarnessRunnerProofs,
   StageWebHarnessRunnerSnapshot
@@ -192,10 +193,7 @@ export function StageShell({
   function startVoiceCapture() {
     const SpeechRecognition = getSpeechRecognitionConstructor();
 
-    if (
-      realtimeArmAvailable &&
-      realtimeBridge.status === "disabled"
-    ) {
+    if (realtimeArmAvailable && realtimeBridge.status === "disabled") {
       onArmRealtime();
       return;
     }
@@ -290,9 +288,7 @@ export function StageShell({
     startVoiceCapture();
   }
 
-  function activateVoiceButtonFromMouseDown(
-    event: ReactMouseEvent<HTMLButtonElement>
-  ) {
+  function activateVoiceButtonFromMouseDown(event: ReactMouseEvent<HTMLButtonElement>) {
     event.preventDefault();
 
     if (voiceButtonPointerStartedRef.current) {
@@ -481,6 +477,11 @@ export function StageShell({
         data-testid="stage-workspace"
       >
         <StageSceneField scene={stageScene} />
+        <StageRitualField
+          approval={latestApproval}
+          events={thread.agentEvents}
+          isRunning={isRunning}
+        />
         <div
           className="stage-field-orientation"
           aria-label="Thread topology"

@@ -141,6 +141,23 @@ material treatment rather than by CSS 3D transforms on interactive cards.
 Likewise, active command controls use stable geometry so voice startup and
 artifact actions remain reachable while the render field animates.
 
+### StageRitualField
+
+`StageRitualField` is the central ritual/labor layer above `StageSceneField`
+and below the interactive DOM object surfaces. It reads only serialized
+`IntentThread` state: recent `AgentEvent` records and the latest
+`ApprovalRequest`.
+
+The layer renders visible labor as a quiet geometric orbit and mirrors a pending
+or approved request as an approval threshold in the field. It does not own the
+approval action. The right-rail `ApprovalCard` remains the single explicit
+button surface for approve/reject/ask-why, which keeps high-impact action
+semantics auditable while the field itself becomes more cinematic and
+organized.
+
+Browser and e2e geometry checks guard this layer against covering the focal work
+object, the command dock, or other readable objects.
+
 ### IntentThread
 
 ```ts
