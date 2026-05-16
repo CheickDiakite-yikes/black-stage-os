@@ -2,7 +2,8 @@ import type {
   StageSceneClusterId,
   StageSceneEdge,
   StageSceneManifest,
-  StageSceneNode
+  StageSceneNode,
+  StageSceneZone
 } from "@blackstage/stage-core";
 
 type StageSceneFieldProps = {
@@ -91,6 +92,7 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
   const visibleClusters = Array.from(
     new Set(scene.nodes.map((node) => node.clusterId))
   ).map((clusterId) => resolveClusterHalo(clusterId, anchors));
+  const activeZones = scene.zones.filter((zone) => zone.active);
   const focalAnchor =
     anchors.find((anchor) => anchor.node.objectId === scene.camera.focalObjectId) ??
     anchors.find((anchor) => anchor.node.role === "primary_display") ??
@@ -102,10 +104,12 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
       className="stage-scene-field"
       aria-hidden="true"
       data-ambient={scene.ambientState}
+      data-active-zone-count={activeZones.length}
       data-edge-count={visibleEdges.length}
       data-layout={scene.layoutMode}
       data-node-count={scene.nodes.length}
       data-testid="stage-scene-field"
+      data-zone-count={scene.zones.length}
     >
       <svg
         className="stage-scene-field-vector"
@@ -123,6 +127,31 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
             <feGaussianBlur stdDeviation="0.6" />
           </filter>
         </defs>
+        <g className="scene-zone-field">
+          {scene.zones.map((zone) => (
+            <ellipse
+              key={zone.id}
+              className={`scene-zone scene-zone-${zone.clusterId} ${
+                zone.active ? "scene-zone-active" : "scene-zone-dormant"
+              }`}
+              cx={zone.x}
+              cy={zone.y}
+              data-scene-cluster={zone.clusterId}
+              data-scene-zone={zone.id}
+              data-scene-zone-active={zone.active ? "true" : "false"}
+              data-scene-zone-intensity={zone.intensity.toFixed(2)}
+              rx={zone.radiusX}
+              ry={zone.radiusY}
+            />
+          ))}
+          {activeZones.length > 1 ? (
+            <path
+              className="scene-zone-flow"
+              d={drawZoneFlow(activeZones)}
+              pathLength="1"
+            />
+          ) : null}
+        </g>
         <g className="scene-cluster-halos">
           {visibleClusters.map((cluster) => (
             <ellipse
@@ -183,6 +212,32 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
       </svg>
     </div>
   );
+}
+
+function drawZoneFlow(zones: StageSceneZone[]): string {
+  const [firstZone, ...restZones] = zones;
+
+  if (!firstZone) {
+    return "";
+  }
+
+  const segments = [`M ${firstZone.x.toFixed(2)} ${firstZone.y.toFixed(2)}`];
+  let previousZone = firstZone;
+
+  for (const zone of restZones) {
+    const midpointX = (previousZone.x + zone.x) / 2;
+    const midpointY = (previousZone.y + zone.y) / 2;
+    const curveLift = zone.y >= previousZone.y ? -6 : 6;
+
+    segments.push(
+      `C ${midpointX.toFixed(2)} ${(previousZone.y + curveLift).toFixed(2)}`,
+      `${midpointX.toFixed(2)} ${(midpointY - curveLift).toFixed(2)}`,
+      `${zone.x.toFixed(2)} ${zone.y.toFixed(2)}`
+    );
+    previousZone = zone;
+  }
+
+  return segments.join(" ");
 }
 
 function resolveSceneAnchor(node: StageSceneNode, index: number): SceneAnchor {

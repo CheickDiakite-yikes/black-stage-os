@@ -326,7 +326,13 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       ),
       sceneEdgeCount: Number(sceneField.dataset.edgeCount ?? 0),
       sceneNodeCount: Number(sceneField.dataset.nodeCount ?? 0),
+      sceneZoneCount: Number(sceneField.dataset.zoneCount ?? 0),
+      sceneActiveZoneCount: Number(sceneField.dataset.activeZoneCount ?? 0),
       sceneHasFocalStage: Boolean(sceneField.querySelector(".scene-focal-stage")),
+      sceneHasZoneFlow: Boolean(sceneField.querySelector(".scene-zone-flow")),
+      sceneHasWorkZone: Boolean(
+        sceneField.querySelector('[data-scene-zone="work_focus"]')
+      ),
       sceneHasFramesEdge: Boolean(
         sceneField.querySelector('[data-scene-relationship="frames"]')
       ),
@@ -369,7 +375,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(renderFieldEvidence.planSceneDepth).toBeGreaterThan(80);
   expect(renderFieldEvidence.sceneEdgeCount).toBeGreaterThanOrEqual(2);
   expect(renderFieldEvidence.sceneNodeCount).toBeGreaterThanOrEqual(3);
+  expect(renderFieldEvidence.sceneZoneCount).toBeGreaterThanOrEqual(5);
+  expect(renderFieldEvidence.sceneActiveZoneCount).toBeGreaterThanOrEqual(3);
   expect(renderFieldEvidence.sceneHasFocalStage).toBe(true);
+  expect(renderFieldEvidence.sceneHasZoneFlow).toBe(true);
+  expect(renderFieldEvidence.sceneHasWorkZone).toBe(true);
   expect(renderFieldEvidence.sceneHasFramesEdge).toBe(true);
   expect(renderFieldEvidence.sceneHasSupportEdge).toBe(true);
   expect(renderFieldEvidence.sceneHasIntentHalo).toBe(true);
@@ -430,6 +440,73 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   await expect(page.getByTestId("stage-workspace")).toContainText(
     "Task 3: Research instrumentation"
   );
+  await expect(page.getByTestId("stage-workspace")).toContainText("Memory boundary");
+  const approvedFieldEvidence = await page
+    .getByTestId("stage-workspace")
+    .evaluate((workspace) => {
+      const overlaps = (first: DOMRect, second: DOMRect) =>
+        !(
+          first.right <= second.left ||
+          second.right <= first.left ||
+          first.bottom <= second.top ||
+          second.bottom <= first.top
+        );
+      const objectRects = Array.from(
+        workspace.querySelectorAll<HTMLElement>(".stage-object")
+      ).map((element, index) => ({
+        title:
+          element.querySelector("h2")?.textContent?.trim() ??
+          element.dataset.testid ??
+          `object-${index}`,
+        rect: element.getBoundingClientRect()
+      }));
+      const objectOverlaps: Array<[string, string]> = [];
+      const commandDock = document.querySelector<HTMLElement>(".intent-capture");
+      const commandRect = commandDock?.getBoundingClientRect();
+
+      for (let firstIndex = 0; firstIndex < objectRects.length; firstIndex += 1) {
+        for (
+          let secondIndex = firstIndex + 1;
+          secondIndex < objectRects.length;
+          secondIndex += 1
+        ) {
+          if (
+            overlaps(objectRects[firstIndex].rect, objectRects[secondIndex].rect)
+          ) {
+            objectOverlaps.push([
+              objectRects[firstIndex].title,
+              objectRects[secondIndex].title
+            ]);
+          }
+        }
+      }
+
+      return {
+        activeZoneCount: Number(
+          workspace
+            .querySelector<HTMLElement>(".stage-scene-field")
+            ?.dataset.activeZoneCount ?? 0
+        ),
+        hasArtifactZone: Boolean(
+          workspace.querySelector('[data-scene-zone="artifact_output"]')
+        ),
+        hasZoneFlow: Boolean(workspace.querySelector(".scene-zone-flow")),
+        objectCount: objectRects.length,
+        objectOverlaps,
+        commandOverlaps: commandRect
+          ? objectRects
+              .filter((object) => overlaps(object.rect, commandRect))
+              .map((object) => object.title)
+          : []
+      };
+    });
+
+  expect(approvedFieldEvidence.objectCount).toBeGreaterThanOrEqual(10);
+  expect(approvedFieldEvidence.activeZoneCount).toBeGreaterThanOrEqual(4);
+  expect(approvedFieldEvidence.hasArtifactZone).toBe(true);
+  expect(approvedFieldEvidence.hasZoneFlow).toBe(true);
+  expect(approvedFieldEvidence.objectOverlaps).toEqual([]);
+  expect(approvedFieldEvidence.commandOverlaps).toEqual([]);
   await expect(page.getByTestId("browser-portal-surface")).toContainText(
     "blackstage://validation/stage-shell-v0"
   );

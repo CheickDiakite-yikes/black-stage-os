@@ -113,6 +113,8 @@ the cinematic state of the stage:
 - substrate material, liquidity, bloom, and grain
 - object roles, clusters, materials, contours, and motion cues
 - stage-space object coordinates, depth, scale, and tilt
+- semantic zones for intent ingress, work focus, evidence orbit, approval
+  threshold, and artifact output
 - semantic edges between intent, evidence, approvals, and artifacts
 
 This is the Blackstage-specific equivalent of a guarded render spec. It keeps
@@ -123,14 +125,15 @@ become much more fluid.
 
 Stage Web renders the manifest through `StageSceneField`, a non-interactive SVG
 and CSS field layer behind the readable DOM objects. The field draws semantic
-cluster halos, a focal stage floor, horizon energy, and relationship paths while
-documents, approvals, artifacts, and controls remain accessible DOM surfaces
-above it.
+zone bands, cluster halos, a focal stage floor, horizon energy, relationship
+paths, and a soft flow spine through the active zones while documents,
+approvals, artifacts, and controls remain accessible DOM surfaces above it.
 
-The current field uses semantic stage-space coordinates from the manifest so the
-active surface behaves like a cinematic scene instead of a CSS grid. The next
-renderer upgrade should bind edges to measured object geometry after layout so
-the vector layer feels physically attached to the objects it explains.
+The current field uses semantic stage-space coordinates and active zones from
+the manifest so the active surface behaves like a cinematic scene instead of a
+CSS grid. The next renderer upgrade should bind edges to measured object
+geometry after layout so the vector layer feels physically attached to the
+objects it explains.
 
 Control-bearing objects stay on a 2D DOM plane for reliable hit testing. Depth
 is represented by manifest scale, halos, vector relationships, floor rings, and

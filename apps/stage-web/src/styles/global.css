@@ -891,6 +891,55 @@ button:disabled {
   overflow: visible;
 }
 
+.scene-zone-field {
+  opacity: 0.9;
+}
+
+.scene-zone {
+  fill: transparent;
+  opacity: 0.13;
+  stroke: rgba(216, 189, 133, 0.12);
+  stroke-dasharray: 0.16 0.74;
+  stroke-width: 0.18;
+  transform-box: fill-box;
+  transform-origin: center;
+  vector-effect: non-scaling-stroke;
+}
+
+.scene-zone-active {
+  opacity: 0.32;
+  animation: scene-zone-breathe 12s ease-in-out infinite alternate;
+}
+
+.scene-zone-primary_work {
+  stroke: rgba(226, 198, 145, 0.2);
+  stroke-width: 0.22;
+}
+
+.scene-zone-evidence {
+  stroke: rgba(118, 205, 167, 0.18);
+}
+
+.scene-zone-approval {
+  stroke: rgba(216, 170, 88, 0.22);
+}
+
+.scene-zone-artifact {
+  stroke: rgba(239, 228, 210, 0.18);
+}
+
+.scene-zone-flow {
+  fill: none;
+  opacity: 0.42;
+  stroke: rgba(239, 228, 210, 0.28);
+  stroke-dasharray: 0.08 0.28;
+  stroke-linecap: round;
+  stroke-width: 0.22;
+  filter: drop-shadow(0 0 0.36rem rgba(216, 189, 133, 0.22));
+  vector-effect: non-scaling-stroke;
+  animation: scene-zone-flow 10s ease-in-out infinite alternate;
+}
+
 .scene-cluster-halo {
   fill: transparent;
   opacity: 0.34;
@@ -2624,6 +2673,30 @@ button:disabled {
   100% {
     opacity: 0.76;
     stroke-dashoffset: -0.28;
+  }
+}
+
+@keyframes scene-zone-breathe {
+  0% {
+    opacity: 0.2;
+    stroke-dashoffset: 0.08;
+  }
+
+  100% {
+    opacity: 0.38;
+    stroke-dashoffset: -0.22;
+  }
+}
+
+@keyframes scene-zone-flow {
+  0% {
+    opacity: 0.26;
+    stroke-dashoffset: 0.42;
+  }
+
+  100% {
+    opacity: 0.54;
+    stroke-dashoffset: -0.3;
   }
 }
 

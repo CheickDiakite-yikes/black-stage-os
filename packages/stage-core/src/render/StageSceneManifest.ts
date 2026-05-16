@@ -65,6 +65,25 @@ export type StageScenePhase = {
   clusterId: StageSceneClusterId;
 };
 
+export type StageSceneZoneId =
+  | "intent_ingress"
+  | "work_focus"
+  | "evidence_orbit"
+  | "approval_threshold"
+  | "artifact_output";
+
+export type StageSceneZone = {
+  id: StageSceneZoneId;
+  label: string;
+  clusterId: StageSceneClusterId;
+  x: number;
+  y: number;
+  radiusX: number;
+  radiusY: number;
+  intensity: number;
+  active: boolean;
+};
+
 export type StageSceneCamera = {
   mode: "orthographic_field" | "cinematic_table";
   focalObjectId?: string;
@@ -125,6 +144,7 @@ export type StageSceneManifest = {
   camera: StageSceneCamera;
   substrate: StageSceneSubstrate;
   phases: StageScenePhase[];
+  zones: StageSceneZone[];
   nodes: StageSceneNode[];
   edges: StageSceneEdge[];
   updatedAt: IsoTimestamp;
@@ -181,6 +201,7 @@ export function createStageSceneManifest(thread: IntentThread): StageSceneManife
       grain: 0.34
     },
     phases: createStageScenePhases(thread, nodes),
+    zones: createStageSceneZones(thread, nodes),
     nodes,
     edges: createStageSceneEdges(nodes, primaryNode?.objectId),
     updatedAt: thread.updatedAt
@@ -229,20 +250,20 @@ function resolveStageTransform(
 ): StageSceneTransform {
   const collapsedScale = object.state === "collapsed" ? 0.76 : 1;
   const primaryAnchors = [
-    { x: 61, y: 35, z: 88, scale: 0.98, rotateX: 0, rotateY: 0 },
-    { x: 90, y: 34, z: 66, scale: 0.62, rotateX: -3.5, rotateY: 7 },
-    { x: 39, y: 68, z: 62, scale: 0.58, rotateX: -5, rotateY: -3 },
-    { x: 76, y: 58, z: 58, scale: 0.58, rotateX: -5, rotateY: 7 }
+    { x: 57, y: 35, z: 88, scale: 0.98, rotateX: 0, rotateY: 0 },
+    { x: 94, y: 23, z: 66, scale: 0.54, rotateX: -3.5, rotateY: 7 },
+    { x: 24, y: 62, z: 58, scale: 0.54, rotateX: -5, rotateY: -5 },
+    { x: 94, y: 62, z: 56, scale: 0.52, rotateX: -5, rotateY: 8 }
   ];
   const artifactAnchors = [
     { x: 70, y: 77, z: 52, scale: 0.72, rotateX: -5, rotateY: 4 },
-    { x: 87, y: 64, z: 56, scale: 0.68, rotateX: -4.5, rotateY: 7 },
-    { x: 87, y: 82, z: 48, scale: 0.66, rotateX: -6, rotateY: 8 },
+    { x: 94, y: 64, z: 56, scale: 0.66, rotateX: -4.5, rotateY: 7 },
+    { x: 94, y: 82, z: 48, scale: 0.64, rotateX: -6, rotateY: 8 },
     { x: 62, y: 88, z: 40, scale: 0.62, rotateX: -7, rotateY: 3 }
   ];
   const anchor =
     classification.clusterId === "intent"
-      ? { x: 18, y: 28, z: 58, scale: 0.82, rotateX: -3, rotateY: -7 }
+      ? { x: 15, y: 28, z: 58, scale: 0.82, rotateX: -3, rotateY: -7 }
       : classification.clusterId === "primary_work"
         ? primaryAnchors[clusterIndex % primaryAnchors.length]
         : classification.clusterId === "evidence"
@@ -433,6 +454,82 @@ function createStageScenePhases(
       clusterId: "artifact"
     }
   ];
+}
+
+function createStageSceneZones(
+  thread: IntentThread,
+  nodes: StageSceneNode[]
+): StageSceneZone[] {
+  const clusterCount = (clusterId: StageSceneClusterId) =>
+    nodes.filter((node) => node.clusterId === clusterId).length;
+  const approvalCount = thread.approvals.length;
+  const artifactCount = thread.artifacts.length;
+
+  return [
+    {
+      id: "intent_ingress",
+      label: "Intent ingress",
+      clusterId: "intent",
+      x: 15,
+      y: 28,
+      radiusX: 17,
+      radiusY: 15,
+      intensity: resolveZoneIntensity(clusterCount("intent"), 1),
+      active: clusterCount("intent") > 0
+    },
+    {
+      id: "work_focus",
+      label: "Work focus",
+      clusterId: "primary_work",
+      x: 57,
+      y: 36,
+      radiusX: 32,
+      radiusY: 22,
+      intensity: resolveZoneIntensity(clusterCount("primary_work"), 3),
+      active: clusterCount("primary_work") > 0
+    },
+    {
+      id: "evidence_orbit",
+      label: "Evidence orbit",
+      clusterId: "evidence",
+      x: 36,
+      y: 78,
+      radiusX: 38,
+      radiusY: 18,
+      intensity: resolveZoneIntensity(clusterCount("evidence"), 6),
+      active: clusterCount("evidence") > 0
+    },
+    {
+      id: "approval_threshold",
+      label: "Approval threshold",
+      clusterId: "approval",
+      x: 84,
+      y: 48,
+      radiusX: 15,
+      radiusY: 20,
+      intensity: resolveZoneIntensity(approvalCount, 1),
+      active: approvalCount > 0
+    },
+    {
+      id: "artifact_output",
+      label: "Artifact output",
+      clusterId: "artifact",
+      x: 82,
+      y: 76,
+      radiusX: 19,
+      radiusY: 18,
+      intensity: resolveZoneIntensity(artifactCount, 3),
+      active: artifactCount > 0 || clusterCount("artifact") > 0
+    }
+  ];
+}
+
+function resolveZoneIntensity(value: number, fullStrengthAt: number): number {
+  if (value <= 0) {
+    return 0.18;
+  }
+
+  return Number(Math.min(1, 0.34 + value / fullStrengthAt / 1.45).toFixed(2));
 }
 
 function createStageSceneEdges(

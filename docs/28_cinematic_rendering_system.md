@@ -199,6 +199,10 @@ Current implementation:
   CSS grid coincidence.
 - Manifest clusters become halos for intent, primary work, evidence, approval,
   artifact, and telemetry.
+- Manifest zones now define the larger spatial grammar of the field: intent
+  ingress, work focus, evidence orbit, approval threshold, and artifact output.
+  `StageSceneField` renders those zones as faint active bands plus a flow spine
+  so organization is visible before a user reads any card.
 - `StageSceneField` renders a focal floor/horizon system under the primary
   object, giving the field a stage, not just a background.
 - DOM objects remain the readable/control-bearing surfaces above the field, but
@@ -213,6 +217,9 @@ Current implementation:
 - Artifact workbench focus is sorted by artifact timestamps, not event arrival
   order, so late old draft events cannot pull focus away from a newer approved
   artifact.
+- The approved desktop scene now has an e2e geometry gate for all visible
+  objects and the command dock, preventing secondary work/task objects from
+  drifting back across the focal plan card.
 
 ### Phase 2: Liquid Substrate
 

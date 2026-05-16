@@ -49,6 +49,22 @@ Shipped a verified rendering slice toward the goal:
   `pnpm build`, `pnpm test:e2e` (28/28), `pnpm scan:secrets`, and Browser
   plugin geometry QA for initial and approved active states.
 
+## 2026-05-16 Checkpoint: Render Organization Intelligence Slice
+
+Continued the rendering-first goal after the scene-field slice:
+
+- `StageSceneManifest` now emits active semantic zones for intent ingress, work
+  focus, evidence orbit, approval threshold, and artifact output.
+- `StageSceneField` renders those zones plus a quiet zone-flow spine behind the
+  object layer so the field communicates organization before the user reads the
+  individual cards.
+- Desktop Browser QA found the next concrete bug: approved-scene secondary
+  objects could still graze the focal plan card at a wide viewport.
+- Retuned intent, primary-work, and artifact anchors so the startup scene and
+  full approved scene both preserve clear space around the focal plan.
+- Added e2e coverage for zone metadata/flow and post-approval all-object
+  overlap checks, including command-dock clearance.
+
 Paste this into Codex CLI after installing the goal-mode add-on, running `/status`, and reviewing the pre-goal `/plan`.
 
 ```text
