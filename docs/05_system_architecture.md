@@ -155,6 +155,13 @@ button surface for approve/reject/ask-why, which keeps high-impact action
 semantics auditable while the field itself becomes more cinematic and
 organized.
 
+When an approval is pending, Stage Web derives a single approval-focus object
+from the serialized thread and scene manifest. The focus target remains a normal
+`StageObject`; no extra approval state is stored. The renderer dims surrounding
+objects and draws a non-interactive tether from the focus target to the central
+threshold so the approval is visually attached to the object/action being
+reviewed.
+
 Browser and e2e geometry checks guard this layer against covering the focal work
 object, the command dock, or other readable objects.
 

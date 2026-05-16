@@ -1089,6 +1089,32 @@ button:disabled {
   transform: translateX(-50%);
 }
 
+.stage-approval-tether {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.stage-approval-tether__line {
+  fill: none;
+  opacity: 0.72;
+  stroke: rgba(216, 170, 88, 0.44);
+  stroke-dasharray: 0.16 0.32;
+  stroke-linecap: round;
+  stroke-width: 0.18;
+  filter: drop-shadow(0 0 0.34rem rgba(216, 170, 88, 0.24));
+  vector-effect: non-scaling-stroke;
+  animation: approval-tether-flow 5.6s ease-in-out infinite alternate;
+}
+
+.stage-approval-tether__target,
+.stage-approval-tether__gate {
+  fill: rgba(239, 228, 210, 0.72);
+  filter: drop-shadow(0 0 0.4rem rgba(216, 170, 88, 0.44));
+}
+
 .stage-labor-orbit__spine {
   position: absolute;
   inset: 18% 7% 16%;
@@ -1545,6 +1571,48 @@ button:disabled {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+.stage-workspace-approval-pending::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 57% 35%, rgba(216, 170, 88, 0.13), transparent 12rem),
+    radial-gradient(circle at 82% 48%, rgba(216, 170, 88, 0.11), transparent 10rem),
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(216, 170, 88, 0.075) 49.8%,
+      transparent 50.2%
+    );
+}
+
+.stage-workspace-approval-pending .stage-object:not(.stage-object-approval-focus) {
+  opacity: 0.44 !important;
+  filter: saturate(0.68);
+}
+
+.stage-workspace-approval-pending .stage-object:not(.stage-object-approval-focus):hover,
+.stage-workspace-approval-pending
+  .stage-object:not(.stage-object-approval-focus):focus-within {
+  opacity: 0.78 !important;
+  filter: saturate(0.9);
+}
+
+.stage-object-approval-focus {
+  z-index: 10;
+  border-color: rgba(239, 228, 210, 0.5);
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, 0.68),
+    0 0 72px rgba(216, 170, 88, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.085);
+}
+
+.stage-object-approval-focus::before {
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    radial-gradient(circle at 82% 8%, rgba(216, 170, 88, 0.18), transparent 9rem),
+    linear-gradient(90deg, rgba(216, 170, 88, 0.12), transparent 26%);
+  opacity: 0.48;
+}
+
 .stage-object.stage-object-plan_card h2 {
   font-size: clamp(1.35rem, 2.2vw, 1.95rem);
 }
@@ -1567,6 +1635,15 @@ button:disabled {
 .stage-object-constellation-dense .stage-object.stage-object-plan_card {
   --object-width: clamp(22rem, 34vw, 32rem);
   min-height: 13.6rem;
+}
+
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  ) {
+  --object-width: clamp(17rem, 24vw, 25rem);
+  max-height: 10.4rem;
+  padding: 0.9rem;
 }
 
 .stage-object-constellation-dense
@@ -1653,6 +1730,62 @@ button:disabled {
   height: 1px;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .object-list,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .document-portal-surface,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .browser-portal-surface,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .map-surface,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .memory-surface,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .model-surface,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .simulation-surface,
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  )
+  .object-annotations {
+  position: static;
+  width: auto;
+  height: auto;
+  clip: auto;
+  white-space: normal;
+}
+
+.stage-object-constellation-dense
+  .stage-object-approval-focus:not(.stage-object-plan_card):not(
+    .stage-object-intent_card
+  ) {
+  --object-width: clamp(17rem, 24vw, 25rem);
+  max-height: 10.4rem;
+  padding: 0.9rem;
 }
 
 .stage-object-dragging {
@@ -2961,6 +3094,18 @@ button:disabled {
     box-shadow:
       0 0 70px rgba(216, 170, 88, 0.18),
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+@keyframes approval-tether-flow {
+  0% {
+    opacity: 0.44;
+    stroke-dashoffset: 0.18;
+  }
+
+  100% {
+    opacity: 0.82;
+    stroke-dashoffset: -0.18;
   }
 }
 

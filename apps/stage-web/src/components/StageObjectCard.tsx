@@ -7,6 +7,7 @@ import type {
 import { useEffect, useRef, useState } from "react";
 
 type StageObjectCardProps = {
+  approvalFocused?: boolean;
   object: StageObject;
   sceneNode?: StageSceneNode;
   onCollapseToggle: (objectId: string) => void;
@@ -44,6 +45,7 @@ const objectLabels: Record<StageObject["type"], string> = {
 };
 
 export function StageObjectCard({
+  approvalFocused = false,
   object,
   sceneNode,
   onCollapseToggle,
@@ -210,8 +212,9 @@ export function StageObjectCard({
       } ${sceneNode ? `stage-object-material-${sceneNode.material}` : ""} ${
         sceneNode ? `stage-object-contour-${sceneNode.contour}` : ""
       } ${object.pinned ? "stage-object-pinned" : ""} ${
-        isDragging ? "stage-object-dragging" : ""
-      }`}
+        approvalFocused ? "stage-object-approval-focus" : ""
+      } ${isDragging ? "stage-object-dragging" : ""}`}
+      data-approval-focus={approvalFocused ? "true" : "false"}
       data-testid={`stage-object-${object.type}`}
       data-scene-cluster={sceneNode?.clusterId}
       data-scene-material={sceneNode?.material}

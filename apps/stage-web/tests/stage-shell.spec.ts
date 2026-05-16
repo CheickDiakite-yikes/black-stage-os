@@ -465,11 +465,20 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const ritualField = document.querySelector<HTMLElement>(
       '[data-testid="stage-ritual-field"]'
     );
+    const workspace = document.querySelector<HTMLElement>(
+      '[data-testid="stage-workspace"]'
+    );
     const approvalThreshold = document.querySelector<HTMLElement>(
       '[data-testid="stage-approval-threshold"]'
     );
+    const approvalTether = document.querySelector<HTMLElement>(
+      ".stage-approval-tether"
+    );
     const planObjectElement = document.querySelector<HTMLElement>(
       '[data-testid="stage-object-plan_card"]'
+    );
+    const approvalFocusedObject = document.querySelector<HTMLElement>(
+      '[data-approval-focus="true"]'
     );
     const intentCapture = document.querySelector<HTMLElement>(
       '[data-testid="intent-capture"]'
@@ -477,8 +486,22 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const thresholdRect = approvalThreshold?.getBoundingClientRect();
     const planRect = planObjectElement?.getBoundingClientRect();
     const commandRect = intentCapture?.getBoundingClientRect();
+    const intentObject = document.querySelector<HTMLElement>(
+      '[data-testid="stage-object-intent_card"]'
+    );
 
     return {
+      approvalFocusObject: workspace?.dataset.approvalFocusObject,
+      approvalFocusedObjectType: approvalFocusedObject?.dataset.testid,
+      hasApprovalPendingClass:
+        workspace?.classList.contains("stage-workspace-approval-pending") ?? false,
+      hasApprovalTether: Boolean(approvalTether),
+      dimmedIntentOpacity: Number(
+        intentObject ? getComputedStyle(intentObject).opacity : 1
+      ),
+      focusedPlanOpacity: Number(
+        planObjectElement ? getComputedStyle(planObjectElement).opacity : 0
+      ),
       ritualHasApproval: ritualField?.dataset.hasApproval === "true",
       laborNodeCount: document.querySelectorAll('[data-testid="stage-labor-node"]')
         .length,
@@ -490,6 +513,14 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     };
   });
 
+  expect(pendingRitualEvidence.approvalFocusObject).toBeTruthy();
+  expect(pendingRitualEvidence.approvalFocusedObjectType).toBe(
+    "stage-object-plan_card"
+  );
+  expect(pendingRitualEvidence.hasApprovalPendingClass).toBe(true);
+  expect(pendingRitualEvidence.hasApprovalTether).toBe(true);
+  expect(pendingRitualEvidence.dimmedIntentOpacity).toBeLessThan(0.8);
+  expect(pendingRitualEvidence.focusedPlanOpacity).toBeGreaterThan(0.95);
   expect(pendingRitualEvidence.ritualHasApproval).toBe(true);
   expect(pendingRitualEvidence.laborNodeCount).toBeGreaterThanOrEqual(4);
   expect(pendingRitualEvidence.thresholdStatus).toBe("pending");
@@ -532,6 +563,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         '[data-testid="stage-approval-threshold"]'
       );
       const approvalThresholdRect = approvalThreshold?.getBoundingClientRect();
+      const approvalTether = workspace.querySelector<HTMLElement>(
+        ".stage-approval-tether"
+      );
 
       for (let firstIndex = 0; firstIndex < objectRects.length; firstIndex += 1) {
         for (
@@ -558,6 +592,13 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         ),
         hasZoneFlow: Boolean(workspace.querySelector(".scene-zone-flow")),
         approvedThresholdStatus: approvalThreshold?.dataset.approvalStatus,
+        approvalFocusObject: workspace.dataset.approvalFocusObject,
+        approvalFocusCount: workspace.querySelectorAll('[data-approval-focus="true"]')
+          .length,
+        hasApprovalPendingClass: workspace.classList.contains(
+          "stage-workspace-approval-pending"
+        ),
+        hasApprovalTether: Boolean(approvalTether),
         laborNodeCount: workspace.querySelectorAll('[data-testid="stage-labor-node"]')
           .length,
         objectCount: objectRects.length,
@@ -580,6 +621,10 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.hasArtifactZone).toBe(true);
   expect(approvedFieldEvidence.hasZoneFlow).toBe(true);
   expect(approvedFieldEvidence.approvedThresholdStatus).toBe("approved");
+  expect(approvedFieldEvidence.approvalFocusObject).toBeUndefined();
+  expect(approvedFieldEvidence.approvalFocusCount).toBe(0);
+  expect(approvedFieldEvidence.hasApprovalPendingClass).toBe(false);
+  expect(approvedFieldEvidence.hasApprovalTether).toBe(false);
   expect(approvedFieldEvidence.laborNodeCount).toBeGreaterThanOrEqual(7);
   expect(approvedFieldEvidence.objectOverlaps).toEqual([]);
   expect(approvedFieldEvidence.commandOverlaps).toEqual([]);

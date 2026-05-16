@@ -1,8 +1,13 @@
-import type { AgentEvent, ApprovalRequest } from "@blackstage/stage-core";
+import type {
+  AgentEvent,
+  ApprovalRequest,
+  StageSceneNode
+} from "@blackstage/stage-core";
 import type { CSSProperties } from "react";
 
 type StageRitualFieldProps = {
   approval?: ApprovalRequest;
+  approvalFocusNode?: StageSceneNode;
   events: AgentEvent[];
   isRunning: boolean;
 };
@@ -20,11 +25,14 @@ const laborPositions = [
 
 export function StageRitualField({
   approval,
+  approvalFocusNode,
   events,
   isRunning
 }: StageRitualFieldProps) {
   const visibleEvents = events.slice(-laborEventLimit);
   const status = approval?.status ?? (isRunning ? "working" : "listening");
+  const shouldRenderApprovalTether =
+    approval?.status === "pending" && approvalFocusNode;
 
   return (
     <section
@@ -34,6 +42,28 @@ export function StageRitualField({
       data-has-approval={approval ? "true" : "false"}
       data-testid="stage-ritual-field"
     >
+      {shouldRenderApprovalTether ? (
+        <svg
+          className="stage-approval-tether"
+          aria-hidden="true"
+          focusable="false"
+          preserveAspectRatio="none"
+          viewBox="0 0 100 100"
+        >
+          <path
+            className="stage-approval-tether__line"
+            d={drawApprovalTether(approvalFocusNode)}
+            pathLength="1"
+          />
+          <circle
+            className="stage-approval-tether__target"
+            cx={approvalFocusNode.transform.x}
+            cy={approvalFocusNode.transform.y}
+            r="1.1"
+          />
+          <circle className="stage-approval-tether__gate" cx="88" cy="42" r="1.2" />
+        </svg>
+      ) : null}
       <div className="stage-labor-orbit" data-testid="stage-labor-orbit">
         <div className="stage-labor-orbit__spine" />
         {visibleEvents.map((event, index) => (
@@ -78,4 +108,19 @@ export function StageRitualField({
       ) : null}
     </section>
   );
+}
+
+function drawApprovalTether(focusNode: StageSceneNode): string {
+  const startX = focusNode.transform.x;
+  const startY = focusNode.transform.y;
+  const endX = 88;
+  const endY = 42;
+  const midpointX = (startX + endX) / 2;
+
+  return [
+    `M ${startX.toFixed(2)} ${startY.toFixed(2)}`,
+    `C ${midpointX.toFixed(2)} ${(startY - 10).toFixed(2)}`,
+    `${midpointX.toFixed(2)} ${(endY + 10).toFixed(2)}`,
+    `${endX.toFixed(2)} ${endY.toFixed(2)}`
+  ].join(" ");
 }

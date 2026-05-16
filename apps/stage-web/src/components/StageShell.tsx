@@ -172,6 +172,13 @@ export function StageShell({
     () => new Map(stageScene.nodes.map((node) => [node.objectId, node])),
     [stageScene.nodes]
   );
+  const approvalFocusObjectId = useMemo(
+    () => resolveApprovalFocusObjectId(thread, stageScene, latestApproval),
+    [latestApproval, stageScene, thread]
+  );
+  const approvalFocusNode = approvalFocusObjectId
+    ? sceneNodeByObjectId.get(approvalFocusObjectId)
+    : undefined;
 
   function submitIntent(
     nextIntent = intentText,
@@ -470,8 +477,11 @@ export function StageShell({
         </p>
       </section>
       <section
-        className="stage-workspace"
+        className={`stage-workspace ${
+          approvalFocusObjectId ? "stage-workspace-approval-pending" : ""
+        }`}
         aria-label="Dynamic render objects"
+        data-approval-focus-object={approvalFocusObjectId}
         data-stage-ambient={stageScene.ambientState}
         data-stage-layout={stageScene.layoutMode}
         data-testid="stage-workspace"
@@ -479,6 +489,7 @@ export function StageShell({
         <StageSceneField scene={stageScene} />
         <StageRitualField
           approval={latestApproval}
+          approvalFocusNode={approvalFocusNode}
           events={thread.agentEvents}
           isRunning={isRunning}
         />
@@ -509,6 +520,7 @@ export function StageShell({
           {visibleObjects.map((object) => (
             <StageObjectCard
               key={object.id}
+              approvalFocused={object.id === approvalFocusObjectId}
               object={object}
               sceneNode={sceneNodeByObjectId.get(object.id)}
               onCollapseToggle={onCollapseObject}
@@ -924,6 +936,47 @@ function getSpeechRecognitionConstructor():
 
   const speechWindow = window as SpeechRecognitionWindow;
   return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+}
+
+function resolveApprovalFocusObjectId(
+  thread: IntentThread,
+  scene: ReturnType<typeof createStageSceneManifest>,
+  approval?: IntentThread["approvals"][number]
+): string | undefined {
+  if (approval?.status !== "pending") {
+    return undefined;
+  }
+
+  const actionTaskId = approval.id.endsWith("_approval")
+    ? approval.id.replace(/_approval$/, "_task")
+    : undefined;
+  const exactActionTask = actionTaskId
+    ? thread.renderObjects.find((object) => object.id === actionTaskId)
+    : undefined;
+
+  if (exactActionTask) {
+    return exactActionTask.id;
+  }
+
+  if (
+    approval.actionType === "memory_write" ||
+    approval.actionType === "memory_delete"
+  ) {
+    return thread.renderObjects.find((object) => object.type === "memory_card")?.id;
+  }
+
+  if (approval.actionType === "file_write") {
+    return (
+      thread.renderObjects.find((object) => object.type === "plan_card")?.id ??
+      scene.camera.focalObjectId
+    );
+  }
+
+  return (
+    scene.camera.focalObjectId ??
+    scene.nodes.find((node) => node.role === "primary_display")?.objectId ??
+    scene.nodes[0]?.objectId
+  );
 }
 
 function readSpeechResult(event: SpeechRecognitionEventLike): {

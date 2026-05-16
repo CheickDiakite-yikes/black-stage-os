@@ -80,6 +80,21 @@ field instead of leaving it only as rail content:
 - Preserved the orb-first startup contract and kept hidden QA parameters as the
   only scenario entrypoint for repeat visual validation.
 
+## 2026-05-16 Checkpoint: Approval Focus Pull Slice
+
+Pushed approval closer to an object-bound ritual:
+
+- Pending approvals now derive one approval-focus object from the current
+  `IntentThread` and `StageSceneManifest`.
+- The focused object remains full strength while surrounding objects dim.
+- `StageRitualField` draws a visible tether from the focused object to the
+  approval threshold.
+- Browser-plugin QA confirmed the Build BlackStage pending state has one
+  approval button, one focused plan object, one tether, dimmed surrounding
+  objects, and no threshold overlap with the plan or command dock.
+- The e2e render gate now asserts the same pending approval focus/dimming
+  behavior before resolving the approval.
+
 Paste this into Codex CLI after installing the goal-mode add-on, running `/status`, and reviewing the pre-goal `/plan`.
 
 ```text

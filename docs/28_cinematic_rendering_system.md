@@ -230,6 +230,10 @@ Current implementation:
 - Browser geometry QA now checks that pending and approved approval-threshold
   states do not cover the focal plan object or the command dock, and that the
   approved scene keeps object, command, and threshold collisions at zero.
+- Pending approvals now create an approval-focus state: the relevant work object
+  stays at full strength, surrounding objects dim, and `StageRitualField` draws
+  a live tether from the object to the approval threshold. This starts turning
+  approval into a camera/focus event instead of a detached badge.
 
 ### Phase 2: Liquid Substrate
 
@@ -286,8 +290,9 @@ Latest Browser-plugin QA for the Build BlackStage scenario:
   no command-dock overlaps, Speak hit target resolves to the button.
 - Pending approval state: one approval button remains in the right-rail control
   surface, the central approval threshold is visible in the field, 4 labor
-  nodes are visible, and the threshold does not cover the focal plan or command
-  dock.
+  nodes are visible, the plan card is the single approval-focus object,
+  surrounding intent/evidence objects dim, an approval tether is visible, and
+  the threshold does not cover the focal plan or command dock.
 - Approved state: 14 objects, 14 scene nodes, 11 scene edges, dense
   constellation mode active, approved artifact workbench visible, no object
   overlaps, no command-dock overlaps, no approval-threshold/object overlaps,
@@ -298,9 +303,10 @@ Latest Browser-plugin QA for the Build BlackStage scenario:
 Make the vector field more alive without sacrificing readability:
 
 - Add focus-pull transitions when the primary object changes.
-- Make the central approval threshold feel more like the action object itself:
-  dim the field, focus the camera, and let the relevant object become the
-  approval instrument while preserving one explicit approval control surface.
+- Make the approval instrument more cinematic: the tethered work object should
+  receive a stronger focus pull, the rest of the field should fall further into
+  black material, and the threshold should feel physically attached to the
+  object it is asking about.
 - Evolve the current labor orbit into a richer geometric/progress constellation
   that can expand into the full audit feed.
 - Capture real object geometry after layout and map SVG edges to actual object
