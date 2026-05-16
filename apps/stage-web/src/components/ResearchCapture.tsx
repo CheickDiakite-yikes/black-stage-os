@@ -99,22 +99,32 @@ export function ResearchCapture({
             {realtimeLatencyLine ? ` · ${realtimeLatencyLine}` : ""}
           </p>
           <button type="button" onClick={onExportRealtimeDebug}>
-            Export debug
+            Export debug log
           </button>
         </div>
       ) : null}
       <div className="research-actions">
         <button
+          className="trace-action-secondary"
           type="button"
           disabled={stageEventCount === 0 || isReplaying}
           onClick={onReplay}
         >
           Replay trace
         </button>
-        <button type="button" onClick={onExport}>
+        <button className="trace-action-primary" type="button" onClick={onExport}>
           Export JSON
         </button>
-        <button type="button" onClick={onReset}>
+        {realtimeDebugSummary ? (
+          <button
+            className="trace-action-primary trace-debug-export-compact"
+            type="button"
+            onClick={onExportRealtimeDebug}
+          >
+            Export debug
+          </button>
+        ) : null}
+        <button className="trace-action-secondary" type="button" onClick={onReset}>
           Reset
         </button>
       </div>

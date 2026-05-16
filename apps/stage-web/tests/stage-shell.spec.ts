@@ -289,6 +289,15 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const intentRect = intentObject.getBoundingClientRect();
     const planRect = planObjectElement.getBoundingClientRect();
     const documentRect = documentObject.getBoundingClientRect();
+    const intentCapture = document.querySelector<HTMLElement>(
+      '[data-testid="intent-capture"]'
+    );
+    const commandRect = intentCapture?.getBoundingClientRect();
+    const overlaps = (first: DOMRect, second: DOMRect) =>
+      first.left < second.right &&
+      first.right > second.left &&
+      first.top < second.bottom &&
+      first.bottom > second.top;
 
     return {
       columns: getComputedStyle(constellation)
@@ -301,7 +310,16 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         .getPropertyValue("--object-accent")
         .trim(),
       planRightOfIntent: planRect.left > intentRect.left + 80,
-      documentBelowIntent: documentRect.top > intentRect.top + 80
+      documentBelowIntent: documentRect.top > intentRect.top + 80,
+      objectsDoNotOverlap:
+        !overlaps(intentRect, planRect) &&
+        !overlaps(intentRect, documentRect) &&
+        !overlaps(planRect, documentRect),
+      commandDockDoesNotCoverObjects: commandRect
+        ? !overlaps(commandRect, intentRect) &&
+          !overlaps(commandRect, planRect) &&
+          !overlaps(commandRect, documentRect)
+        : false
     };
   });
 
@@ -313,6 +331,8 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(renderFieldEvidence.documentAccent).not.toBe(renderFieldEvidence.intentAccent);
   expect(renderFieldEvidence.planRightOfIntent).toBe(true);
   expect(renderFieldEvidence.documentBelowIntent).toBe(true);
+  expect(renderFieldEvidence.objectsDoNotOverlap).toBe(true);
+  expect(renderFieldEvidence.commandDockDoesNotCoverObjects).toBe(true);
 
   await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
     force: true
@@ -394,6 +414,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   await expect(page.getByTestId("artifact-workbench")).toContainText("exported");
   await expect(page.getByTestId("research-capture")).toContainText("Research trace");
 
+  await page.getByTestId("research-capture").hover({
+    force: true
+  });
   const downloadPromise = page.waitForEvent("download");
   await page
     .getByTestId("research-capture")
@@ -402,9 +425,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toContain("blackstage-stage-shell");
+  await page.mouse.move(16, 16);
 
   await page.evaluate(() => {
     window.scrollTo(0, 0);
+    document.querySelector(".stage-workspace")?.scrollTo(0, 0);
     document.querySelector(".stage-object-constellation")?.scrollTo(0, 0);
     document.querySelector(".artifact-stack")?.scrollTo(0, 0);
   });
@@ -512,12 +537,40 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
   const dragHandle = planObject.getByRole("button", {
     name: "Drag Stage Shell v0 plan"
   });
-  const initialPosition = await readObjectShift(planObject);
+  const initialShift = await readObjectShift(planObject);
+  const initialStoredPosition = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+
+    if (!rawSnapshot) {
+      return null;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as {
+      currentThread?: {
+        renderObjects?: Array<{
+          type?: string;
+          position?: {
+            x?: number;
+            y?: number;
+          };
+        }>;
+      };
+    };
+    const planObjectSnapshot = snapshot.currentThread?.renderObjects?.find(
+      (object) => object.type === "plan_card"
+    );
+
+    return {
+      x: planObjectSnapshot?.position?.x ?? 0,
+      y: planObjectSnapshot?.position?.y ?? 0
+    };
+  });
   const dragBox = await dragHandle.boundingBox();
 
   expect(dragBox).not.toBeNull();
+  expect(initialStoredPosition).not.toBeNull();
 
-  if (!dragBox) {
+  if (!dragBox || !initialStoredPosition) {
     return;
   }
 
@@ -532,12 +585,16 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
   );
   await page.mouse.up();
 
-  const expectedPosition = {
-    x: initialPosition.x + 42,
-    y: initialPosition.y + 18
+  const expectedVisibleShift = {
+    x: initialShift.x + 42,
+    y: initialShift.y + 18
+  };
+  const expectedStoredPosition = {
+    x: initialStoredPosition.x + 42,
+    y: initialStoredPosition.y + 18
   };
 
-  await expect.poll(async () => readObjectShift(planObject)).toEqual(expectedPosition);
+  await expect.poll(async () => readObjectShift(planObject)).toEqual(expectedVisibleShift);
 
   const dragWasLogged = await page.evaluate((expected) => {
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
@@ -568,7 +625,7 @@ test("Stage Shell v0 records direct object dragging as replayable manipulation",
           event.payload.position?.y === expected.y
       )
     );
-  }, expectedPosition);
+  }, expectedStoredPosition);
 
   expect(dragWasLogged).toBe(true);
 });
@@ -951,6 +1008,9 @@ test("Stage Shell v0 replays the local event log without mutating it", async ({
 
   expect(stageEventCount).toBeGreaterThan(6);
 
+  await page.getByTestId("research-capture").hover({
+    force: true
+  });
   await page
     .getByTestId("research-capture")
     .getByRole("button", { name: "Replay trace" })

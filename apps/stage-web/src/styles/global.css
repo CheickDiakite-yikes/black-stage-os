@@ -28,7 +28,7 @@ body,
 }
 
 body {
-  overflow: hidden;
+  overflow: clip;
 }
 
 button,
@@ -52,7 +52,7 @@ button:disabled {
   display: grid;
   min-height: 100vh;
   place-items: center;
-  overflow: hidden;
+  overflow: clip;
   background:
     radial-gradient(circle at 50% 52%, rgba(206, 181, 128, 0.1), transparent 9rem),
     radial-gradient(circle at 52% 44%, rgba(255, 255, 255, 0.045), transparent 30rem),
@@ -326,8 +326,8 @@ button:disabled {
 }
 
 .stage-active .stage-presence {
-  z-index: 1;
-  opacity: 0.52;
+  z-index: 0;
+  opacity: 0.28;
   pointer-events: none;
 }
 
@@ -336,7 +336,7 @@ button:disabled {
 }
 
 .stage-active .presence-orbit {
-  width: 11rem;
+  width: 8.8rem;
 }
 
 .stage-listening .presence-orbit {
@@ -541,11 +541,14 @@ button:disabled {
 }
 
 .stage-active .thread-console {
-  width: min(24rem, calc(100vw - 3rem));
-  padding: 0.78rem 0.9rem;
+  top: 1rem;
+  left: 1rem;
+  width: min(19rem, calc(100vw - 3rem));
+  padding: 0.68rem 0.78rem;
   background:
     linear-gradient(180deg, rgba(10, 10, 10, 0.72), rgba(0, 0, 0, 0.44)),
     radial-gradient(circle at 0% 0%, rgba(216, 189, 133, 0.11), transparent 8rem);
+  opacity: 0.78;
   box-shadow:
     0 18px 58px rgba(0, 0, 0, 0.46),
     inset 0 1px 0 rgba(255, 255, 255, 0.035);
@@ -677,18 +680,20 @@ button:disabled {
 
 .stage-workspace {
   position: absolute;
-  inset: 6.65rem 1.6rem 6.35rem;
+  inset: 5.6rem 1.35rem 5.85rem;
   z-index: 4;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(19rem, 27vw, 25rem);
+  grid-template-columns: minmax(0, 1fr) clamp(19rem, 23vw, 22.5rem);
   grid-template-rows: auto auto auto minmax(0, 1fr);
   grid-template-areas:
     "orientation feed"
     "objects feed"
     "objects approval"
     "objects artifacts";
-  gap: clamp(1rem, 1.6vw, 1.55rem);
+  column-gap: clamp(1.15rem, 1.7vw, 1.75rem);
+  row-gap: clamp(0.86rem, 1.25vw, 1.25rem);
   align-items: start;
+  overflow: clip;
   perspective: 1200px;
   pointer-events: none;
 }
@@ -831,15 +836,15 @@ button:disabled {
 .stage-object-constellation {
   grid-area: objects;
   display: grid;
-  max-height: calc(100vh - 14.8rem);
-  grid-auto-flow: dense;
-  grid-auto-rows: minmax(2.35rem, auto);
-  grid-template-columns: repeat(14, minmax(0, 1fr));
-  gap: 0.95rem;
+  max-height: calc(100vh - 13.4rem);
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(2.2rem, auto);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.15rem;
   align-content: start;
   min-height: 100%;
-  overflow: auto;
-  padding: 0 min(3vw, 2.5rem) 4.6rem;
+  overflow: clip;
+  padding: 0 min(1.4vw, 1.25rem) 4.15rem;
   scrollbar-width: none;
   pointer-events: auto;
 }
@@ -889,43 +894,17 @@ button:disabled {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.stage-object:nth-child(1) {
+.stage-object {
   grid-column: span 4;
 }
 
-.stage-object:nth-child(2) {
-  grid-column: span 7;
-}
-
-.stage-object:nth-child(3) {
-  grid-column: span 5;
-}
-
-.stage-object:nth-child(4) {
-  grid-column: span 5;
-}
-
-.stage-object:nth-child(5) {
-  grid-column: span 4;
-}
-
-.stage-object:nth-child(6) {
-  grid-column: span 4;
-}
-
-.stage-object:nth-child(7) {
-  grid-column: span 4;
-}
-
-.stage-object:nth-child(n + 8) {
-  grid-column: span 4;
-}
-
+.stage-object[data-scene-cluster="intent"],
 .stage-object.stage-object-intent_card {
   grid-column: 1 / span 4;
   --field-y: 0.35rem;
 }
 
+.stage-object[data-scene-cluster="primary_work"],
 .stage-object.stage-object-plan_card {
   grid-column: 5 / span 8;
   min-height: 16.8rem;
@@ -933,9 +912,14 @@ button:disabled {
   --field-y: 0;
 }
 
+.stage-object[data-scene-cluster="evidence"],
 .stage-object.stage-object-document_portal {
-  grid-column: 2 / span 6;
+  grid-column: span 5;
   --field-y: 0.25rem;
+}
+
+.stage-object.stage-object-document_portal {
+  grid-column: 1 / span 5;
 }
 
 .stage-object.stage-object-browser_portal,
@@ -945,6 +929,7 @@ button:disabled {
   grid-column: span 5;
 }
 
+.stage-object[data-scene-cluster="artifact"],
 .stage-object.stage-object-codex_task_card,
 .stage-object.stage-object-memory_card,
 .stage-object.stage-object-research_note,
@@ -985,6 +970,72 @@ button:disabled {
 .stage-object-research_note {
   --object-accent: #b9d38c;
   --object-halo: rgba(185, 211, 140, 0.1);
+}
+
+.stage-object-role-primary_display {
+  --object-scale: 1.035;
+  background:
+    linear-gradient(180deg, rgba(12, 12, 12, 0.76), rgba(0, 0, 0, 0.52)),
+    radial-gradient(
+      ellipse at 48% -8%,
+      color-mix(in srgb, var(--object-accent) 28%, transparent),
+      transparent 17rem
+    ),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.055), transparent 12rem);
+  box-shadow:
+    0 30px 96px rgba(0, 0, 0, 0.62),
+    0 0 54px var(--object-halo),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.stage-object-role-intent_anchor {
+  border-color: rgba(216, 189, 133, 0.34);
+}
+
+.stage-object-role-supporting_evidence {
+  opacity: 0.94;
+}
+
+.stage-object-role-approval_gate {
+  border-color: rgba(216, 189, 133, 0.42);
+  box-shadow:
+    0 26px 86px rgba(0, 0, 0, 0.58),
+    0 0 48px rgba(216, 189, 133, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.stage-object-material-luminous_document {
+  background:
+    linear-gradient(180deg, rgba(10, 14, 13, 0.78), rgba(0, 0, 0, 0.54)),
+    radial-gradient(circle at 18% 0%, rgba(230, 237, 231, 0.16), transparent 13rem);
+}
+
+.stage-object-material-luminous_document .document-portal-surface {
+  border: 1px solid rgba(230, 237, 231, 0.36);
+  background:
+    linear-gradient(180deg, rgba(230, 237, 231, 0.92), rgba(203, 214, 210, 0.84)),
+    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.62), transparent 10rem);
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(230, 237, 231, 0.12);
+  padding: 0.78rem;
+}
+
+.stage-object-material-luminous_document .document-portal-surface h3 {
+  color: rgba(0, 0, 0, 0.86);
+}
+
+.stage-object-material-luminous_document .document-portal-surface dt {
+  color: rgba(40, 52, 49, 0.64);
+}
+
+.stage-object-material-luminous_document .document-portal-surface dd,
+.stage-object-material-luminous_document .document-portal-surface figcaption {
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.stage-object-contour-liquid_island {
+  border-radius: 2px;
 }
 
 .stage-object::after {
@@ -1086,7 +1137,6 @@ button:disabled {
 
 .stage-object:hover .object-actions,
 .stage-object:focus-within .object-actions,
-.stage-object-focused .object-actions,
 .stage-object-pinned .object-actions {
   opacity: 1;
   transform: translateY(0);
@@ -1600,6 +1650,19 @@ button:disabled {
     radial-gradient(circle at 0% 0%, rgba(216, 189, 133, 0.075), transparent 11rem);
 }
 
+.stage-active .agent-feed {
+  max-height: min(28vh, 14.5rem);
+}
+
+.stage-active .approval-card {
+  max-height: min(30vh, 18rem);
+  overflow: auto;
+}
+
+.stage-active .artifact-stack {
+  max-height: min(24vh, 14.5rem);
+}
+
 .approval-grid {
   grid-template-columns: 1fr;
 }
@@ -1687,19 +1750,54 @@ button:disabled {
 }
 
 .stage-active .research-capture {
+  left: 1rem;
+  bottom: 1rem;
   width: min(16rem, calc(100vw - 3rem));
   max-height: 6.35rem;
-  opacity: 0.68;
+  overflow: hidden;
+  opacity: 0.48;
   transition:
     max-height 180ms ease,
     opacity 180ms ease,
     transform 180ms ease;
 }
 
-.stage-active .research-capture:hover,
-.stage-active .research-capture:focus-within {
+.stage-active .research-capture .trace-metrics,
+.stage-active .research-capture .trace-list,
+.stage-active .research-capture .realtime-debug-summary {
+  display: none;
+}
+
+.stage-active .research-capture .research-actions {
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.stage-active .research-capture .trace-action-secondary {
+  display: none;
+}
+
+.stage-active .research-capture .trace-action-primary {
+  min-height: 1.72rem;
+  padding: 0.33rem 0.48rem;
+  font-size: 0.56rem;
+}
+
+.stage-active .research-capture:hover {
   max-height: min(30rem, calc(100vh - 12rem));
+  overflow: auto;
   opacity: 1;
+}
+
+.stage-active .research-capture:hover .trace-metrics,
+.stage-active .research-capture:hover .trace-list,
+.stage-active .research-capture:hover .realtime-debug-summary {
+  display: grid;
+}
+
+.stage-active .research-capture:hover .trace-action-secondary {
+  display: inline-grid;
 }
 
 .research-capture p {
@@ -1798,6 +1896,51 @@ button:disabled {
   transition:
     opacity 180ms ease,
     transform 180ms ease;
+}
+
+.stage-active .intent-capture {
+  bottom: 1rem;
+  width: clamp(18rem, 38vw, 28rem);
+  max-width: calc(100vw - 2rem);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  opacity: 0.34;
+}
+
+.stage-active .intent-capture .context-attach,
+.stage-active .intent-capture .voice-output-toggle,
+.stage-active .intent-capture .realtime-arm-toggle,
+.stage-active .intent-capture .voice-transcript,
+.stage-active .intent-capture .stage-voice-reply,
+.stage-active .intent-capture .realtime-broker-status,
+.stage-active .intent-capture .harness-runner-status {
+  display: none;
+}
+
+.stage-active .intent-capture:hover,
+.stage-active .intent-capture:focus-within {
+  width: min(44rem, calc(100vw - 2rem));
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
+  opacity: 1;
+}
+
+.stage-active .intent-capture:hover .context-attach,
+.stage-active .intent-capture:hover .voice-output-toggle,
+.stage-active .intent-capture:hover .realtime-arm-toggle,
+.stage-active .intent-capture:focus-within .context-attach,
+.stage-active .intent-capture:focus-within .voice-output-toggle,
+.stage-active .intent-capture:focus-within .realtime-arm-toggle {
+  display: inline-grid;
+}
+
+.stage-active .intent-capture:hover .voice-transcript,
+.stage-active .intent-capture:hover .stage-voice-reply,
+.stage-active .intent-capture:hover .realtime-broker-status,
+.stage-active .intent-capture:hover .harness-runner-status,
+.stage-active .intent-capture:focus-within .voice-transcript,
+.stage-active .intent-capture:focus-within .stage-voice-reply,
+.stage-active .intent-capture:focus-within .realtime-broker-status,
+.stage-active .intent-capture:focus-within .harness-runner-status {
+  display: block;
 }
 
 .intent-capture:focus-within {
@@ -1946,6 +2089,7 @@ button:disabled {
   font-size: 0.95rem;
   font-weight: 400;
   letter-spacing: 0.34em;
+  pointer-events: none;
   text-shadow: 0 0 16px rgba(216, 189, 133, 0.16);
   white-space: nowrap;
 }
@@ -2234,14 +2378,14 @@ button:disabled {
   }
 }
 
-@media (min-width: 641px) and (max-height: 720px) {
+@media (min-width: 641px) and (max-height: 820px) {
   .stage-active .thread-console {
     width: min(20rem, calc(100vw - 3rem));
   }
 
   .stage-workspace {
-    inset: 4.3rem 1rem 1rem;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    inset: 4.3rem 1rem 4.7rem;
+    grid-template-rows: minmax(0, 0.68fr) auto minmax(0, 0.64fr);
     grid-template-areas:
       "objects feed"
       "objects approval"
@@ -2249,7 +2393,8 @@ button:disabled {
   }
 
   .stage-object-constellation {
-    max-height: calc(100vh - 5.4rem);
+    max-height: calc(100vh - 9rem);
+    overflow: auto;
     padding-bottom: 1rem;
   }
 
@@ -2284,17 +2429,92 @@ button:disabled {
     margin-top: 0.54rem;
   }
 
+  .stage-active .agent-feed {
+    max-height: min(18vh, 8.6rem);
+  }
+
+  .stage-active .approval-card {
+    max-height: min(22vh, 10.6rem);
+  }
+
+  .stage-active .artifact-stack {
+    max-height: min(16vh, 8rem);
+  }
+
   .stage-active .research-capture {
+    bottom: 0.72rem;
+    left: 0.72rem;
+    display: block;
+    width: min(12rem, calc(34vw - 0.75rem));
+    max-height: 2.6rem;
+    padding: 0.56rem 0.6rem;
+    opacity: 0.38;
+  }
+
+  .stage-active .research-capture p {
     display: none;
   }
 
+  .stage-active .research-capture .research-actions {
+    margin-top: 0;
+  }
+
+  .stage-active .research-capture .trace-action-primary {
+    min-height: 1.55rem;
+    padding-inline: 0.44rem;
+  }
+
+  .stage-active .research-capture:hover,
+  .stage-active .research-capture:focus-within {
+    width: min(18rem, calc(100vw - 2rem));
+    max-height: min(19rem, calc(100vh - 7rem));
+    opacity: 1;
+  }
+
+  .stage-active .research-capture:hover p,
+  .stage-active .research-capture:focus-within p {
+    display: block;
+  }
+
   .stage-active .intent-capture {
-    display: none;
+    bottom: 0.72rem;
+    display: grid;
+    width: min(26rem, calc(100vw - 2rem));
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto;
+    align-items: stretch;
+    opacity: 0.48;
+  }
+
+  .stage-active .intent-capture:hover,
+  .stage-active .intent-capture:focus-within {
+    width: min(30rem, calc(100vw - 2rem));
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
+  }
+
+  .stage-active .intent-capture input {
+    padding-block: 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .stage-active .intent-capture .intent-submit,
+  .stage-active .intent-capture .voice-affordance {
+    min-height: 1.98rem;
+    padding-inline: 0.56rem;
+    font-size: 0.62rem;
   }
 
   .stage-active .stage-voice-reply,
   .stage-active .realtime-broker-status,
-  .stage-active .harness-runner-status {
+  .stage-active .harness-runner-status,
+  .stage-active .intent-capture:hover .voice-transcript,
+  .stage-active .intent-capture:hover .stage-voice-reply,
+  .stage-active .intent-capture:hover .realtime-broker-status,
+  .stage-active .intent-capture:hover .harness-runner-status,
+  .stage-active .intent-capture:focus-within .voice-transcript,
+  .stage-active .intent-capture:focus-within .stage-voice-reply,
+  .stage-active .intent-capture:focus-within .realtime-broker-status,
+  .stage-active .intent-capture:focus-within .harness-runner-status {
     display: none;
   }
 }

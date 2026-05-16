@@ -700,10 +700,14 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
     resultArtifactWasLogged: true,
     artifactRequestedAction: "request confirmatory diligence materials"
   });
+  await page.getByTestId("research-capture").hover({ force: true });
   const debugDownloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export debug" }).click({
-    force: true
-  });
+  await page
+    .getByTestId("research-capture")
+    .getByRole("button", { exact: true, name: "Export debug" })
+    .click({
+      force: true
+    });
   const debugDownload = await debugDownloadPromise;
   const debugDownloadPath = await debugDownload.path();
 
@@ -809,6 +813,7 @@ test("Stage Web bridges live Realtime SDP only after visible approval", async ({
       })
     ])
   );
+  await page.getByTestId("research-capture").hover({ force: true });
   await page.getByRole("button", { name: "Reset" }).click({ force: true });
   await expect
     .poll(async () =>

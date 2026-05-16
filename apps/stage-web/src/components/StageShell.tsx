@@ -5,6 +5,7 @@ import type {
   StageShellScenario,
   StageShellScenarioId
 } from "@blackstage/stage-core";
+import { createStageSceneManifest } from "@blackstage/stage-core";
 import {
   createTranscriptState,
   type RealtimeBrokerClientReadiness,
@@ -159,40 +160,11 @@ export function StageShell({
       ),
     [thread.renderObjects]
   );
-  const fieldPhases = useMemo(() => {
-    const countByType = (types: Array<(typeof visibleObjects)[number]["type"]>) =>
-      visibleObjects.filter((object) => types.includes(object.type)).length;
-
-    return [
-      {
-        label: "Intent",
-        value: countByType(["intent_card"])
-      },
-      {
-        label: "Plan",
-        value: countByType(["plan_card", "model_card", "simulation_card"])
-      },
-      {
-        label: "Evidence",
-        value: countByType([
-          "document_portal",
-          "browser_portal",
-          "map_portal",
-          "memory_card",
-          "research_note"
-        ])
-      },
-      {
-        label: "Approval",
-        value: thread.approvals.filter((approval) => approval.status === "pending")
-          .length
-      },
-      {
-        label: "Artifact",
-        value: thread.artifacts.length
-      }
-    ];
-  }, [thread.approvals, thread.artifacts.length, visibleObjects]);
+  const stageScene = useMemo(() => createStageSceneManifest(thread), [thread]);
+  const sceneNodeByObjectId = useMemo(
+    () => new Map(stageScene.nodes.map((node) => [node.objectId, node])),
+    [stageScene.nodes]
+  );
 
   function submitIntent(
     nextIntent = intentText,
@@ -321,17 +293,21 @@ export function StageShell({
   const finalTranscript = transcript.segments.at(-1)?.text;
   const realtimeIsListening =
     realtimeBridge.status === "connecting" || realtimeBridge.status === "connected";
+  const realtimeCanArmVoice =
+    realtimeArmAvailable && realtimeBridge.status === "disabled" && !realtimeArmPending;
+  const voiceInputAvailable =
+    voiceCapture.status !== "unavailable" || realtimeCanArmVoice || realtimeIsListening;
   const stageIsListening = voiceCapture.status === "listening" || realtimeIsListening;
   const voiceButtonLabel = stageIsListening
     ? "Listening"
-    : voiceCapture.status === "unavailable"
-      ? "Voice standby"
-      : "Speak";
+    : voiceInputAvailable
+      ? "Speak"
+      : "Voice standby";
   const presenceOrbLabel = stageIsListening
     ? "Listening for intent"
-    : voiceCapture.status === "unavailable"
-      ? "Voice unavailable"
-      : "Start voice input";
+    : voiceInputAvailable
+      ? "Start voice input"
+      : "Voice unavailable";
   const assistantSpeechStatus =
     assistantSpeechText ??
     (stageVoiceEnabled ? "Stage voice ready for key turns." : "Stage voice muted.");
@@ -439,7 +415,7 @@ export function StageShell({
           aria-label={presenceOrbLabel}
           aria-pressed={stageIsListening}
           data-testid="presence-orb"
-          disabled={voiceCapture.status === "unavailable"}
+          disabled={!voiceInputAvailable}
           onClick={activatePresenceOrbFromClick}
           onPointerDown={activatePresenceOrb}
         >
@@ -463,6 +439,8 @@ export function StageShell({
       <section
         className="stage-workspace"
         aria-label="Dynamic render objects"
+        data-stage-ambient={stageScene.ambientState}
+        data-stage-layout={stageScene.layoutMode}
         data-testid="stage-workspace"
       >
         <div
@@ -475,7 +453,7 @@ export function StageShell({
             <strong>{visibleObjects.length} objects</strong>
           </div>
           <ol>
-            {fieldPhases.map((phase) => (
+            {stageScene.phases.map((phase) => (
               <li key={phase.label}>
                 <span>{phase.label}</span>
                 <strong>{phase.value}</strong>
@@ -488,6 +466,7 @@ export function StageShell({
             <StageObjectCard
               key={object.id}
               object={object}
+              sceneNode={sceneNodeByObjectId.get(object.id)}
               onCollapseToggle={onCollapseObject}
               onFocus={onFocusObject}
               onMove={onMoveObject}
@@ -564,7 +543,7 @@ export function StageShell({
           className="voice-affordance"
           type="button"
           aria-pressed={stageIsListening}
-          disabled={voiceCapture.status === "unavailable"}
+          disabled={!voiceInputAvailable}
           onClick={startVoiceCapture}
         >
           {voiceButtonLabel}

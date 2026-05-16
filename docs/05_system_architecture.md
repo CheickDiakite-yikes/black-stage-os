@@ -17,7 +17,7 @@ Intent parser / planner
    ↓
 Intent thread state
    ↓
-Stage render manifest
+Stage scene manifest
    ↓
 Living render field UI
    ↓
@@ -100,6 +100,23 @@ templates/
 ```
 
 ## Domain model
+
+### StageSceneManifest
+
+The render field should not derive organization intelligence from scattered CSS
+selectors. `IntentThread` compiles into a `StageSceneManifest` that describes
+the cinematic state of the stage:
+
+- ambient state
+- layout mode
+- camera depth, tilt, parallax, and focal object
+- substrate material, liquidity, bloom, and grain
+- object roles, clusters, materials, contours, and motion cues
+- semantic edges between intent, evidence, approvals, and artifacts
+
+This is the Blackstage-specific equivalent of a guarded render spec. It keeps
+dynamic rendering replayable and auditable while allowing the visual layer to
+become much more fluid.
 
 ### IntentThread
 

@@ -43,6 +43,7 @@ Read these documents in order when starting the project.
 25. `25_agents_sdk_live_preflight.md` — Agents SDK live-readiness gate.
 26. `26_live_readiness_preflight.md` — aggregate live-readiness preflight.
 27. `27_live_voice_test_protocol.md` — manual live voice, tool-call, rendering, and debug-export protocol.
+28. `28_cinematic_rendering_system.md` — video-informed render grammar, scene manifest, and cinematic renderer plan.
 
 ## Artifacts
 

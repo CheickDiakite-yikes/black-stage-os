@@ -1,9 +1,10 @@
-import type { StageObject } from "@blackstage/stage-core";
+import type { StageObject, StageSceneNode } from "@blackstage/stage-core";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 type StageObjectCardProps = {
   object: StageObject;
+  sceneNode?: StageSceneNode;
   onCollapseToggle: (objectId: string) => void;
   onFocus: (objectId: string) => void;
   onMove: (
@@ -40,6 +41,7 @@ const objectLabels: Record<StageObject["type"], string> = {
 
 export function StageObjectCard({
   object,
+  sceneNode,
   onCollapseToggle,
   onFocus,
   onMove,
@@ -56,9 +58,19 @@ export function StageObjectCard({
   >(undefined);
   const dragCleanupRef = useRef<(() => void) | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
+  const basePositionRef = useRef({
+    x: object.position?.x ?? 0,
+    y: object.position?.y ?? 0
+  });
+  const visibleShift = {
+    x: (object.position?.x ?? 0) - basePositionRef.current.x,
+    y: (object.position?.y ?? 0) - basePositionRef.current.y
+  };
   const objectStyle = {
-    "--object-shift-x": `${object.position?.x ?? 0}px`,
-    "--object-shift-y": `${object.position?.y ?? 0}px`
+    "--object-shift-x": `${visibleShift.x}px`,
+    "--object-shift-y": `${visibleShift.y}px`,
+    "--scene-depth": `${sceneNode?.transform.z ?? object.position?.z ?? 0}`,
+    "--scene-priority": `${sceneNode?.priority ?? 50}`
   } as CSSProperties;
 
   function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -151,9 +163,16 @@ export function StageObjectCard({
   return (
     <article
       className={`stage-object stage-object-${object.type} stage-object-${object.state} ${
-        object.pinned ? "stage-object-pinned" : ""
-      } ${isDragging ? "stage-object-dragging" : ""}`}
+        sceneNode ? `stage-object-role-${sceneNode.role}` : ""
+      } ${sceneNode ? `stage-object-material-${sceneNode.material}` : ""} ${
+        sceneNode ? `stage-object-contour-${sceneNode.contour}` : ""
+      } ${object.pinned ? "stage-object-pinned" : ""} ${
+        isDragging ? "stage-object-dragging" : ""
+      }`}
       data-testid={`stage-object-${object.type}`}
+      data-scene-cluster={sceneNode?.clusterId}
+      data-scene-material={sceneNode?.material}
+      data-scene-role={sceneNode?.role}
       style={objectStyle}
     >
       <div className="object-chrome">
