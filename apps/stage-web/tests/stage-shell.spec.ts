@@ -316,6 +316,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     );
     const approvalThresholdRect = approvalThreshold?.getBoundingClientRect();
     const generatedStreamRect = generatedStream?.getBoundingClientRect();
+    const generatedPatchClock = generatedStream?.querySelector<HTMLElement>(
+      ".generated-stream-clock"
+    );
     const overlaps = (first: DOMRect, second: DOMRect) =>
       first.left < second.right &&
       first.right > second.left &&
@@ -398,7 +401,13 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         Boolean(generatedStreamRect) &&
         generatedStreamRect!.width > 0 &&
         generatedStreamRect!.height > 0,
+      generatedFrameSequence: Number(generatedStream?.dataset.frameSequence ?? 0),
+      generatedPatchClockText: generatedPatchClock?.textContent ?? "",
+      generatedPatchCount:
+        generatedStream?.querySelectorAll(".generated-stream-patches span").length ??
+        0,
       generatedStreamText: generatedStream?.textContent ?? "",
+      generatedStreamTextLength: generatedStream?.textContent?.length ?? 0,
       generatedStreamDetailCount:
         generatedStream?.querySelectorAll(".generated-stream-detail").length ?? 0,
       planRightOfIntent: planRect.left > intentRect.left + 80,
@@ -423,7 +432,10 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(renderFieldEvidence.constellationPosition).toBe("relative");
   expect(renderFieldEvidence.constellationOpacity).toBeLessThan(0.05);
   expect(renderFieldEvidence.generatedStreamVisible).toBe(true);
-  expect(renderFieldEvidence.generatedStreamText).toContain("Stage Shell v0");
+  expect(renderFieldEvidence.generatedFrameSequence).toBeGreaterThan(0);
+  expect(renderFieldEvidence.generatedPatchClockText).toContain("patch");
+  expect(renderFieldEvidence.generatedPatchCount).toBeGreaterThanOrEqual(3);
+  expect(renderFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);
   expect(renderFieldEvidence.generatedStreamDetailCount).toBeGreaterThanOrEqual(1);
   expect(renderFieldEvidence.documentAccent).not.toBe(renderFieldEvidence.intentAccent);
   expect(renderFieldEvidence.planSceneX).toBeGreaterThan(
@@ -641,6 +653,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         '[data-testid="stage-generated-stream"]'
       );
       const generatedStreamRect = generatedStream?.getBoundingClientRect();
+      const generatedPatchClock = generatedStream?.querySelector<HTMLElement>(
+        ".generated-stream-clock"
+      );
       const constellation = workspace.querySelector<HTMLElement>(
         ".stage-object-constellation"
       );
@@ -693,6 +708,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           Boolean(generatedStreamRect) &&
           generatedStreamRect!.width > 0 &&
           generatedStreamRect!.height > 0,
+        generatedFrameSequence: Number(generatedStream?.dataset.frameSequence ?? 0),
+        generatedPatchClockText: generatedPatchClock?.textContent ?? "",
+        generatedPatchCount:
+          generatedStream?.querySelectorAll(".generated-stream-patches span")
+            .length ?? 0,
         generatedStreamTextLength: generatedStream?.textContent?.length ?? 0,
         laborNodeCount: workspace.querySelectorAll('[data-testid="stage-labor-node"]')
           .length,
@@ -728,6 +748,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.hasApprovalTether).toBe(false);
   expect(approvedFieldEvidence.constellationOpacity).toBeLessThan(0.05);
   expect(approvedFieldEvidence.generatedStreamVisible).toBe(true);
+  expect(approvedFieldEvidence.generatedFrameSequence).toBeGreaterThan(0);
+  expect(approvedFieldEvidence.generatedPatchClockText).toContain("patch");
+  expect(approvedFieldEvidence.generatedPatchCount).toBeGreaterThanOrEqual(2);
   expect(approvedFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);
   expect(approvedFieldEvidence.laborNodeCount).toBeGreaterThanOrEqual(7);
   await expect(page.getByTestId("browser-portal-surface")).toContainText(
