@@ -44,6 +44,7 @@ Read these documents in order when starting the project.
 26. `26_live_readiness_preflight.md` — aggregate live-readiness preflight.
 27. `27_live_voice_test_protocol.md` — manual live voice, tool-call, rendering, and debug-export protocol.
 28. `28_cinematic_rendering_system.md` — video-informed render grammar, scene manifest, and cinematic renderer plan.
+29. `29_morphological_genui_stage_plan.md` — 20-step plan for streaming GenUI morphology: nucleus, orbit, collapse, mode shift, sockets, patch growth, and workbench reveal.
 
 ## Artifacts
 
