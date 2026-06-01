@@ -3960,8 +3960,15 @@ button:disabled {
   position: absolute;
   inset: 12% 10%;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--morph-primary) 16%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--morph-primary) 14%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      color-mix(in srgb, var(--morph-primary) 16%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--morph-primary) 14%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 2.15rem 2.15rem;
   mask-image: radial-gradient(ellipse at center, black 0 38%, transparent 74%);
   opacity: 0;
@@ -3991,7 +3998,11 @@ button:disabled {
   background:
     radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 7%, transparent 8%),
     radial-gradient(circle at 42% 38%, var(--morph-secondary), transparent 31%),
-    radial-gradient(circle, color-mix(in srgb, var(--morph-primary) 48%, transparent), transparent 64%);
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--morph-primary) 48%, transparent),
+      transparent 64%
+    );
   box-shadow:
     0 0 22px color-mix(in srgb, var(--morph-primary) 34%, transparent),
     0 0 calc(60px + var(--morph-energy, 0.4) * 100px) var(--morph-shadow),
@@ -4082,8 +4093,15 @@ button:disabled {
   height: var(--socket-height);
   border: 1px solid color-mix(in srgb, var(--morph-primary) 18%, transparent);
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--morph-primary) 9%, transparent) 1px, transparent 1px),
-    linear-gradient(color-mix(in srgb, var(--morph-primary) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--morph-primary) 9%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--morph-primary) 8%, transparent) 1px,
+      transparent 1px
+    ),
     rgba(0, 0, 0, 0.16);
   background-size: 1.3rem 1.3rem;
   box-shadow:
@@ -4541,7 +4559,8 @@ button:disabled {
   background: rgba(216, 189, 133, 0.48);
 }
 
-.stage-active .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus) {
+.stage-active
+  .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus) {
   display: block;
   width: auto;
   max-width: 9rem;
@@ -4907,6 +4926,15 @@ button:disabled {
     right: 0.75rem;
     width: auto;
     max-height: 24vh;
+  }
+
+  .stage-active.stage-inspect-open .agent-feed,
+  .stage-active.stage-inspect-open .approval-card,
+  .stage-active.stage-inspect-open .artifact-stack {
+    display: grid !important;
+    visibility: visible;
+    opacity: 0.94 !important;
+    pointer-events: auto;
   }
 
   .stage-active.stage-inspect-open .thread-console {

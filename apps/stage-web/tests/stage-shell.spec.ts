@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDirectory, "../../..");
 const screenshotPath = path.join(repoRoot, "artifacts/screenshots/stage-shell-v0.png");
+const phoneScreenshotPath = path.join(
+  repoRoot,
+  "artifacts/screenshots/stage-shell-phone-v0.png"
+);
 const startupScenarioLabels = [
   "Acquisition analysis",
   "Seed round plan",
@@ -956,6 +960,154 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.setViewportSize({
+    width: 390,
+    height: 844
+  });
+  await page.goto("/");
+
+  await expect(page.getByTestId("stage-presence")).toContainText("Speak when ready");
+
+  await submitIntent(page, "Build BlackStage");
+
+  await expect(page.getByTestId("stage-generated-stream")).toBeVisible();
+  await expect(page.getByTestId("stage-generated-stream")).toHaveAttribute(
+    "data-morph-mode",
+    /coding|approval/
+  );
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+
+  const phoneEvidence = await page.evaluate(() => {
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+    const morphField = stream?.querySelector<HTMLElement>(".generated-morph-field");
+    const inputDock = document.querySelector<HTMLElement>(
+      '[data-testid="intent-capture"]'
+    );
+    const submitButton = document.querySelector<HTMLElement>(
+      '[data-testid="submit-intent"]'
+    );
+    const inspectToggle = document.querySelector<HTMLElement>(
+      '[data-testid="inspect-toggle"]'
+    );
+    const approvalActions = stream?.querySelector<HTMLElement>(
+      ".generated-stream-actions"
+    );
+    const streamRect = stream?.getBoundingClientRect();
+    const inputRect = inputDock?.getBoundingClientRect();
+    const submitRect = submitButton?.getBoundingClientRect();
+    const inspectRect = inspectToggle?.getBoundingClientRect();
+    const approvalActionRect = approvalActions?.getBoundingClientRect();
+    const elementInViewport = (rect?: DOMRect) =>
+      Boolean(
+        rect &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.left >= -1 &&
+        rect.right <= window.innerWidth + 1 &&
+        rect.top >= -1 &&
+        rect.bottom <= window.innerHeight + 1
+      );
+
+    return {
+      horizontalOverflow:
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      streamInViewport: elementInViewport(streamRect),
+      inputInViewport: elementInViewport(inputRect),
+      submitInViewport: elementInViewport(submitRect),
+      inspectInViewport: elementInViewport(inspectRect),
+      approvalActionsInViewport: elementInViewport(approvalActionRect),
+      morphMode: stream?.dataset.morphMode,
+      morphPhase: stream?.dataset.morphPhase,
+      morphVoiceCadence: stream?.dataset.morphVoiceCadence,
+      workbenchState: stream?.dataset.workbenchState,
+      morphCamera: morphField?.dataset.morphCamera,
+      orbitCount: stream?.querySelectorAll(".generated-morph-orbit-object").length ?? 0,
+      socketCount: stream?.querySelectorAll(".generated-morph-socket").length ?? 0,
+      phaseCount:
+        stream?.querySelectorAll(".generated-morph-phase-rail span").length ?? 0,
+      detailCount: stream?.querySelectorAll(".generated-stream-detail").length ?? 0
+    };
+  });
+
+  expect(phoneEvidence.horizontalOverflow).toBeLessThanOrEqual(1);
+  expect(phoneEvidence.streamInViewport).toBe(true);
+  expect(phoneEvidence.inputInViewport).toBe(true);
+  expect(phoneEvidence.submitInViewport).toBe(true);
+  expect(phoneEvidence.inspectInViewport).toBe(true);
+  expect(phoneEvidence.approvalActionsInViewport).toBe(true);
+  expect(["coding", "approval"]).toContain(phoneEvidence.morphMode);
+  expect([
+    "context_collapsed",
+    "sockets_allocated",
+    "approval_ritual",
+    "workbench_revealed"
+  ]).toContain(phoneEvidence.morphPhase);
+  expect(phoneEvidence.morphVoiceCadence).toBeTruthy();
+  expect(phoneEvidence.workbenchState).toBeTruthy();
+  expect(phoneEvidence.morphCamera).toBeTruthy();
+  expect(phoneEvidence.orbitCount).toBeGreaterThanOrEqual(2);
+  expect(phoneEvidence.socketCount).toBeGreaterThanOrEqual(2);
+  expect(phoneEvidence.phaseCount).toBe(8);
+  expect(phoneEvidence.detailCount).toBeGreaterThanOrEqual(1);
+
+  await page.screenshot({
+    path: phoneScreenshotPath,
+    timeout: 0
+  });
+
+  await page.getByTestId("inspect-toggle").click({
+    force: true
+  });
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-mode",
+    "true"
+  );
+  await page.waitForTimeout(120);
+
+  const mobileInspectEvidence = await page.evaluate(() => {
+    const visible = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+
+      return Boolean(
+        element &&
+        getComputedStyle(element).display !== "none" &&
+        getComputedStyle(element).opacity !== "0"
+      );
+    };
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+
+    return {
+      horizontalOverflow:
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      generatedOpacity: stream ? Number(getComputedStyle(stream).opacity) : 1,
+      agentFeedVisible: visible('[data-testid="agent-activity-feed"]'),
+      approvalCardVisible: visible('[data-testid="approval-card"]'),
+      artifactStackVisible: visible('[data-testid="artifact-stack"]'),
+      orientationHidden: !visible('[data-testid="stage-field-orientation"]'),
+      researchHidden: !visible('[data-testid="research-capture"]')
+    };
+  });
+
+  expect(mobileInspectEvidence.horizontalOverflow).toBeLessThanOrEqual(1);
+  expect(mobileInspectEvidence.generatedOpacity).toBeLessThan(0.6);
+  expect(mobileInspectEvidence.agentFeedVisible).toBe(true);
+  expect(mobileInspectEvidence.approvalCardVisible).toBe(true);
+  expect(mobileInspectEvidence.artifactStackVisible).toBe(true);
+  expect(mobileInspectEvidence.orientationHidden).toBe(true);
+  expect(mobileInspectEvidence.researchHidden).toBe(true);
 });
 
 test("Stage Shell v0 treats text commands as stage-object manipulation", async ({
