@@ -2,6 +2,7 @@ import type { HarnessRunnerClientReadiness } from "@blackstage/agent-runtime";
 import type {
   IntentThread,
   ResearchEvent,
+  StageEvent,
   StageShellScenario,
   StageShellScenarioId
 } from "@blackstage/stage-core";
@@ -23,6 +24,7 @@ import { AgentActivityFeed } from "./AgentActivityFeed";
 import { ApprovalCard } from "./ApprovalCard";
 import { ArtifactCard } from "./ArtifactCard";
 import { ResearchCapture } from "./ResearchCapture";
+import { StageGeneratedStream } from "./StageGeneratedStream";
 import { StageObjectCard } from "./StageObjectCard";
 import { StageRitualField } from "./StageRitualField";
 import { StageSceneField } from "./StageSceneField";
@@ -54,6 +56,7 @@ type StageShellProps = {
   realtimeDebugSummary?: StageWebRealtimeDebugSummary;
   realtimeMicPreflight: VoiceCapturePreflight;
   stageEventCount: number;
+  stageEvents: StageEvent[];
   stageVoiceEnabled: boolean;
   isRunning: boolean;
   isReplaying: boolean;
@@ -114,6 +117,7 @@ export function StageShell({
   realtimeDebugSummary,
   realtimeMicPreflight,
   stageEventCount,
+  stageEvents,
   stageVoiceEnabled,
   isRunning,
   isReplaying,
@@ -522,6 +526,13 @@ export function StageShell({
           approvalFocusNode={approvalFocusNode}
           events={thread.agentEvents}
           isRunning={isRunning}
+        />
+        <StageGeneratedStream
+          onApprove={onApprove}
+          onAskWhy={onAskWhy}
+          onReject={onReject}
+          stageEvents={stageEvents}
+          thread={thread}
         />
         <div
           className="stage-field-orientation"

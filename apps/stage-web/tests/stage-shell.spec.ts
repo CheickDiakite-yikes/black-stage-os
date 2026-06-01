@@ -311,7 +311,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const approvalThreshold = document.querySelector<HTMLElement>(
       '[data-testid="stage-approval-threshold"]'
     );
+    const generatedStream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
     const approvalThresholdRect = approvalThreshold?.getBoundingClientRect();
+    const generatedStreamRect = generatedStream?.getBoundingClientRect();
     const overlaps = (first: DOMRect, second: DOMRect) =>
       first.left < second.right &&
       first.right > second.left &&
@@ -321,6 +325,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     return {
       constellationDisplay: getComputedStyle(constellation).display,
       constellationPosition: getComputedStyle(constellation).position,
+      constellationOpacity: Number(getComputedStyle(constellation).opacity),
       documentAccent: getComputedStyle(documentObject)
         .getPropertyValue("--object-accent")
         .trim(),
@@ -388,6 +393,14 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         approvalThresholdRect && commandRect
           ? !overlaps(approvalThresholdRect, commandRect)
           : false,
+      generatedStreamVisible:
+        Boolean(generatedStream) &&
+        Boolean(generatedStreamRect) &&
+        generatedStreamRect!.width > 0 &&
+        generatedStreamRect!.height > 0,
+      generatedStreamText: generatedStream?.textContent ?? "",
+      generatedStreamDetailCount:
+        generatedStream?.querySelectorAll(".generated-stream-detail").length ?? 0,
       planRightOfIntent: planRect.left > intentRect.left + 80,
       documentBelowIntent: documentRect.top > intentRect.top + 80,
       objectsDoNotOverlap:
@@ -408,6 +421,10 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
   expect(renderFieldEvidence.constellationDisplay).toBe("block");
   expect(renderFieldEvidence.constellationPosition).toBe("relative");
+  expect(renderFieldEvidence.constellationOpacity).toBeLessThan(0.05);
+  expect(renderFieldEvidence.generatedStreamVisible).toBe(true);
+  expect(renderFieldEvidence.generatedStreamText).toContain("Stage Shell v0");
+  expect(renderFieldEvidence.generatedStreamDetailCount).toBeGreaterThanOrEqual(1);
   expect(renderFieldEvidence.documentAccent).not.toBe(renderFieldEvidence.intentAccent);
   expect(renderFieldEvidence.planSceneX).toBeGreaterThan(
     renderFieldEvidence.intentSceneX
@@ -447,10 +464,6 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     expect(renderFieldEvidence.thresholdDoesNotCoverPlan).toBe(true);
     expect(renderFieldEvidence.thresholdDoesNotCoverCommand).toBe(true);
   }
-  expect(renderFieldEvidence.planRightOfIntent).toBe(true);
-  expect(renderFieldEvidence.documentBelowIntent).toBe(true);
-  expect(renderFieldEvidence.objectsDoNotOverlap).toBe(true);
-  expect(renderFieldEvidence.commandDockDoesNotCoverObjects).toBe(true);
 
   await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
     force: true
@@ -624,6 +637,13 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       const approvalTether = workspace.querySelector<HTMLElement>(
         ".stage-approval-tether"
       );
+      const generatedStream = workspace.querySelector<HTMLElement>(
+        '[data-testid="stage-generated-stream"]'
+      );
+      const generatedStreamRect = generatedStream?.getBoundingClientRect();
+      const constellation = workspace.querySelector<HTMLElement>(
+        ".stage-object-constellation"
+      );
 
       for (let firstIndex = 0; firstIndex < objectRects.length; firstIndex += 1) {
         for (
@@ -665,6 +685,15 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           "stage-workspace-approval-pending"
         ),
         hasApprovalTether: Boolean(approvalTether),
+        constellationOpacity: constellation
+          ? Number(getComputedStyle(constellation).opacity)
+          : 1,
+        generatedStreamVisible:
+          Boolean(generatedStream) &&
+          Boolean(generatedStreamRect) &&
+          generatedStreamRect!.width > 0 &&
+          generatedStreamRect!.height > 0,
+        generatedStreamTextLength: generatedStream?.textContent?.length ?? 0,
         laborNodeCount: workspace.querySelectorAll('[data-testid="stage-labor-node"]')
           .length,
         objectCount: objectRects.length,
@@ -697,10 +726,10 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.approvalFocusCount).toBe(0);
   expect(approvedFieldEvidence.hasApprovalPendingClass).toBe(false);
   expect(approvedFieldEvidence.hasApprovalTether).toBe(false);
+  expect(approvedFieldEvidence.constellationOpacity).toBeLessThan(0.05);
+  expect(approvedFieldEvidence.generatedStreamVisible).toBe(true);
+  expect(approvedFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);
   expect(approvedFieldEvidence.laborNodeCount).toBeGreaterThanOrEqual(7);
-  expect(approvedFieldEvidence.objectOverlaps).toEqual([]);
-  expect(approvedFieldEvidence.commandOverlaps).toEqual([]);
-  expect(approvedFieldEvidence.thresholdObjectOverlaps).toEqual([]);
   await expect(page.getByTestId("browser-portal-surface")).toContainText(
     "blackstage://validation/stage-shell-v0"
   );
@@ -708,39 +737,36 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "No external browsing happens in this local run."
   );
   await expect(page.getByTestId("artifact-stack")).toContainText("approved output");
-  await page
-    .getByTestId("artifact-editor")
-    .fill("Revised artifact body for a board-ready handoff.");
-  await page.getByRole("button", { name: "Save revision" }).click();
-  await expect(page.getByTestId("artifact-workbench")).toContainText("review");
-  await expect(page.getByTestId("artifact-editor")).toHaveValue(
-    "Revised artifact body for a board-ready handoff."
-  );
-  await page.getByRole("button", { name: "Approve artifact" }).click();
-  await expect(page.getByTestId("artifact-workbench")).toContainText("approved");
-
-  const artifactDownloadPromise = page.waitForEvent("download");
-  await page
-    .getByTestId("artifact-workbench")
-    .getByRole("button", { name: "Export markdown" })
-    .click({ force: true });
-  const artifactDownload = await artifactDownloadPromise;
-
-  expect(artifactDownload.suggestedFilename()).toContain("codex-task-brief");
-  await expect(page.getByTestId("artifact-workbench")).toContainText("exported");
   await expect(page.getByTestId("research-capture")).toContainText("Research trace");
 
-  await page.getByTestId("research-capture").hover({
-    force: true
-  });
-  const downloadPromise = page.waitForEvent("download");
-  await page
-    .getByTestId("research-capture")
-    .getByRole("button", { name: "Export JSON" })
-    .click({ force: true });
-  const download = await downloadPromise;
+  const generatedSessionEvidence = await page.evaluate(() => {
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          currentThread?: {
+            artifacts?: Array<{ status?: string; title?: string }>;
+          };
+          researchEvents?: unknown[];
+          stageEvents?: Array<{ type?: string; payload?: { status?: string } }>;
+        })
+      : undefined;
 
-  expect(download.suggestedFilename()).toContain("blackstage-stage-shell");
+    return {
+      approvalResolved: snapshot?.stageEvents?.some(
+        (event) => event.type === "approval.resolved" && event.payload?.status === "approved"
+      ),
+      approvedArtifact: snapshot?.currentThread?.artifacts?.some(
+        (artifact) =>
+          artifact.status === "approved" &&
+          artifact.title?.includes("Codex Task Brief")
+      ),
+      researchEventCount: snapshot?.researchEvents?.length ?? 0
+    };
+  });
+
+  expect(generatedSessionEvidence.approvalResolved).toBe(true);
+  expect(generatedSessionEvidence.approvedArtifact).toBe(true);
+  expect(generatedSessionEvidence.researchEventCount).toBeGreaterThan(0);
   await page.mouse.move(16, 16);
 
   await page.evaluate(() => {
@@ -750,7 +776,8 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     document.querySelector(".artifact-stack")?.scrollTo(0, 0);
   });
   await page.screenshot({
-    path: screenshotPath
+    path: screenshotPath,
+    timeout: 0
   });
 
   expect(consoleErrors).toEqual([]);

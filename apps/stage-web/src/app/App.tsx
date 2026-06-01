@@ -2305,6 +2305,7 @@ export function App() {
       realtimeMicPreflight={realtimeMicPreflight}
       stageVoiceEnabled={stageVoiceEnabled}
       stageEventCount={stageEvents.length}
+      stageEvents={stageEvents}
       thread={thread}
       onApprove={approveCurrentRequest}
       onAskWhy={askWhy}
