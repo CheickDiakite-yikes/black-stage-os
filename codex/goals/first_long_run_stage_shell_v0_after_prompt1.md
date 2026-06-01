@@ -95,6 +95,22 @@ Pushed approval closer to an object-bound ritual:
 - The e2e render gate now asserts the same pending approval focus/dimming
   behavior before resolving the approval.
 
+## 2026-05-16 Checkpoint: Camera Attention Slice
+
+Continued the rendering-first goal by making focus more explicit in the field:
+
+- `StageSceneField` now renders a camera aperture and focus corridor around the
+  active focal object.
+- `StageShell` exposes camera focus object/coordinates on the workspace, and
+  promotes the pending approval-focus object into the camera focus target.
+- `StageObjectCard` now exposes object ids, camera-focus state, camera distance,
+  and subtle parallax offsets for non-focal objects.
+- Browser QA found a medium-viewport bug where the approval threshold grazed the
+  focused plan; the threshold was shifted into the approval threshold lane and
+  the tether endpoint moved with it.
+- The e2e render gate now asserts camera aperture/corridor presence, camera
+  focus identity, object parallax metadata, and approval-threshold clearance.
+
 Paste this into Codex CLI after installing the goal-mode add-on, running `/status`, and reviewing the pre-goal `/plan`.
 
 ```text

@@ -179,6 +179,30 @@ export function StageShell({
   const approvalFocusNode = approvalFocusObjectId
     ? sceneNodeByObjectId.get(approvalFocusObjectId)
     : undefined;
+  const cameraFocusNode =
+    approvalFocusNode ??
+    (stageScene.camera.focalObjectId
+      ? sceneNodeByObjectId.get(stageScene.camera.focalObjectId)
+      : undefined) ??
+    stageScene.nodes.find((node) => node.role === "primary_display") ??
+    stageScene.nodes[0];
+  const cameraFocus = cameraFocusNode
+    ? {
+        objectId: cameraFocusNode.objectId,
+        x: cameraFocusNode.transform.x,
+        y: cameraFocusNode.transform.y,
+        parallax: stageScene.camera.parallax
+      }
+    : undefined;
+  const workspaceStyle = cameraFocusNode
+    ? ({
+        "--stage-camera-depth": stageScene.camera.depth.toFixed(2),
+        "--stage-camera-focus-x": `${cameraFocusNode.transform.x}%`,
+        "--stage-camera-focus-y": `${cameraFocusNode.transform.y}%`,
+        "--stage-camera-parallax": stageScene.camera.parallax.toFixed(2),
+        "--stage-camera-tilt": `${stageScene.camera.tilt}deg`
+      } as CSSProperties)
+    : undefined;
 
   function submitIntent(
     nextIntent = intentText,
@@ -479,14 +503,20 @@ export function StageShell({
       <section
         className={`stage-workspace ${
           approvalFocusObjectId ? "stage-workspace-approval-pending" : ""
-        }`}
+        } ${cameraFocusNode ? "stage-workspace-camera-active" : ""}`}
         aria-label="Dynamic render objects"
         data-approval-focus-object={approvalFocusObjectId}
+        data-stage-camera-focus-object={cameraFocusNode?.objectId}
+        data-stage-camera-mode={stageScene.camera.mode}
         data-stage-ambient={stageScene.ambientState}
         data-stage-layout={stageScene.layoutMode}
         data-testid="stage-workspace"
+        style={workspaceStyle}
       >
-        <StageSceneField scene={stageScene} />
+        <StageSceneField
+          attentionObjectId={cameraFocusNode?.objectId}
+          scene={stageScene}
+        />
         <StageRitualField
           approval={latestApproval}
           approvalFocusNode={approvalFocusNode}
@@ -521,6 +551,7 @@ export function StageShell({
             <StageObjectCard
               key={object.id}
               approvalFocused={object.id === approvalFocusObjectId}
+              cameraFocus={cameraFocus}
               object={object}
               sceneNode={sceneNodeByObjectId.get(object.id)}
               onCollapseToggle={onCollapseObject}

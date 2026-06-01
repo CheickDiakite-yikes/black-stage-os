@@ -205,6 +205,10 @@ Current implementation:
   so organization is visible before a user reads any card.
 - `StageSceneField` renders a focal floor/horizon system under the primary
   object, giving the field a stage, not just a background.
+- The workspace now declares the active camera focus object and focus
+  coordinates. `StageSceneField` paints a camera aperture plus focus corridor
+  around that object, and DOM render objects receive camera-focus, distance,
+  and parallax metadata.
 - DOM objects remain the readable/control-bearing surfaces above the field, but
   they are positioned as luminous islands around the focal work object.
 - Stage object cards intentionally use 2D hit-testable transforms for the
@@ -234,6 +238,12 @@ Current implementation:
   stays at full strength, surrounding objects dim, and `StageRitualField` draws
   a live tether from the object to the approval threshold. This starts turning
   approval into a camera/focus event instead of a detached badge.
+- Pending approval also promotes that approval-focus object into the camera
+  focus object, so aperture, corridor, tether, dimming, and object metadata all
+  describe the same action target.
+- Browser QA found and fixed a medium-viewport overlap where the approval
+  threshold touched the focused plan. The threshold is still tuned by responsive
+  CSS, so full geometry-aware threshold placement remains open.
 
 ### Phase 2: Liquid Substrate
 

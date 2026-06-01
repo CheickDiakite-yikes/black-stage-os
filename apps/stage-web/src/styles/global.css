@@ -680,6 +680,11 @@ button:disabled {
 
 .stage-workspace {
   --stage-rail-width: clamp(19rem, 23vw, 22.5rem);
+  --stage-camera-depth: 0.38;
+  --stage-camera-focus-x: 57%;
+  --stage-camera-focus-y: 36%;
+  --stage-camera-parallax: 0.18;
+  --stage-camera-tilt: 0deg;
   position: absolute;
   inset: 5.6rem 1.35rem 5.85rem;
   z-index: 4;
@@ -811,7 +816,12 @@ button:disabled {
 .stage-workspace::before {
   inset: 3.2rem clamp(17rem, 22vw, 22rem) 3rem 3rem;
   background:
-    radial-gradient(circle at 42% 34%, rgba(216, 189, 133, 0.105), transparent 9rem),
+    radial-gradient(
+      circle at var(--stage-camera-focus-x) var(--stage-camera-focus-y),
+      rgba(239, 228, 210, 0.135),
+      transparent 10.5rem
+    ),
+    radial-gradient(circle at 42% 34%, rgba(216, 189, 133, 0.085), transparent 9rem),
     radial-gradient(circle at 72% 68%, rgba(118, 205, 167, 0.052), transparent 11rem),
     linear-gradient(
       90deg,
@@ -821,6 +831,10 @@ button:disabled {
     );
   mask-image: radial-gradient(ellipse at center, black 0 44%, transparent 78%);
   opacity: 0.9;
+}
+
+.stage-workspace-camera-active::before {
+  opacity: calc(0.72 + var(--stage-camera-depth) * 0.26);
 }
 
 .stage-workspace::after {
@@ -931,6 +945,55 @@ button:disabled {
   filter: drop-shadow(0 0 0.36rem rgba(216, 189, 133, 0.22));
   vector-effect: non-scaling-stroke;
   animation: scene-zone-flow 10s ease-in-out infinite alternate;
+}
+
+.scene-camera-field {
+  opacity: 0.78;
+}
+
+.scene-camera-corridor {
+  fill: rgba(216, 189, 133, 0.045);
+  stroke: rgba(239, 228, 210, 0.18);
+  stroke-dasharray: 0.18 0.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.18;
+  filter: drop-shadow(0 0 0.54rem rgba(216, 189, 133, 0.18));
+  vector-effect: non-scaling-stroke;
+  animation: scene-camera-corridor 9s ease-in-out infinite alternate;
+}
+
+.scene-camera-aperture {
+  opacity: 0.92;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scene-camera-aperture-breathe 8s ease-in-out infinite alternate;
+}
+
+.scene-camera-aperture-outer,
+.scene-camera-aperture-inner {
+  fill: transparent;
+  stroke: rgba(239, 228, 210, 0.42);
+  stroke-dasharray: 0.24 0.46;
+  stroke-width: 0.18;
+  filter: drop-shadow(0 0 0.34rem rgba(216, 189, 133, 0.3));
+  vector-effect: non-scaling-stroke;
+}
+
+.scene-camera-aperture-inner {
+  opacity: 0.78;
+  stroke: rgba(216, 170, 88, 0.44);
+  stroke-dasharray: 0.14 0.34;
+}
+
+.scene-camera-reticle-x,
+.scene-camera-reticle-y {
+  fill: none;
+  opacity: 0.6;
+  stroke: rgba(239, 228, 210, 0.38);
+  stroke-linecap: round;
+  stroke-width: 0.14;
+  vector-effect: non-scaling-stroke;
 }
 
 .scene-cluster-halo {
@@ -1075,7 +1138,7 @@ button:disabled {
   position: absolute;
   inset: 0 calc(var(--stage-rail-width) + clamp(1.15rem, 1.7vw, 1.75rem)) 0 0;
   z-index: 3;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: none;
 }
 
@@ -1196,9 +1259,9 @@ button:disabled {
 .stage-approval-threshold {
   position: absolute;
   top: clamp(12.5rem, 42%, 22rem);
-  right: clamp(0.15rem, 0.7vw, 0.85rem);
+  right: clamp(-4rem, -4vw, -2.4rem);
   display: grid;
-  width: clamp(8.1rem, 10.5vw, 9.6rem);
+  width: clamp(7.5rem, 10vw, 8.9rem);
   min-height: clamp(7rem, 13vh, 9.4rem);
   align-content: center;
   border: 1px solid rgba(216, 170, 88, 0.24);
@@ -1376,6 +1439,9 @@ button:disabled {
   --field-x: 0px;
   --field-y: 0px;
   --field-z: 0px;
+  --object-camera-distance: 0;
+  --object-parallax-x: 0px;
+  --object-parallax-y: 0px;
   --object-scale: 1;
   --object-width: clamp(15rem, 23vw, 24rem);
   position: absolute;
@@ -1395,8 +1461,8 @@ button:disabled {
     0 0 34px var(--object-halo),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transform: translate(
-      calc(-50% + var(--object-shift-x, 0px)),
-      calc(-50% + var(--object-shift-y, 0px))
+      calc(-50% + var(--object-shift-x, 0px) + var(--object-parallax-x, 0px)),
+      calc(-50% + var(--object-shift-y, 0px) + var(--object-parallax-y, 0px))
     )
     scale(var(--scene-scale, 1));
   transform-origin: 50% 65%;
@@ -1488,6 +1554,18 @@ button:disabled {
     0 30px 96px rgba(0, 0, 0, 0.62),
     0 0 54px var(--object-halo),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.stage-object[data-camera-focus="true"] {
+  border-color: color-mix(in srgb, var(--object-accent) 68%, rgba(239, 228, 210, 0.22));
+}
+
+.stage-object[data-camera-focus="true"]::after {
+  opacity: 0.72;
+}
+
+.stage-object[data-camera-focus="false"] {
+  will-change: transform, opacity;
 }
 
 .stage-object-role-intent_anchor {
@@ -3051,6 +3129,30 @@ button:disabled {
   }
 }
 
+@keyframes scene-camera-corridor {
+  0% {
+    opacity: 0.34;
+    stroke-dashoffset: 0.28;
+  }
+
+  100% {
+    opacity: 0.72;
+    stroke-dashoffset: -0.22;
+  }
+}
+
+@keyframes scene-camera-aperture-breathe {
+  0% {
+    opacity: 0.68;
+    transform: scale(0.98);
+  }
+
+  100% {
+    opacity: 0.96;
+    transform: scale(1.025);
+  }
+}
+
 @keyframes scene-horizon-breathe {
   0% {
     opacity: 0.24;
@@ -3189,6 +3291,11 @@ button:disabled {
   .stage-object.stage-object-plan_card {
     grid-column: 5 / span 4;
     min-height: 15rem;
+  }
+
+  .stage-approval-threshold {
+    right: clamp(-4.6rem, -5.2vw, -2.8rem);
+    width: clamp(7rem, 11vw, 8rem);
   }
 
   .agent-feed,
@@ -3634,5 +3741,290 @@ button:disabled {
     bottom: 6.8rem;
     width: auto;
     transform: none;
+  }
+}
+
+/* Active threads must stay born from the void. Detailed cards remain inspectable
+   later, but the first viewport should show one conversational focal object. */
+.stage-active .thread-console,
+.stage-active .stage-field-orientation,
+.stage-active .agent-feed,
+.stage-active .approval-card,
+.stage-active .artifact-stack,
+.stage-active .research-capture {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.5rem);
+}
+
+.stage-active .stage-workspace {
+  inset: 3.8rem 0 4.8rem;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.stage-active .stage-workspace::before {
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at var(--stage-camera-focus-x) var(--stage-camera-focus-y),
+      rgba(239, 228, 210, 0.105),
+      transparent 15rem
+    ),
+    radial-gradient(circle at 50% 62%, rgba(216, 189, 133, 0.06), transparent 22rem),
+    linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.36));
+  mask-image: radial-gradient(ellipse at center, black 0 38%, transparent 76%);
+  opacity: 0.86;
+}
+
+.stage-active .stage-workspace::after {
+  display: none;
+}
+
+.stage-active .stage-scene-field,
+.stage-active .stage-ritual-field {
+  inset: 0;
+}
+
+.stage-active .stage-object-constellation {
+  position: absolute;
+  inset: 0;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.stage-active .stage-object {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(8px);
+  transition:
+    filter 420ms ease,
+    opacity 420ms ease,
+    transform 520ms ease;
+}
+
+.stage-active .stage-object[data-camera-focus="true"],
+.stage-active .stage-object-approval-focus {
+  --object-width: min(44rem, 68vw);
+  left: 50%;
+  top: 47%;
+  z-index: 11;
+  display: block;
+  width: var(--object-width);
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  opacity: 1 !important;
+  pointer-events: auto;
+  filter: none;
+  transform: translate(
+      calc(-50% + var(--object-shift-x, 0px)),
+      calc(-50% + var(--object-shift-y, 0px))
+    )
+    scale(1);
+}
+
+.stage-active .stage-object[data-camera-focus="true"]::before,
+.stage-active .stage-object[data-camera-focus="true"]::after,
+.stage-active .stage-object-approval-focus::before,
+.stage-active .stage-object-approval-focus::after {
+  display: none;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] .object-chrome,
+.stage-active .stage-object-approval-focus .object-chrome {
+  justify-content: center;
+  color: rgba(216, 189, 133, 0.74);
+  letter-spacing: 0.34em;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] .object-chrome span:last-child,
+.stage-active .stage-object-approval-focus .object-chrome span:last-child {
+  display: none;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] .object-actions,
+.stage-active .stage-object-approval-focus .object-actions {
+  opacity: 0;
+  pointer-events: auto;
+}
+
+.stage-active .stage-object[data-camera-focus="true"]:hover .object-actions,
+.stage-active .stage-object[data-camera-focus="true"]:focus-within .object-actions,
+.stage-active .stage-object-approval-focus:hover .object-actions,
+.stage-active .stage-object-approval-focus:focus-within .object-actions {
+  opacity: 0.62;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] h2,
+.stage-active .stage-object-approval-focus h2 {
+  margin-top: 0.9rem;
+  color: rgba(255, 246, 228, 0.95);
+  font-size: clamp(2rem, 5vw, 4.4rem);
+  line-height: 1.02;
+  text-align: center;
+  text-shadow:
+    0 0 22px rgba(216, 189, 133, 0.18),
+    0 0 72px rgba(216, 189, 133, 0.14);
+}
+
+.stage-active .stage-object[data-camera-focus="true"] p,
+.stage-active .stage-object-approval-focus p {
+  max-width: min(42rem, 76vw);
+  margin: 1.15rem auto 0;
+  color: rgba(239, 228, 210, 0.68);
+  font-size: clamp(1rem, 1.7vw, 1.28rem);
+  line-height: 1.52;
+  text-align: center;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] .object-list,
+.stage-active .stage-object-approval-focus .object-list {
+  display: none;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] .object-list li,
+.stage-active .stage-object-approval-focus .object-list li {
+  border: 0;
+  background: transparent;
+  color: rgba(239, 228, 210, 0.66);
+  padding: 0;
+  font-size: clamp(0.86rem, 1.2vw, 1rem);
+  text-align: center;
+}
+
+.stage-active .stage-object[data-camera-focus="true"] .object-list li::before,
+.stage-active .stage-object-approval-focus .object-list li::before {
+  width: 1.1rem;
+  margin-right: 0.66rem;
+  background: rgba(216, 189, 133, 0.48);
+}
+
+.stage-active .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus) {
+  display: block;
+  width: auto;
+  max-width: 9rem;
+  max-height: 2rem;
+  padding: 0;
+  opacity: 0.3 !important;
+  filter: blur(1px);
+  transform: translate(
+      calc(-50% + var(--object-shift-x, 0px) + var(--object-parallax-x, 0px)),
+      calc(-50% + var(--object-shift-y, 0px) + var(--object-parallax-y, 0px))
+    )
+    scale(0.78);
+}
+
+.stage-active
+  .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus)
+  > :not(.object-chrome) {
+  display: none;
+}
+
+.stage-active
+  .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus)
+  .object-chrome {
+  display: flex;
+  justify-content: center;
+  color: rgba(216, 189, 133, 0.5);
+  font-size: 0.48rem;
+  letter-spacing: 0.24em;
+}
+
+.stage-active
+  .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus)
+  .object-chrome
+  span:last-child {
+  display: none;
+}
+
+.stage-active .stage-approval-threshold {
+  top: 52%;
+  right: auto;
+  left: calc(50% + min(24vw, 18rem));
+  width: clamp(7rem, 10vw, 8.5rem);
+  min-height: clamp(6rem, 11vh, 8rem);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(216, 170, 88, 0.13), transparent 5.6rem),
+    rgba(0, 0, 0, 0.08);
+  backdrop-filter: none;
+  transform: translateY(-50%);
+}
+
+.stage-active .stage-labor-orbit {
+  left: 50%;
+  bottom: clamp(4rem, 10vh, 6rem);
+  opacity: 0.42;
+}
+
+.stage-active .intent-capture {
+  bottom: 1.4rem;
+  opacity: 0.46;
+}
+
+@media (max-width: 640px) {
+  .stage-active.stage-shell {
+    padding: 0;
+  }
+
+  .stage-active .stage-presence {
+    top: 4.5rem;
+    left: 50%;
+    opacity: 0.22;
+    transform: translateX(-50%) scale(0.72);
+  }
+
+  .stage-active .stage-workspace {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    margin: 0;
+  }
+
+  .stage-active .stage-scene-field {
+    display: block;
+  }
+
+  .stage-active .stage-object[data-camera-focus="true"],
+  .stage-active .stage-object-approval-focus {
+    --object-width: min(26rem, calc(100vw - 2rem));
+    left: 50%;
+    top: 48%;
+    width: var(--object-width);
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .stage-active .stage-object[data-camera-focus="true"] h2,
+  .stage-active .stage-object-approval-focus h2 {
+    font-size: clamp(1.8rem, 9vw, 3.1rem);
+  }
+
+  .stage-active .stage-object[data-camera-focus="true"] p,
+  .stage-active .stage-object-approval-focus p {
+    max-width: calc(100vw - 3rem);
+    font-size: 0.96rem;
+  }
+
+  .stage-active .stage-approval-threshold {
+    display: none;
+  }
+
+  .stage-active .stage-labor-orbit {
+    bottom: 7.4rem;
+    width: min(22rem, 86vw);
+    opacity: 0.18;
+  }
+
+  .stage-active .intent-capture {
+    bottom: 1rem;
+    width: min(27rem, calc(100vw - 2rem));
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 }

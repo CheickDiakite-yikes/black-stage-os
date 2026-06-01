@@ -126,8 +126,9 @@ become much more fluid.
 Stage Web renders the manifest through `StageSceneField`, a non-interactive SVG
 and CSS field layer behind the readable DOM objects. The field draws semantic
 zone bands, cluster halos, a focal stage floor, horizon energy, relationship
-paths, and a soft flow spine through the active zones while documents,
-approvals, artifacts, and controls remain accessible DOM surfaces above it.
+paths, a camera aperture/corridor, and a soft flow spine through the active
+zones while documents, approvals, artifacts, and controls remain accessible DOM
+surfaces above it.
 
 The current field uses semantic stage-space coordinates and active zones from
 the manifest so the active surface behaves like a cinematic scene instead of a
@@ -136,10 +137,11 @@ geometry after layout so the vector layer feels physically attached to the
 objects it explains.
 
 Control-bearing objects stay on a 2D DOM plane for reliable hit testing. Depth
-is represented by manifest scale, halos, vector relationships, floor rings, and
-material treatment rather than by CSS 3D transforms on interactive cards.
-Likewise, active command controls use stable geometry so voice startup and
-artifact actions remain reachable while the render field animates.
+is represented by manifest scale, halos, vector relationships, floor rings,
+camera focus metadata, small parallax offsets, and material treatment rather
+than by CSS 3D transforms on interactive cards. Likewise, active command
+controls use stable geometry so voice startup and artifact actions remain
+reachable while the render field animates.
 
 ### StageRitualField
 
@@ -160,7 +162,9 @@ from the serialized thread and scene manifest. The focus target remains a normal
 `StageObject`; no extra approval state is stored. The renderer dims surrounding
 objects and draws a non-interactive tether from the focus target to the central
 threshold so the approval is visually attached to the object/action being
-reviewed.
+reviewed. The same focus target becomes the camera focus object, so
+`StageSceneField`, `StageObjectCard`, and `StageRitualField` describe one shared
+attention state instead of three unrelated visual effects.
 
 Browser and e2e geometry checks guard this layer against covering the focal work
 object, the command dock, or other readable objects.

@@ -7,6 +7,7 @@ import type {
 } from "@blackstage/stage-core";
 
 type StageSceneFieldProps = {
+  attentionObjectId?: string;
   scene: StageSceneManifest;
 };
 
@@ -69,7 +70,7 @@ const clusterHaloById: Record<StageSceneClusterId, ClusterHalo> = {
   }
 };
 
-export function StageSceneField({ scene }: StageSceneFieldProps) {
+export function StageSceneField({ attentionObjectId, scene }: StageSceneFieldProps) {
   const anchors = scene.nodes.map(resolveSceneAnchor);
   const anchorByObjectId = new Map(
     anchors.map((anchor) => [anchor.node.objectId, anchor])
@@ -94,6 +95,7 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
   ).map((clusterId) => resolveClusterHalo(clusterId, anchors));
   const activeZones = scene.zones.filter((zone) => zone.active);
   const focalAnchor =
+    anchors.find((anchor) => anchor.node.objectId === attentionObjectId) ??
     anchors.find((anchor) => anchor.node.objectId === scene.camera.focalObjectId) ??
     anchors.find((anchor) => anchor.node.role === "primary_display") ??
     anchors[0];
@@ -106,6 +108,11 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
       data-ambient={scene.ambientState}
       data-active-zone-count={activeZones.length}
       data-edge-count={visibleEdges.length}
+      data-camera-depth={scene.camera.depth.toFixed(2)}
+      data-camera-focus-object={focalAnchor?.node.objectId}
+      data-camera-mode={scene.camera.mode}
+      data-camera-parallax={scene.camera.parallax.toFixed(2)}
+      data-camera-tilt={scene.camera.tilt.toFixed(2)}
       data-layout={scene.layoutMode}
       data-node-count={scene.nodes.length}
       data-testid="stage-scene-field"
@@ -165,6 +172,33 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
             />
           ))}
         </g>
+        {focalAnchor ? (
+          <g
+            className="scene-camera-field"
+            data-scene-camera-focus={focalAnchor.node.objectId}
+          >
+            <path
+              className="scene-camera-corridor"
+              d={drawCameraCorridor(focalAnchor, floorY)}
+              pathLength="1"
+            />
+            <g
+              className="scene-camera-aperture"
+              transform={`translate(${focalAnchor.x} ${focalAnchor.y})`}
+            >
+              <ellipse className="scene-camera-aperture-outer" rx="10.8" ry="6.4" />
+              <ellipse className="scene-camera-aperture-inner" rx="5.4" ry="3.2" />
+              <path
+                className="scene-camera-reticle-x"
+                d="M -13 0 L -7.4 0 M 7.4 0 L 13 0"
+              />
+              <path
+                className="scene-camera-reticle-y"
+                d="M 0 -8.4 L 0 -4.5 M 0 4.5 L 0 8.4"
+              />
+            </g>
+          </g>
+        ) : null}
         <g className="scene-stage-floor">
           <path
             className="scene-horizon-line"
@@ -177,10 +211,25 @@ export function StageSceneField({ scene }: StageSceneFieldProps) {
               data-scene-focal={focalAnchor.node.objectId}
               transform={`translate(${focalAnchor.x} ${floorY})`}
             >
-              <ellipse className="scene-floor-ring scene-floor-ring-outer" rx="25" ry="5.4" />
-              <ellipse className="scene-floor-ring scene-floor-ring-mid" rx="15.2" ry="3.3" />
-              <ellipse className="scene-floor-ring scene-floor-ring-core" rx="6.2" ry="1.4" />
-              <path className="scene-floor-sweep" d="M -28 1.9 C -9 4.8 10 3.8 30 -1.7" />
+              <ellipse
+                className="scene-floor-ring scene-floor-ring-outer"
+                rx="25"
+                ry="5.4"
+              />
+              <ellipse
+                className="scene-floor-ring scene-floor-ring-mid"
+                rx="15.2"
+                ry="3.3"
+              />
+              <ellipse
+                className="scene-floor-ring scene-floor-ring-core"
+                rx="6.2"
+                ry="1.4"
+              />
+              <path
+                className="scene-floor-sweep"
+                d="M -28 1.9 C -9 4.8 10 3.8 30 -1.7"
+              />
             </g>
           ) : null}
         </g>
@@ -240,6 +289,22 @@ function drawZoneFlow(zones: StageSceneZone[]): string {
   return segments.join(" ");
 }
 
+function drawCameraCorridor(focus: SceneAnchor, floorY: number): string {
+  const lowY = Math.min(96, floorY + 8);
+  const leftX = Math.max(3, focus.x - 19);
+  const rightX = Math.min(97, focus.x + 19);
+
+  return [
+    `M ${leftX.toFixed(2)} ${lowY.toFixed(2)}`,
+    `C ${(focus.x - 10).toFixed(2)} ${(focus.y + 18).toFixed(2)}`,
+    `${(focus.x - 8).toFixed(2)} ${(focus.y + 7).toFixed(2)}`,
+    `${focus.x.toFixed(2)} ${focus.y.toFixed(2)}`,
+    `C ${(focus.x + 8).toFixed(2)} ${(focus.y + 7).toFixed(2)}`,
+    `${(focus.x + 10).toFixed(2)} ${(focus.y + 18).toFixed(2)}`,
+    `${rightX.toFixed(2)} ${lowY.toFixed(2)}`
+  ].join(" ");
+}
+
 function resolveSceneAnchor(node: StageSceneNode, index: number): SceneAnchor {
   const softIndexOffset = (index % 2 === 0 ? -1 : 1) * 0.65;
 
@@ -254,7 +319,9 @@ function resolveClusterHalo(
   clusterId: StageSceneClusterId,
   anchors: SceneAnchor[]
 ): ClusterHalo {
-  const clusterAnchors = anchors.filter((anchor) => anchor.node.clusterId === clusterId);
+  const clusterAnchors = anchors.filter(
+    (anchor) => anchor.node.clusterId === clusterId
+  );
   const fallback = clusterHaloById[clusterId];
 
   if (clusterAnchors.length === 0) {

@@ -61,7 +61,7 @@ export function StageRitualField({
             cy={approvalFocusNode.transform.y}
             r="1.1"
           />
-          <circle className="stage-approval-tether__gate" cx="88" cy="42" r="1.2" />
+          <circle className="stage-approval-tether__gate" cx="94" cy="42" r="1.2" />
         </svg>
       ) : null}
       <div className="stage-labor-orbit" data-testid="stage-labor-orbit">
@@ -113,7 +113,7 @@ export function StageRitualField({
 function drawApprovalTether(focusNode: StageSceneNode): string {
   const startX = focusNode.transform.x;
   const startY = focusNode.transform.y;
-  const endX = 88;
+  const endX = 94;
   const endY = 42;
   const midpointX = (startX + endX) / 2;
 

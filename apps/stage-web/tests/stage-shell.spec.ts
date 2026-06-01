@@ -336,7 +336,24 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       sceneNodeCount: Number(sceneField.dataset.nodeCount ?? 0),
       sceneZoneCount: Number(sceneField.dataset.zoneCount ?? 0),
       sceneActiveZoneCount: Number(sceneField.dataset.activeZoneCount ?? 0),
+      sceneCameraMode: sceneField.dataset.cameraMode,
+      sceneCameraFocusObject: sceneField.dataset.cameraFocusObject,
+      workspaceCameraFocusObject: document.querySelector<HTMLElement>(
+        '[data-testid="stage-workspace"]'
+      )?.dataset.stageCameraFocusObject,
+      workspaceCameraDepth: getComputedStyle(
+        document.querySelector<HTMLElement>('[data-testid="stage-workspace"]') ??
+          sceneField
+      )
+        .getPropertyValue("--stage-camera-depth")
+        .trim(),
       sceneHasFocalStage: Boolean(sceneField.querySelector(".scene-focal-stage")),
+      sceneHasCameraAperture: Boolean(
+        sceneField.querySelector(".scene-camera-aperture")
+      ),
+      sceneHasCameraCorridor: Boolean(
+        sceneField.querySelector(".scene-camera-corridor")
+      ),
       sceneHasZoneFlow: Boolean(sceneField.querySelector(".scene-zone-flow")),
       sceneHasWorkZone: Boolean(
         sceneField.querySelector('[data-scene-zone="work_focus"]')
@@ -353,6 +370,12 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       sceneHasPrimaryHalo: Boolean(
         sceneField.querySelector('[data-scene-cluster="primary_work"]')
       ),
+      planCameraFocused: planObjectElement.dataset.cameraFocus === "true",
+      planObjectId: planObjectElement.dataset.objectId,
+      intentCameraFocused: intentObject.dataset.cameraFocus === "true",
+      intentParallaxX: getComputedStyle(intentObject)
+        .getPropertyValue("--object-parallax-x")
+        .trim(),
       ritualExists: Boolean(ritualField),
       ritualHasApproval: ritualField?.dataset.hasApproval === "true",
       ritualEventCount: Number(ritualField?.dataset.eventCount ?? 0),
@@ -397,17 +420,33 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(renderFieldEvidence.sceneNodeCount).toBeGreaterThanOrEqual(3);
   expect(renderFieldEvidence.sceneZoneCount).toBeGreaterThanOrEqual(5);
   expect(renderFieldEvidence.sceneActiveZoneCount).toBeGreaterThanOrEqual(3);
+  expect(renderFieldEvidence.sceneCameraMode).toBeTruthy();
+  expect(renderFieldEvidence.sceneCameraFocusObject).toBe(
+    renderFieldEvidence.planObjectId
+  );
+  expect(renderFieldEvidence.workspaceCameraFocusObject).toBe(
+    renderFieldEvidence.planObjectId
+  );
+  expect(Number(renderFieldEvidence.workspaceCameraDepth)).toBeGreaterThan(0);
   expect(renderFieldEvidence.sceneHasFocalStage).toBe(true);
+  expect(renderFieldEvidence.sceneHasCameraAperture).toBe(true);
+  expect(renderFieldEvidence.sceneHasCameraCorridor).toBe(true);
   expect(renderFieldEvidence.sceneHasZoneFlow).toBe(true);
   expect(renderFieldEvidence.sceneHasWorkZone).toBe(true);
   expect(renderFieldEvidence.sceneHasFramesEdge).toBe(true);
   expect(renderFieldEvidence.sceneHasSupportEdge).toBe(true);
   expect(renderFieldEvidence.sceneHasIntentHalo).toBe(true);
   expect(renderFieldEvidence.sceneHasPrimaryHalo).toBe(true);
+  expect(renderFieldEvidence.planCameraFocused).toBe(true);
+  expect(renderFieldEvidence.intentCameraFocused).toBe(false);
+  expect(renderFieldEvidence.intentParallaxX).not.toBe("0px");
   expect(renderFieldEvidence.ritualExists).toBe(true);
-  expect(renderFieldEvidence.ritualHasApproval).toBe(false);
   expect(renderFieldEvidence.ritualEventCount).toBeGreaterThanOrEqual(2);
   expect(renderFieldEvidence.laborNodeCount).toBeGreaterThanOrEqual(2);
+  if (renderFieldEvidence.ritualHasApproval) {
+    expect(renderFieldEvidence.thresholdDoesNotCoverPlan).toBe(true);
+    expect(renderFieldEvidence.thresholdDoesNotCoverCommand).toBe(true);
+  }
   expect(renderFieldEvidence.planRightOfIntent).toBe(true);
   expect(renderFieldEvidence.documentBelowIntent).toBe(true);
   expect(renderFieldEvidence.objectsDoNotOverlap).toBe(true);
@@ -489,13 +528,21 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const intentObject = document.querySelector<HTMLElement>(
       '[data-testid="stage-object-intent_card"]'
     );
+    const sceneField = document.querySelector<HTMLElement>(
+      '[data-testid="stage-scene-field"]'
+    );
 
     return {
       approvalFocusObject: workspace?.dataset.approvalFocusObject,
+      sceneCameraFocusObject: sceneField?.dataset.cameraFocusObject,
+      workspaceCameraFocusObject: workspace?.dataset.stageCameraFocusObject,
       approvalFocusedObjectType: approvalFocusedObject?.dataset.testid,
+      approvalFocusedObjectId: approvalFocusedObject?.dataset.objectId,
       hasApprovalPendingClass:
         workspace?.classList.contains("stage-workspace-approval-pending") ?? false,
       hasApprovalTether: Boolean(approvalTether),
+      hasCameraAperture: Boolean(sceneField?.querySelector(".scene-camera-aperture")),
+      hasCameraCorridor: Boolean(sceneField?.querySelector(".scene-camera-corridor")),
       dimmedIntentOpacity: Number(
         intentObject ? getComputedStyle(intentObject).opacity : 1
       ),
@@ -514,11 +561,22 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   });
 
   expect(pendingRitualEvidence.approvalFocusObject).toBeTruthy();
+  expect(pendingRitualEvidence.sceneCameraFocusObject).toBe(
+    pendingRitualEvidence.approvalFocusObject
+  );
+  expect(pendingRitualEvidence.workspaceCameraFocusObject).toBe(
+    pendingRitualEvidence.approvalFocusObject
+  );
+  expect(pendingRitualEvidence.approvalFocusedObjectId).toBe(
+    pendingRitualEvidence.approvalFocusObject
+  );
   expect(pendingRitualEvidence.approvalFocusedObjectType).toBe(
     "stage-object-plan_card"
   );
   expect(pendingRitualEvidence.hasApprovalPendingClass).toBe(true);
   expect(pendingRitualEvidence.hasApprovalTether).toBe(true);
+  expect(pendingRitualEvidence.hasCameraAperture).toBe(true);
+  expect(pendingRitualEvidence.hasCameraCorridor).toBe(true);
   expect(pendingRitualEvidence.dimmedIntentOpacity).toBeLessThan(0.8);
   expect(pendingRitualEvidence.focusedPlanOpacity).toBeGreaterThan(0.95);
   expect(pendingRitualEvidence.ritualHasApproval).toBe(true);
@@ -591,6 +649,14 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           workspace.querySelector('[data-scene-zone="artifact_output"]')
         ),
         hasZoneFlow: Boolean(workspace.querySelector(".scene-zone-flow")),
+        hasCameraAperture: Boolean(workspace.querySelector(".scene-camera-aperture")),
+        hasCameraCorridor: Boolean(workspace.querySelector(".scene-camera-corridor")),
+        cameraFocusCount: workspace.querySelectorAll('[data-camera-focus="true"]')
+          .length,
+        cameraFocusObject: workspace.querySelector<HTMLElement>(
+          '[data-camera-focus="true"]'
+        )?.dataset.objectId,
+        workspaceCameraFocusObject: workspace.dataset.stageCameraFocusObject,
         approvedThresholdStatus: approvalThreshold?.dataset.approvalStatus,
         approvalFocusObject: workspace.dataset.approvalFocusObject,
         approvalFocusCount: workspace.querySelectorAll('[data-approval-focus="true"]')
@@ -620,6 +686,12 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.activeZoneCount).toBeGreaterThanOrEqual(4);
   expect(approvedFieldEvidence.hasArtifactZone).toBe(true);
   expect(approvedFieldEvidence.hasZoneFlow).toBe(true);
+  expect(approvedFieldEvidence.hasCameraAperture).toBe(true);
+  expect(approvedFieldEvidence.hasCameraCorridor).toBe(true);
+  expect(approvedFieldEvidence.cameraFocusCount).toBe(1);
+  expect(approvedFieldEvidence.workspaceCameraFocusObject).toBe(
+    approvedFieldEvidence.cameraFocusObject
+  );
   expect(approvedFieldEvidence.approvedThresholdStatus).toBe("approved");
   expect(approvedFieldEvidence.approvalFocusObject).toBeUndefined();
   expect(approvedFieldEvidence.approvalFocusCount).toBe(0);

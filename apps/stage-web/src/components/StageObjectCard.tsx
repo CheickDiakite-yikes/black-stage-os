@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 type StageObjectCardProps = {
   approvalFocused?: boolean;
+  cameraFocus?: StageObjectCameraFocus;
   object: StageObject;
   sceneNode?: StageSceneNode;
   onCollapseToggle: (objectId: string) => void;
@@ -21,6 +22,13 @@ type StageObjectCardProps = {
     }
   ) => void;
   onPinToggle: (objectId: string) => void;
+};
+
+type StageObjectCameraFocus = {
+  objectId?: string;
+  x: number;
+  y: number;
+  parallax: number;
 };
 
 const objectLabels: Record<StageObject["type"], string> = {
@@ -46,6 +54,7 @@ const objectLabels: Record<StageObject["type"], string> = {
 
 export function StageObjectCard({
   approvalFocused = false,
+  cameraFocus,
   object,
   sceneNode,
   onCollapseToggle,
@@ -72,16 +81,23 @@ export function StageObjectCard({
     x: (object.position?.x ?? 0) - basePositionRef.current.x,
     y: (object.position?.y ?? 0) - basePositionRef.current.y
   };
+  const cameraState = resolveObjectCameraState(sceneNode, cameraFocus);
+  const baseSceneScale = sceneNode?.transform.scale ?? 1;
   const objectStyle = {
     "--object-shift-x": `${visibleShift.x}px`,
     "--object-shift-y": `${visibleShift.y}px`,
+    "--object-camera-distance": cameraState.distance.toFixed(2),
+    "--object-parallax-x": `${cameraState.parallaxX}px`,
+    "--object-parallax-y": `${cameraState.parallaxY}px`,
     "--scene-x": `${sceneNode?.transform.x ?? 50}`,
     "--scene-y": `${sceneNode?.transform.y ?? 50}`,
     "--scene-depth": `${sceneNode?.transform.z ?? object.position?.z ?? 0}`,
     "--scene-priority": `${sceneNode?.priority ?? 50}`,
     "--scene-rotate-x": `${sceneNode?.transform.rotateX ?? 0}`,
     "--scene-rotate-y": `${sceneNode?.transform.rotateY ?? 0}`,
-    "--scene-scale": `${sceneNode?.transform.scale ?? 1}`
+    "--scene-scale": `${Number(
+      (baseSceneScale * (cameraState.focused ? 1.025 : 1)).toFixed(3)
+    )}`
   } as CSSProperties;
 
   function beginWindowDrag(dragStart: {
@@ -215,6 +231,9 @@ export function StageObjectCard({
         approvalFocused ? "stage-object-approval-focus" : ""
       } ${isDragging ? "stage-object-dragging" : ""}`}
       data-approval-focus={approvalFocused ? "true" : "false"}
+      data-camera-distance={cameraState.distance.toFixed(2)}
+      data-camera-focus={cameraState.focused ? "true" : "false"}
+      data-object-id={object.id}
       data-testid={`stage-object-${object.type}`}
       data-scene-cluster={sceneNode?.clusterId}
       data-scene-material={sceneNode?.material}
@@ -283,6 +302,38 @@ export function StageObjectCard({
       )}
     </article>
   );
+}
+
+function resolveObjectCameraState(
+  sceneNode: StageSceneNode | undefined,
+  cameraFocus: StageObjectCameraFocus | undefined
+): {
+  distance: number;
+  focused: boolean;
+  parallaxX: number;
+  parallaxY: number;
+} {
+  if (!sceneNode || !cameraFocus) {
+    return {
+      distance: 0,
+      focused: false,
+      parallaxX: 0,
+      parallaxY: 0
+    };
+  }
+
+  const deltaX = sceneNode.transform.x - cameraFocus.x;
+  const deltaY = sceneNode.transform.y - cameraFocus.y;
+  const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+  const focused = sceneNode.objectId === cameraFocus.objectId;
+  const parallaxStrength = focused ? 0 : Math.min(0.18, cameraFocus.parallax * 0.2);
+
+  return {
+    distance: Number(distance.toFixed(2)),
+    focused,
+    parallaxX: Number((-deltaX * parallaxStrength).toFixed(2)),
+    parallaxY: Number((-deltaY * parallaxStrength * 0.72).toFixed(2))
+  };
 }
 
 function ObjectSurface({ object }: { object: StageObject }) {
