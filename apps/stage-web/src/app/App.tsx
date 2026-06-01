@@ -1007,6 +1007,7 @@ export function App() {
     const startupParams = new URLSearchParams(window.location.search);
     const startupIntent = startupParams.get("stageIntent");
     const startupScenarioId = startupParams.get("stageScenario");
+    let startupTimer: number | undefined;
 
     if (startupScenarioId) {
       try {
@@ -1014,25 +1015,51 @@ export function App() {
           startupScenarioId as StageShellScenarioId
         );
 
-        startupIntentAppliedRef.current = true;
-        runIntent(startupIntent?.trim() || startupScenario.intent, startupScenario.id, {
-          source: "scenario"
-        });
+        startupTimer = window.setTimeout(() => {
+          if (startupIntentAppliedRef.current) {
+            return;
+          }
+
+          startupIntentAppliedRef.current = true;
+          runIntent(
+            startupIntent?.trim() || startupScenario.intent,
+            startupScenario.id,
+            {
+              source: "scenario"
+            }
+          );
+        }, 0);
       } catch (error) {
         console.warn(error);
       }
 
-      return;
+      return () => {
+        if (startupTimer) {
+          window.clearTimeout(startupTimer);
+        }
+      };
     }
 
     if (!startupIntent?.trim()) {
       return;
     }
 
-    startupIntentAppliedRef.current = true;
-    runIntent(startupIntent, undefined, {
-      source: "text"
-    });
+    startupTimer = window.setTimeout(() => {
+      if (startupIntentAppliedRef.current) {
+        return;
+      }
+
+      startupIntentAppliedRef.current = true;
+      runIntent(startupIntent, undefined, {
+        source: "text"
+      });
+    }, 0);
+
+    return () => {
+      if (startupTimer) {
+        window.clearTimeout(startupTimer);
+      }
+    };
   }, [runIntent]);
 
   useEffect(() => {

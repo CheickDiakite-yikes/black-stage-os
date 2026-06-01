@@ -17,6 +17,7 @@
     "dev": "pnpm --filter @blackstage/stage-web dev",
     "dev:broker": "pnpm --filter @blackstage/stage-broker dev",
     "dev:runner": "pnpm --filter @blackstage/stage-runner dev",
+    "demo:morphology": "pnpm --filter @blackstage/stage-web dev -- --host 127.0.0.1 --port 5173",
     "build": "pnpm -r --sort build",
     "check:workflow": "node scripts/check-workflow-policy.mjs",
     "lint": "eslint .",
@@ -32,6 +33,7 @@
     "test": "pnpm check:workflow && pnpm test:scripts && pnpm -r --if-present test",
     "test:scripts": "node --test scripts/test/*.test.mjs",
     "test:e2e": "pnpm --filter @blackstage/stage-web test:e2e",
+    "test:morphology": "pnpm --filter @blackstage/stage-web test:e2e --grep \"startup-intent morphology demo URL|streams intent into approval-gated artifacts|preserves generated morphology on phone viewport\"",
     "typecheck": "pnpm -r --sort typecheck",
     "format": "prettier --write ."
   },

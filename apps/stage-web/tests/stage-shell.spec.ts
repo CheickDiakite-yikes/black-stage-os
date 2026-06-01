@@ -238,6 +238,56 @@ test("Stage Shell v0 opens to the idle orb instead of saved fixture work", async
   });
 });
 
+test("Stage Shell v0 runs the startup-intent morphology demo URL", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/?stageIntent=Build%20BlackStage");
+
+  await expect(page.getByTestId("stage-generated-stream")).toHaveAttribute(
+    "data-morph-mode",
+    /coding|approval/
+  );
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+
+  const startupDemoEvidence = await page.evaluate(() => {
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+    const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
+    const snapshot = rawSnapshot
+      ? (JSON.parse(rawSnapshot) as {
+          researchEvents?: Array<{ eventType?: string }>;
+          stageEvents?: Array<{ type?: string }>;
+        })
+      : undefined;
+
+    return {
+      phase: stream?.dataset.morphPhase,
+      socketCount: stream?.querySelectorAll(".generated-morph-socket").length ?? 0,
+      stageEventCount: snapshot?.stageEvents?.length ?? 0,
+      morphologyResearchCount:
+        snapshot?.researchEvents?.filter(
+          (event) => event.eventType === "morphology_frame_captured"
+        ).length ?? 0
+    };
+  });
+
+  expect([
+    "context_collapsed",
+    "sockets_allocated",
+    "approval_ritual",
+    "workbench_revealed"
+  ]).toContain(startupDemoEvidence.phase);
+  expect(startupDemoEvidence.socketCount).toBeGreaterThanOrEqual(2);
+  expect(startupDemoEvidence.stageEventCount).toBeGreaterThan(1);
+  expect(startupDemoEvidence.morphologyResearchCount).toBeGreaterThan(1);
+});
+
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   page
 }) => {
