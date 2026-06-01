@@ -533,8 +533,13 @@ function createMorphWorkbench(
   const phaseOrder = stageMorphPhaseOrder.indexOf(activePhaseId);
   const patchPhaseOrder = stageMorphPhaseOrder.indexOf("patch_applied");
   const revealPhaseOrder = stageMorphPhaseOrder.indexOf("workbench_revealed");
+  const pendingApproval = thread.approvals.some(
+    (approval) => approval.status === "pending"
+  );
   const state =
-    phaseOrder >= revealPhaseOrder || thread.artifacts.length > 0
+    pendingApproval
+      ? "patching"
+      : phaseOrder >= revealPhaseOrder || thread.artifacts.length > 0
       ? "revealed"
       : phaseOrder >= patchPhaseOrder
         ? "patching"
@@ -558,6 +563,10 @@ function resolveActiveMorphPhaseId(
 ): StageMorphPhaseId {
   if (!thread.originalIntent && !latestEvent) {
     return "nucleus_awake";
+  }
+
+  if (thread.approvals.some((approval) => approval.status === "pending")) {
+    return "approval_ritual";
   }
 
   if (latestEvent) {

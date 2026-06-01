@@ -72,7 +72,8 @@ export function createGeneratedFrame(
   thread: IntentThread
 ): GeneratedFrame {
   const renderableEvents = stageEvents.filter(isRenderableEvent);
-  const latest = renderableEvents.at(-1);
+  const latest =
+    findPendingApprovalEvent(renderableEvents, thread) ?? renderableEvents.at(-1);
   const sequenceIndex = Math.max(renderableEvents.length, 1);
 
   if (!latest) {
@@ -313,6 +314,32 @@ function withPatches(
 
 function isRenderableEvent(event: StageEvent): boolean {
   return renderableEventTypes.includes(event.type);
+}
+
+function findPendingApprovalEvent(
+  events: StageEvent[],
+  thread: IntentThread
+): StageEvent | undefined {
+  const pendingApproval = thread.approvals.find(
+    (approval) => approval.status === "pending"
+  );
+
+  if (!pendingApproval) {
+    return undefined;
+  }
+
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+
+    if (
+      event.type === "approval.requested" &&
+      event.payload.id === pendingApproval.id
+    ) {
+      return event;
+    }
+  }
+
+  return undefined;
 }
 
 function createSequence(index: number, source: StageEvent["type"]) {

@@ -1,4 +1,12 @@
-import type { ApprovalRequest, IntentThread, StageEvent } from "@blackstage/stage-core";
+import {
+  createStageMorphFrame,
+  type ApprovalRequest,
+  type IntentThread,
+  type StageEvent,
+  type StageMorphFrame,
+  type StageMorphOrbitObject,
+  type StageMorphSocket
+} from "@blackstage/stage-core";
 import type { CSSProperties } from "react";
 import {
   createGeneratedFrame,
@@ -26,35 +34,37 @@ export function StageGeneratedStream({
   }
 
   const frame = createGeneratedFrame(stageEvents, thread);
+  const morphFrame = createStageMorphFrame(stageEvents, thread);
   const pendingApproval = thread.approvals.find(
     (approval) => approval.status === "pending"
   );
   const clockStyle = {
-    "--stream-progress": frame.sequence.progress.toString()
+    "--stream-progress": frame.sequence.progress.toString(),
+    "--morph-depth": morphFrame.camera.depth.toString(),
+    "--morph-energy": morphFrame.nucleus.energy.toString(),
+    "--morph-tilt": `${morphFrame.camera.tilt}deg`
   } as CSSProperties;
 
   return (
     <section
-      className={`stage-generated-stream stage-generated-stream-${frame.kind}`}
+      className={`stage-generated-stream stage-generated-stream-${frame.kind} stage-morph-${morphFrame.activePhaseId} stage-morph-mode-${morphFrame.mode} stage-morph-workbench-${morphFrame.workbench.state}`}
       aria-label="Streaming generated interface"
       data-frame-kind={frame.kind}
       data-frame-sequence={frame.sequence.index}
       data-frame-source={frame.source}
+      data-morph-mode={morphFrame.mode}
+      data-morph-phase={morphFrame.activePhaseId}
+      data-morph-voice-cadence={morphFrame.nucleus.voice.cadence}
+      data-workbench-state={morphFrame.workbench.state}
       data-testid="stage-generated-stream"
+      style={clockStyle}
     >
-      <div className="generated-stream-orbit" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
+      <GeneratedMorphologyField morphFrame={morphFrame} />
       <div className="generated-stream-meta">
-        <span>{frame.label}</span>
-        <strong>{frame.source}</strong>
+        <span>{morphFrame.phases.find((phase) => phase.active)?.label}</span>
+        <strong>{morphFrame.mode}</strong>
       </div>
-      <div
-        className="generated-stream-clock"
-        style={clockStyle}
-      >
+      <div className="generated-stream-clock">
         <span>{frame.sequence.label}</span>
         <i aria-hidden="true" />
       </div>
@@ -86,6 +96,108 @@ export function StageGeneratedStream({
         <GeneratedPatchTrail patches={frame.patches} />
       </div>
     </section>
+  );
+}
+
+function GeneratedMorphologyField({ morphFrame }: { morphFrame: StageMorphFrame }) {
+  return (
+    <div
+      className="generated-morph-field"
+      aria-hidden="true"
+      data-morph-camera={morphFrame.camera.mode}
+    >
+      <div className="generated-morph-grid" />
+      <div className="generated-morph-sockets">
+        {morphFrame.sockets
+          .filter((socket) => socket.role !== "nucleus")
+          .map((socket, index) => (
+            <GeneratedMorphSocket index={index} key={socket.id} socket={socket} />
+          ))}
+      </div>
+      <div className="generated-morph-orbit">
+        {morphFrame.orbit.map((orbitObject, index) => (
+          <GeneratedMorphOrbitObject
+            index={index}
+            key={orbitObject.id}
+            orbitObject={orbitObject}
+          />
+        ))}
+      </div>
+      <div
+        className="generated-morph-nucleus"
+        data-nucleus-status={morphFrame.nucleus.status}
+      >
+        <span />
+        <i />
+      </div>
+      <div className="generated-morph-phase-rail">
+        {morphFrame.phases.map((phase) => (
+          <span
+            data-phase-active={phase.active}
+            data-phase-completed={phase.completed}
+            key={phase.id}
+            style={
+              {
+                "--phase-intensity": phase.intensity.toString()
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GeneratedMorphOrbitObject({
+  index,
+  orbitObject
+}: {
+  index: number;
+  orbitObject: StageMorphOrbitObject;
+}) {
+  const style = {
+    "--orbit-angle": `${orbitObject.angle}deg`,
+    "--orbit-radius": `${10 + orbitObject.distance * 28}rem`,
+    "--orbit-weight": orbitObject.weight.toString(),
+    "--orbit-delay": `${index * 90}ms`
+  } as CSSProperties;
+
+  return (
+    <span
+      className="generated-morph-orbit-object"
+      data-orbit-role={orbitObject.role}
+      data-orbit-status={orbitObject.status}
+      style={style}
+    >
+      <i />
+    </span>
+  );
+}
+
+function GeneratedMorphSocket({
+  index,
+  socket
+}: {
+  index: number;
+  socket: StageMorphSocket;
+}) {
+  const style = {
+    "--socket-height": `${socket.height}%`,
+    "--socket-left": `${socket.x}%`,
+    "--socket-top": `${socket.y}%`,
+    "--socket-width": `${socket.width}%`,
+    "--socket-delay": `${index * 120}ms`
+  } as CSSProperties;
+
+  return (
+    <span
+      className="generated-morph-socket"
+      data-socket-role={socket.role}
+      data-socket-state={socket.state}
+      style={style}
+    >
+      <i />
+    </span>
   );
 }
 

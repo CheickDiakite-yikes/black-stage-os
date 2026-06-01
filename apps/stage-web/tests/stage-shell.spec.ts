@@ -402,6 +402,24 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         generatedStreamRect!.width > 0 &&
         generatedStreamRect!.height > 0,
       generatedFrameSequence: Number(generatedStream?.dataset.frameSequence ?? 0),
+      generatedMorphMode: generatedStream?.dataset.morphMode,
+      generatedMorphPhase: generatedStream?.dataset.morphPhase,
+      generatedMorphVoiceCadence: generatedStream?.dataset.morphVoiceCadence,
+      generatedWorkbenchState: generatedStream?.dataset.workbenchState,
+      generatedMorphCamera:
+        generatedStream?.querySelector<HTMLElement>(".generated-morph-field")
+          ?.dataset.morphCamera,
+      generatedMorphNucleusExists: Boolean(
+        generatedStream?.querySelector(".generated-morph-nucleus")
+      ),
+      generatedMorphOrbitCount:
+        generatedStream?.querySelectorAll(".generated-morph-orbit-object").length ??
+        0,
+      generatedMorphSocketCount:
+        generatedStream?.querySelectorAll(".generated-morph-socket").length ?? 0,
+      generatedMorphPhaseCount:
+        generatedStream?.querySelectorAll(".generated-morph-phase-rail span")
+          .length ?? 0,
       generatedPatchClockText: generatedPatchClock?.textContent ?? "",
       generatedPatchCount:
         generatedStream?.querySelectorAll(".generated-stream-patches span").length ??
@@ -433,6 +451,20 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(renderFieldEvidence.constellationOpacity).toBeLessThan(0.05);
   expect(renderFieldEvidence.generatedStreamVisible).toBe(true);
   expect(renderFieldEvidence.generatedFrameSequence).toBeGreaterThan(0);
+  expect(["coding", "approval"]).toContain(renderFieldEvidence.generatedMorphMode);
+  expect([
+    "sockets_allocated",
+    "context_collapsed",
+    "approval_ritual",
+    "workbench_revealed"
+  ]).toContain(renderFieldEvidence.generatedMorphPhase);
+  expect(renderFieldEvidence.generatedMorphVoiceCadence).toBeTruthy();
+  expect(renderFieldEvidence.generatedWorkbenchState).toBeTruthy();
+  expect(renderFieldEvidence.generatedMorphCamera).toBeTruthy();
+  expect(renderFieldEvidence.generatedMorphNucleusExists).toBe(true);
+  expect(renderFieldEvidence.generatedMorphOrbitCount).toBeGreaterThanOrEqual(2);
+  expect(renderFieldEvidence.generatedMorphSocketCount).toBeGreaterThanOrEqual(2);
+  expect(renderFieldEvidence.generatedMorphPhaseCount).toBe(8);
   expect(renderFieldEvidence.generatedPatchClockText).toContain("patch");
   expect(renderFieldEvidence.generatedPatchCount).toBeGreaterThanOrEqual(3);
   expect(renderFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);
@@ -709,6 +741,17 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           generatedStreamRect!.width > 0 &&
           generatedStreamRect!.height > 0,
         generatedFrameSequence: Number(generatedStream?.dataset.frameSequence ?? 0),
+        generatedMorphMode: generatedStream?.dataset.morphMode,
+        generatedMorphPhase: generatedStream?.dataset.morphPhase,
+        generatedWorkbenchState: generatedStream?.dataset.workbenchState,
+        generatedMorphNucleusExists: Boolean(
+          generatedStream?.querySelector(".generated-morph-nucleus")
+        ),
+        generatedMorphSocketCount:
+          generatedStream?.querySelectorAll(".generated-morph-socket").length ?? 0,
+        generatedMorphPhaseCount:
+          generatedStream?.querySelectorAll(".generated-morph-phase-rail span")
+            .length ?? 0,
         generatedPatchClockText: generatedPatchClock?.textContent ?? "",
         generatedPatchCount:
           generatedStream?.querySelectorAll(".generated-stream-patches span")
@@ -749,6 +792,12 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.constellationOpacity).toBeLessThan(0.05);
   expect(approvedFieldEvidence.generatedStreamVisible).toBe(true);
   expect(approvedFieldEvidence.generatedFrameSequence).toBeGreaterThan(0);
+  expect(approvedFieldEvidence.generatedMorphMode).toBe("artifact");
+  expect(approvedFieldEvidence.generatedMorphPhase).toBe("workbench_revealed");
+  expect(approvedFieldEvidence.generatedWorkbenchState).toBe("revealed");
+  expect(approvedFieldEvidence.generatedMorphNucleusExists).toBe(true);
+  expect(approvedFieldEvidence.generatedMorphSocketCount).toBeGreaterThanOrEqual(3);
+  expect(approvedFieldEvidence.generatedMorphPhaseCount).toBe(8);
   expect(approvedFieldEvidence.generatedPatchClockText).toContain("patch");
   expect(approvedFieldEvidence.generatedPatchCount).toBeGreaterThanOrEqual(2);
   expect(approvedFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);

@@ -3119,6 +3119,46 @@ button:disabled {
   }
 }
 
+@keyframes generated-nucleus-breathe {
+  0% {
+    filter: blur(0);
+    opacity: 0.74;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+
+  100% {
+    filter: blur(0.2px);
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(calc(1 + var(--morph-energy, 0.4) * 0.18));
+  }
+}
+
+@keyframes generated-socket-arrival {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes generated-orbit-arrival {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--orbit-angle)) translateX(2rem)
+      rotate(calc(var(--orbit-angle) * -1)) scale(0.4);
+  }
+
+  100% {
+    opacity: calc(0.38 + var(--orbit-weight, 0.6) * 0.52);
+    transform: rotate(var(--orbit-angle)) translateX(var(--orbit-radius))
+      rotate(calc(var(--orbit-angle) * -1)) scale(1);
+  }
+}
+
 @keyframes scene-edge-flow {
   0% {
     opacity: 0.34;
@@ -3837,6 +3877,9 @@ button:disabled {
 }
 
 .stage-generated-stream {
+  --morph-primary: rgba(216, 189, 133, 0.72);
+  --morph-secondary: rgba(239, 228, 210, 0.58);
+  --morph-shadow: rgba(216, 189, 133, 0.16);
   position: absolute;
   inset: 0;
   z-index: 12;
@@ -3844,6 +3887,250 @@ button:disabled {
   place-items: center;
   overflow: visible;
   pointer-events: none;
+}
+
+.stage-morph-mode-coding {
+  --morph-primary: rgba(116, 244, 220, 0.76);
+  --morph-secondary: rgba(199, 255, 242, 0.62);
+  --morph-shadow: rgba(91, 220, 205, 0.18);
+}
+
+.stage-morph-mode-research {
+  --morph-primary: rgba(179, 160, 255, 0.72);
+  --morph-secondary: rgba(232, 225, 255, 0.58);
+  --morph-shadow: rgba(145, 118, 255, 0.18);
+}
+
+.stage-morph-mode-approval {
+  --morph-primary: rgba(255, 202, 143, 0.78);
+  --morph-secondary: rgba(255, 239, 214, 0.64);
+  --morph-shadow: rgba(255, 188, 112, 0.2);
+}
+
+.stage-morph-mode-artifact {
+  --morph-primary: rgba(151, 238, 190, 0.7);
+  --morph-secondary: rgba(224, 255, 239, 0.58);
+  --morph-shadow: rgba(119, 220, 172, 0.16);
+}
+
+.generated-morph-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+
+.generated-morph-field::before {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: min(48rem, 72vw);
+  aspect-ratio: 1.65;
+  border: 1px solid color-mix(in srgb, var(--morph-primary) 16%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 calc(90px + var(--morph-energy, 0.4) * 120px) var(--morph-shadow),
+    inset 0 0 72px rgba(239, 228, 210, 0.035);
+  content: "";
+  opacity: calc(0.24 + var(--morph-energy, 0.4) * 0.36);
+  transform: translate(-50%, -50%) rotateX(var(--morph-tilt, 0deg))
+    scale(calc(0.9 + var(--morph-depth, 0.4) * 0.18));
+  transition:
+    border-color 500ms ease,
+    opacity 500ms ease,
+    transform 700ms ease;
+}
+
+.generated-morph-grid {
+  position: absolute;
+  inset: 12% 10%;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--morph-primary) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--morph-primary) 14%, transparent) 1px, transparent 1px);
+  background-size: 2.15rem 2.15rem;
+  mask-image: radial-gradient(ellipse at center, black 0 38%, transparent 74%);
+  opacity: 0;
+  transform: rotateX(var(--morph-tilt, 0deg)) scale(0.94);
+  transition:
+    opacity 620ms ease,
+    transform 720ms ease;
+}
+
+.stage-morph-mode_shifted .generated-morph-grid,
+.stage-morph-sockets_allocated .generated-morph-grid,
+.stage-morph-patch_applied .generated-morph-grid,
+.stage-morph-approval_ritual .generated-morph-grid,
+.stage-morph-workbench_revealed .generated-morph-grid {
+  opacity: calc(0.16 + var(--morph-depth, 0.4) * 0.28);
+  transform: rotateX(var(--morph-tilt, 0deg)) scale(1);
+}
+
+.generated-morph-nucleus {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: clamp(3.4rem, 8vw, 5.8rem);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--morph-secondary) 72%, transparent);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 7%, transparent 8%),
+    radial-gradient(circle at 42% 38%, var(--morph-secondary), transparent 31%),
+    radial-gradient(circle, color-mix(in srgb, var(--morph-primary) 48%, transparent), transparent 64%);
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--morph-primary) 34%, transparent),
+    0 0 calc(60px + var(--morph-energy, 0.4) * 100px) var(--morph-shadow),
+    inset 0 0 22px rgba(255, 255, 255, 0.26);
+  opacity: 0.92;
+  transform: translate(-50%, -50%);
+  animation: generated-nucleus-breathe 1.9s ease-in-out infinite alternate;
+}
+
+.generated-morph-nucleus span,
+.generated-morph-nucleus i {
+  position: absolute;
+  inset: 18%;
+  border: 1px solid color-mix(in srgb, var(--morph-secondary) 42%, transparent);
+  border-radius: 44% 56% 48% 52%;
+  content: "";
+}
+
+.generated-morph-nucleus i {
+  inset: 34%;
+  border-radius: 50%;
+  background: var(--morph-secondary);
+  box-shadow: 0 0 18px var(--morph-primary);
+}
+
+.generated-morph-orbit {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: 1px;
+  height: 1px;
+}
+
+.generated-morph-orbit-object {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(2.2rem, 5vw, 4.1rem);
+  height: clamp(1.1rem, 2.2vw, 1.9rem);
+  border: 1px solid color-mix(in srgb, var(--morph-primary) 22%, transparent);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(0, 0, 0, 0.1));
+  box-shadow: 0 0 28px color-mix(in srgb, var(--morph-primary) 10%, transparent);
+  opacity: 0;
+  transform-origin: 0 0;
+  animation: generated-orbit-arrival 740ms ease var(--orbit-delay, 0ms) both;
+}
+
+.generated-morph-orbit-object i {
+  position: absolute;
+  left: 0.54rem;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: color-mix(in srgb, var(--morph-secondary) 58%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.025),
+    1.5rem 0 0 color-mix(in srgb, var(--morph-primary) 30%, transparent);
+  transform: translateY(-50%);
+}
+
+.generated-morph-orbit-object[data-orbit-role="tool"] {
+  height: clamp(1.4rem, 2.7vw, 2.4rem);
+}
+
+.generated-morph-orbit-object[data-orbit-status="digesting"],
+.stage-morph-context_collapsed .generated-morph-orbit-object {
+  filter: blur(2px);
+  opacity: 0.24;
+  transform: rotate(var(--orbit-angle)) translateX(calc(var(--orbit-radius) * 0.22))
+    rotate(calc(var(--orbit-angle) * -1)) scale(0.5);
+  transition:
+    filter 520ms ease,
+    opacity 520ms ease,
+    transform 620ms ease;
+}
+
+.generated-morph-orbit-object[data-orbit-status="resolved"] {
+  opacity: 0.12;
+  transform: rotate(var(--orbit-angle)) translateX(calc(var(--orbit-radius) * 0.42))
+    rotate(calc(var(--orbit-angle) * -1)) scale(0.54);
+}
+
+.generated-morph-socket {
+  position: absolute;
+  left: var(--socket-left);
+  top: var(--socket-top);
+  width: var(--socket-width);
+  height: var(--socket-height);
+  border: 1px solid color-mix(in srgb, var(--morph-primary) 18%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--morph-primary) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--morph-primary) 8%, transparent) 1px, transparent 1px),
+    rgba(0, 0, 0, 0.16);
+  background-size: 1.3rem 1.3rem;
+  box-shadow:
+    inset 0 0 28px rgba(255, 255, 255, 0.025),
+    0 0 44px color-mix(in srgb, var(--morph-primary) 8%, transparent);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  animation: generated-socket-arrival 620ms ease var(--socket-delay, 0ms) both;
+}
+
+.generated-morph-socket i {
+  position: absolute;
+  inset: 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--morph-secondary) 12%, transparent);
+}
+
+.generated-morph-socket[data-socket-state="empty"] {
+  opacity: 0.28;
+}
+
+.generated-morph-socket[data-socket-state="blocked"] {
+  border-color: rgba(255, 202, 143, 0.4);
+  box-shadow: 0 0 58px rgba(255, 188, 112, 0.14);
+}
+
+.generated-morph-socket[data-socket-role="artifact"] {
+  border-color: rgba(151, 238, 190, 0.24);
+}
+
+.generated-morph-phase-rail {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(5.4rem, 11vh, 7.8rem);
+  display: flex;
+  width: min(16rem, 44vw);
+  justify-content: center;
+  gap: 0.36rem;
+  transform: translateX(-50%);
+}
+
+.generated-morph-phase-rail span {
+  display: block;
+  width: 1.05rem;
+  height: 1px;
+  background: var(--morph-primary);
+  opacity: calc(0.22 + var(--phase-intensity, 0.2) * 0.64);
+}
+
+.generated-morph-phase-rail span[data-phase-active="true"] {
+  height: 2px;
+  box-shadow: 0 0 12px var(--morph-primary);
+}
+
+.stage-morph-workbench-revealed .generated-stream-surface,
+.stage-morph-workbench-revealed .generated-morph-sockets {
+  transform: rotateX(var(--morph-tilt, 0deg)) translateY(-0.35rem);
+  transform-style: preserve-3d;
+}
+
+.stage-morph-approval_ritual .generated-stream-surface {
+  filter: drop-shadow(0 0 30px rgba(255, 188, 112, 0.1));
 }
 
 .generated-stream-orbit {
