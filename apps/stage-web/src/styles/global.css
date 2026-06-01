@@ -3913,6 +3913,39 @@ button:disabled {
   white-space: nowrap;
 }
 
+.generated-stream-clock {
+  position: absolute;
+  left: 50%;
+  top: clamp(6.95rem, 18vh, 11.2rem);
+  display: grid;
+  width: min(12rem, 28vw);
+  gap: 0.42rem;
+  color: rgba(216, 189, 133, 0.46);
+  font-size: 0.54rem;
+  letter-spacing: 0.26em;
+  text-align: center;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.generated-stream-clock i {
+  position: relative;
+  display: block;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(216, 189, 133, 0.12);
+}
+
+.generated-stream-clock i::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: rgba(239, 228, 210, 0.68);
+  transform: scaleX(var(--stream-progress, 0.12));
+  transform-origin: left center;
+  transition: transform 520ms ease;
+}
+
 .generated-stream-surface {
   position: relative;
   display: grid;
@@ -3972,6 +4005,14 @@ button:disabled {
 
 .generated-stream-detail:nth-child(4) {
   animation-delay: 270ms;
+}
+
+.generated-stream-detail-primary {
+  background: rgba(216, 189, 133, 0.035);
+}
+
+.generated-stream-detail-quiet {
+  opacity: 0.78;
 }
 
 .generated-stream-detail span {
@@ -4066,6 +4107,28 @@ button:disabled {
 .generated-stream-actions button:focus-visible {
   border-color: rgba(255, 246, 228, 0.7);
   color: #fff6e4;
+}
+
+.generated-stream-patches {
+  display: flex;
+  max-width: min(44rem, 76vw);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.42rem;
+  margin-top: 0.82rem;
+  color: rgba(216, 189, 133, 0.38);
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.generated-stream-patches span {
+  border: 1px solid rgba(216, 189, 133, 0.08);
+  padding: 0.24rem 0.32rem;
+}
+
+.generated-stream-patches span[data-patch-op="bind"] {
+  color: rgba(239, 228, 210, 0.44);
 }
 
 .stage-generated-stream-approval .generated-stream-surface h2 {
@@ -4270,6 +4333,12 @@ button:disabled {
     letter-spacing: 0.28em;
   }
 
+  .generated-stream-clock {
+    top: 14vh;
+    width: min(9rem, 36vw);
+    font-size: 0.48rem;
+  }
+
   .generated-stream-surface {
     width: min(27rem, calc(100vw - 1.5rem));
   }
@@ -4314,6 +4383,10 @@ button:disabled {
   .generated-stream-actions button {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  .generated-stream-patches {
+    display: none;
   }
 
   .generated-stream-signals {
