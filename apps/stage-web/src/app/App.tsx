@@ -29,7 +29,11 @@ import {
 import { stageTheme } from "@blackstage/stage-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StageShell } from "../components/StageShell";
-import { researchEventFromStageEvent } from "../instrumentation/researchLogger";
+import {
+  hasResearchEventForMorphologyFrame,
+  researchEventFromMorphologyFrame,
+  researchEventFromStageEvent
+} from "../instrumentation/researchLogger";
 import {
   checkStageWebRealtimeBrokerProofs,
   checkStageWebRealtimeBrokerReadiness,
@@ -2116,6 +2120,33 @@ export function App() {
     stageEvents,
     thread
   ]);
+
+  useEffect(() => {
+    const morphologyResearchEvent = researchEventFromMorphologyFrame(
+      sessionId,
+      thread,
+      stageEvents
+    );
+
+    if (!morphologyResearchEvent) {
+      return;
+    }
+
+    setResearchEvents((currentEvents) => {
+      const alreadyCaptured = currentEvents.some((event) =>
+        hasResearchEventForMorphologyFrame(
+          event,
+          sessionId,
+          thread.id,
+          stageEvents.length
+        )
+      );
+
+      return alreadyCaptured
+        ? currentEvents
+        : [...currentEvents, morphologyResearchEvent];
+    });
+  }, [sessionId, stageEvents, thread]);
 
   useEffect(() => {
     const routeUrl = resolveStageWebRealtimeBrokerRouteUrl();

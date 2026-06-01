@@ -1,9 +1,40 @@
 import type {
+  IntentThread,
   ResearchEvent,
   ResearchEventType,
-  StageEvent
+  StageEvent,
+  StageMorphFrame
 } from "@blackstage/stage-core";
+import { createStageMorphFrame } from "@blackstage/stage-core";
 import { redactIntentText } from "./redaction";
+
+type MorphologyResearchPayload = {
+  render_schema: "blackstage.stage_morph_frame.v0";
+  frame_sequence: number;
+  stage_event_count: number;
+  source_event_type: StageEvent["type"] | "none";
+  phase: StageMorphFrame["activePhaseId"];
+  mode: StageMorphFrame["mode"];
+  voice_cadence: StageMorphFrame["nucleus"]["voice"]["cadence"];
+  voice_energy: number;
+  workbench_state: StageMorphFrame["workbench"]["state"];
+  workbench_artifact_count: number;
+  orbit_count: number;
+  socket_count: number;
+  patch_count: number;
+  phase_count: number;
+  active_socket_count: number;
+  approval_ritual_state:
+    | NonNullable<StageMorphFrame["approvalRitual"]>["status"]
+    | "none";
+  approval_risk_level:
+    | NonNullable<StageMorphFrame["approvalRitual"]>["riskLevel"]
+    | "none";
+  camera_depth: number;
+  camera_tilt: number;
+  socket_roles: StageMorphFrame["sockets"][number]["role"][];
+  patch_statuses: Record<string, number>;
+};
 
 export function createResearchEvent(
   sessionId: string,
@@ -192,8 +223,95 @@ export function researchEventFromStageEvent(
   }
 }
 
+export function researchEventFromMorphologyFrame(
+  sessionId: string,
+  thread: IntentThread,
+  stageEvents: StageEvent[]
+): ResearchEvent | undefined {
+  if (stageEvents.length === 0) {
+    return undefined;
+  }
+
+  const frame = createStageMorphFrame(stageEvents, thread);
+
+  return createResearchEvent(
+    sessionId,
+    "morphology_frame_captured",
+    createMorphologyResearchPayload(frame, stageEvents),
+    thread.id
+  );
+}
+
+export function hasResearchEventForMorphologyFrame(
+  researchEvent: ResearchEvent,
+  sessionId: string,
+  threadId: string,
+  stageEventCount: number
+): boolean {
+  if (
+    researchEvent.sessionId !== sessionId ||
+    researchEvent.threadId !== threadId ||
+    researchEvent.eventType !== "morphology_frame_captured"
+  ) {
+    return false;
+  }
+
+  const payload = researchEvent.payload as Partial<MorphologyResearchPayload>;
+
+  return payload.stage_event_count === stageEventCount;
+}
+
 function readExtension(fileName: string): string {
   const extension = fileName.split(".").pop();
 
   return extension && extension !== fileName ? extension.toLowerCase() : "unknown";
+}
+
+function createMorphologyResearchPayload(
+  frame: StageMorphFrame,
+  stageEvents: StageEvent[]
+): MorphologyResearchPayload {
+  const patchStatuses = frame.patches.reduce<Record<string, number>>(
+    (counts, patch) => {
+      counts[patch.status] = (counts[patch.status] ?? 0) + 1;
+
+      return counts;
+    },
+    {}
+  );
+  const socketRoles = Array.from(
+    new Set(frame.sockets.map((socket) => socket.role))
+  ).sort();
+
+  return {
+    render_schema: "blackstage.stage_morph_frame.v0",
+    frame_sequence: stageEvents.length,
+    stage_event_count: stageEvents.length,
+    source_event_type: stageEvents.at(-1)?.type ?? "none",
+    phase: frame.activePhaseId,
+    mode: frame.mode,
+    voice_cadence: frame.nucleus.voice.cadence,
+    voice_energy: roundMetric(frame.nucleus.voice.energy),
+    workbench_state: frame.workbench.state,
+    workbench_artifact_count: frame.patches.filter(
+      (patch) =>
+        patch.source === "artifact.created" || patch.source === "artifact.updated"
+    ).length,
+    orbit_count: frame.orbit.length,
+    socket_count: frame.sockets.length,
+    patch_count: frame.patches.length,
+    phase_count: frame.phases.length,
+    active_socket_count: frame.sockets.filter((socket) => socket.state !== "empty")
+      .length,
+    approval_ritual_state: frame.approvalRitual?.status ?? "none",
+    approval_risk_level: frame.approvalRitual?.riskLevel ?? "none",
+    camera_depth: roundMetric(frame.camera.depth),
+    camera_tilt: roundMetric(frame.camera.tilt),
+    socket_roles: socketRoles,
+    patch_statuses: patchStatuses
+  };
+}
+
+function roundMetric(value: number): number {
+  return Math.round(value * 1_000) / 1_000;
 }

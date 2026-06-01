@@ -22,8 +22,11 @@ export function ResearchCapture({
   onReplay,
   onReset
 }: ResearchCaptureProps) {
-  const latestEvent = events.at(-1);
-  const latestEvents = events.slice(-4).reverse();
+  const visibleEvents = events.filter(
+    (event) => event.eventType !== "morphology_frame_captured"
+  );
+  const latestEvent = visibleEvents.at(-1) ?? events.at(-1);
+  const latestEvents = visibleEvents.slice(-4).reverse();
   const realtimeLatencyLine = realtimeDebugSummary
     ? formatRealtimeLatencyLine(realtimeDebugSummary)
     : undefined;

@@ -406,24 +406,22 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       generatedMorphPhase: generatedStream?.dataset.morphPhase,
       generatedMorphVoiceCadence: generatedStream?.dataset.morphVoiceCadence,
       generatedWorkbenchState: generatedStream?.dataset.workbenchState,
-      generatedMorphCamera:
-        generatedStream?.querySelector<HTMLElement>(".generated-morph-field")
-          ?.dataset.morphCamera,
+      generatedMorphCamera: generatedStream?.querySelector<HTMLElement>(
+        ".generated-morph-field"
+      )?.dataset.morphCamera,
       generatedMorphNucleusExists: Boolean(
         generatedStream?.querySelector(".generated-morph-nucleus")
       ),
       generatedMorphOrbitCount:
-        generatedStream?.querySelectorAll(".generated-morph-orbit-object").length ??
-        0,
+        generatedStream?.querySelectorAll(".generated-morph-orbit-object").length ?? 0,
       generatedMorphSocketCount:
         generatedStream?.querySelectorAll(".generated-morph-socket").length ?? 0,
       generatedMorphPhaseCount:
-        generatedStream?.querySelectorAll(".generated-morph-phase-rail span")
-          .length ?? 0,
+        generatedStream?.querySelectorAll(".generated-morph-phase-rail span").length ??
+        0,
       generatedPatchClockText: generatedPatchClock?.textContent ?? "",
       generatedPatchCount:
-        generatedStream?.querySelectorAll(".generated-stream-patches span").length ??
-        0,
+        generatedStream?.querySelectorAll(".generated-stream-patches span").length ?? 0,
       generatedStreamText: generatedStream?.textContent ?? "",
       generatedStreamTextLength: generatedStream?.textContent?.length ?? 0,
       generatedStreamDetailCount:
@@ -533,8 +531,8 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
       return Boolean(
         element &&
-          getComputedStyle(element).display !== "none" &&
-          getComputedStyle(element).opacity !== "0"
+        getComputedStyle(element).display !== "none" &&
+        getComputedStyle(element).opacity !== "0"
       );
     };
     const stream = document.querySelector<HTMLElement>(
@@ -823,8 +821,8 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
             .length ?? 0,
         generatedPatchClockText: generatedPatchClock?.textContent ?? "",
         generatedPatchCount:
-          generatedStream?.querySelectorAll(".generated-stream-patches span")
-            .length ?? 0,
+          generatedStream?.querySelectorAll(".generated-stream-patches span").length ??
+          0,
         generatedStreamTextLength: generatedStream?.textContent?.length ?? 0,
         laborNodeCount: workspace.querySelectorAll('[data-testid="stage-labor-node"]')
           .length,
@@ -887,27 +885,62 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           currentThread?: {
             artifacts?: Array<{ status?: string; title?: string }>;
           };
-          researchEvents?: unknown[];
+          researchEvents?: Array<{
+            eventType?: string;
+            payload?: {
+              active_socket_count?: number;
+              mode?: string;
+              phase?: string;
+              render_schema?: string;
+              socket_count?: number;
+              source_event_type?: string;
+              stage_event_count?: number;
+              workbench_state?: string;
+            };
+          }>;
           stageEvents?: Array<{ type?: string; payload?: { status?: string } }>;
         })
       : undefined;
+    const morphologyEvent = snapshot?.researchEvents
+      ?.filter((event) => event.eventType === "morphology_frame_captured")
+      .at(-1);
 
     return {
       approvalResolved: snapshot?.stageEvents?.some(
-        (event) => event.type === "approval.resolved" && event.payload?.status === "approved"
+        (event) =>
+          event.type === "approval.resolved" && event.payload?.status === "approved"
       ),
       approvedArtifact: snapshot?.currentThread?.artifacts?.some(
         (artifact) =>
-          artifact.status === "approved" &&
-          artifact.title?.includes("Codex Task Brief")
+          artifact.status === "approved" && artifact.title?.includes("Codex Task Brief")
       ),
-      researchEventCount: snapshot?.researchEvents?.length ?? 0
+      researchEventCount: snapshot?.researchEvents?.length ?? 0,
+      morphologyRenderSchema: morphologyEvent?.payload?.render_schema,
+      morphologyMode: morphologyEvent?.payload?.mode,
+      morphologyPhase: morphologyEvent?.payload?.phase,
+      morphologyWorkbenchState: morphologyEvent?.payload?.workbench_state,
+      morphologySourceEventType: morphologyEvent?.payload?.source_event_type,
+      morphologySocketCount: morphologyEvent?.payload?.socket_count ?? 0,
+      morphologyActiveSocketCount: morphologyEvent?.payload?.active_socket_count ?? 0,
+      morphologyStageEventCount: morphologyEvent?.payload?.stage_event_count ?? 0
     };
   });
 
   expect(generatedSessionEvidence.approvalResolved).toBe(true);
   expect(generatedSessionEvidence.approvedArtifact).toBe(true);
   expect(generatedSessionEvidence.researchEventCount).toBeGreaterThan(0);
+  expect(generatedSessionEvidence.morphologyRenderSchema).toBe(
+    "blackstage.stage_morph_frame.v0"
+  );
+  expect(generatedSessionEvidence.morphologyMode).toBe("artifact");
+  expect(generatedSessionEvidence.morphologyPhase).toBe("workbench_revealed");
+  expect(generatedSessionEvidence.morphologyWorkbenchState).toBe("revealed");
+  expect(["artifact.created", "object.created"]).toContain(
+    generatedSessionEvidence.morphologySourceEventType
+  );
+  expect(generatedSessionEvidence.morphologySocketCount).toBeGreaterThanOrEqual(3);
+  expect(generatedSessionEvidence.morphologyActiveSocketCount).toBeGreaterThan(0);
+  expect(generatedSessionEvidence.morphologyStageEventCount).toBeGreaterThan(0);
   await page.mouse.move(16, 16);
 
   await page.evaluate(() => {

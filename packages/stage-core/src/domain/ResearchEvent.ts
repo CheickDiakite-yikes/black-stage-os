@@ -14,6 +14,7 @@ export type ResearchEventType =
   | "artifact_exported"
   | "assistant_speech"
   | "user_intervention"
+  | "morphology_frame_captured"
   | "session_exported"
   | "wow_signal"
   | "codex_task_started"
