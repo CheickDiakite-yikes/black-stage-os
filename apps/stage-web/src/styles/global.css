@@ -3889,7 +3889,7 @@ button:disabled {
 .generated-stream-meta {
   position: absolute;
   left: 50%;
-  top: clamp(5.75rem, 15vh, 9.5rem);
+  top: clamp(2.7rem, 5vh, 4.1rem);
   display: flex;
   max-width: min(38rem, 72vw);
   align-items: center;
@@ -3916,7 +3916,7 @@ button:disabled {
 .generated-stream-clock {
   position: absolute;
   left: 50%;
-  top: clamp(6.95rem, 18vh, 11.2rem);
+  top: clamp(1.35rem, 3vh, 2.3rem);
   display: grid;
   width: min(12rem, 28vw);
   gap: 0.42rem;
@@ -4111,24 +4111,28 @@ button:disabled {
 
 .generated-stream-patches {
   display: flex;
-  max-width: min(44rem, 76vw);
+  max-width: min(14rem, 48vw);
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.42rem;
+  gap: 0.36rem;
   margin-top: 0.82rem;
-  color: rgba(216, 189, 133, 0.38);
-  font-size: 0.5rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  opacity: 0.42;
 }
 
 .generated-stream-patches span {
-  border: 1px solid rgba(216, 189, 133, 0.08);
-  padding: 0.24rem 0.32rem;
+  display: block;
+  width: 1.05rem;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: rgba(216, 189, 133, 0.32);
+  color: transparent;
+  font-size: 0;
 }
 
 .generated-stream-patches span[data-patch-op="bind"] {
-  color: rgba(239, 228, 210, 0.44);
+  background: rgba(239, 228, 210, 0.48);
 }
 
 .stage-generated-stream-approval .generated-stream-surface h2 {
@@ -4281,7 +4285,7 @@ button:disabled {
 .stage-active .stage-labor-orbit {
   left: 50%;
   bottom: clamp(4rem, 10vh, 6rem);
-  opacity: 0.42;
+  opacity: 0.18;
 }
 
 .stage-active .intent-capture {
@@ -4334,7 +4338,7 @@ button:disabled {
   }
 
   .generated-stream-clock {
-    top: 14vh;
+    top: 3.6rem;
     width: min(9rem, 36vw);
     font-size: 0.48rem;
   }
@@ -4416,7 +4420,7 @@ button:disabled {
   .stage-active .stage-labor-orbit {
     bottom: 7.4rem;
     width: min(22rem, 86vw);
-    opacity: 0.18;
+    opacity: 0.12;
   }
 
   .stage-active .intent-capture {
