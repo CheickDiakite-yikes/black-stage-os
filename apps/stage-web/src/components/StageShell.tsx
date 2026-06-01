@@ -154,6 +154,7 @@ export function StageShell({
     createTranscriptState()
   );
   const [interimTranscript, setInterimTranscript] = useState("");
+  const [inspectMode, setInspectMode] = useState(false);
   const [voiceError, setVoiceError] = useState<string | undefined>();
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
   const presenceOrbPointerStartedRef = useRef(false);
@@ -207,6 +208,10 @@ export function StageShell({
         "--stage-camera-tilt": `${stageScene.camera.tilt}deg`
       } as CSSProperties)
     : undefined;
+
+  useEffect(() => {
+    setInspectMode(false);
+  }, [thread.id]);
 
   function submitIntent(
     nextIntent = intentText,
@@ -416,7 +421,8 @@ export function StageShell({
         thread.status === "paused" && !isIdleStage ? "stage-paused" : ""
       } ${stageIsListening ? "stage-listening" : ""} ${
         stageVoiceEnabled ? "stage-voice-enabled" : ""
-      }`}
+      } ${inspectMode ? "stage-inspect-open" : ""}`}
+      data-inspect-mode={inspectMode}
       data-testid="stage-shell"
       style={stageStyle}
     >
@@ -636,6 +642,16 @@ export function StageShell({
         />
         <button className="intent-submit" type="submit" data-testid="submit-intent">
           Send
+        </button>
+        <button
+          className="inspect-toggle"
+          type="button"
+          aria-label="Toggle audit inspect mode"
+          aria-pressed={inspectMode}
+          data-testid="inspect-toggle"
+          onClick={() => setInspectMode((isOpen) => !isOpen)}
+        >
+          Audit
         </button>
         <button
           className="voice-affordance"

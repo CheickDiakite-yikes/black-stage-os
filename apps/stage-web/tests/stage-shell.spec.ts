@@ -509,6 +509,75 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     expect(renderFieldEvidence.thresholdDoesNotCoverCommand).toBe(true);
   }
 
+  await expect(page.getByTestId("approval-card")).toContainText(
+    "Create three Codex task prompts"
+  );
+  await expect(page.getByTestId("artifact-stack")).toContainText(
+    "Codex Task Brief: Build Stage Shell v0"
+  );
+
+  const inspectToggle = page.getByTestId("inspect-toggle");
+  await expect(inspectToggle).toBeVisible();
+  await inspectToggle.click({
+    force: true
+  });
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-mode",
+    "true"
+  );
+  await page.waitForTimeout(120);
+
+  const inspectEvidence = await page.evaluate(() => {
+    const visible = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+
+      return Boolean(
+        element &&
+          getComputedStyle(element).display !== "none" &&
+          getComputedStyle(element).opacity !== "0"
+      );
+    };
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+
+    return {
+      threadConsole: visible(".thread-console"),
+      orientation: visible('[data-testid="stage-field-orientation"]'),
+      agentFeedExists: Boolean(
+        document.querySelector('[data-testid="agent-activity-feed"]')
+      ),
+      approvalCardExists: Boolean(
+        document.querySelector('[data-testid="approval-card"]')
+      ),
+      artifactStackExists: Boolean(
+        document.querySelector('[data-testid="artifact-stack"]')
+      ),
+      researchCapture: visible('[data-testid="research-capture"]'),
+      objectCount: Array.from(
+        document.querySelectorAll<HTMLElement>(".stage-object")
+      ).filter((element) => getComputedStyle(element).opacity !== "0").length,
+      generatedOpacity: stream ? Number(getComputedStyle(stream).opacity) : 1
+    };
+  });
+
+  expect(inspectEvidence.threadConsole).toBe(true);
+  expect(inspectEvidence.orientation).toBe(true);
+  expect(inspectEvidence.agentFeedExists).toBe(true);
+  expect(inspectEvidence.approvalCardExists).toBe(true);
+  expect(inspectEvidence.artifactStackExists).toBe(true);
+  expect(inspectEvidence.researchCapture).toBe(true);
+  expect(inspectEvidence.objectCount).toBeGreaterThanOrEqual(2);
+  expect(inspectEvidence.generatedOpacity).toBeLessThan(0.6);
+
+  await inspectToggle.click({
+    force: true
+  });
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-mode",
+    "false"
+  );
+
   await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
     force: true
   });

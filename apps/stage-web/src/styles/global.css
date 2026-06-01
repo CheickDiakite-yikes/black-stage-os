@@ -626,6 +626,7 @@ button:disabled {
 
 .intent-submit,
 .context-attach,
+.inspect-toggle,
 .voice-affordance,
 .voice-output-toggle,
 .realtime-arm-toggle,
@@ -648,6 +649,8 @@ button:disabled {
 }
 
 .context-attach:hover,
+.inspect-toggle:hover,
+.inspect-toggle:focus-visible,
 .voice-affordance:hover,
 .voice-output-toggle:hover,
 .realtime-arm-toggle:hover,
@@ -2679,7 +2682,7 @@ button:disabled {
   place-items: center;
   z-index: 40;
   width: min(44rem, calc(100vw - 2rem));
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto auto;
   grid-template-rows: auto auto auto;
   gap: 0.5rem;
   opacity: 0.44;
@@ -2695,7 +2698,7 @@ button:disabled {
   bottom: 1rem;
   width: clamp(18rem, 38vw, 28rem);
   max-width: calc(100vw - 2rem);
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   opacity: 0.34;
 }
 
@@ -2769,6 +2772,17 @@ button:disabled {
 
 .voice-output-toggle {
   opacity: 0.68;
+}
+
+.inspect-toggle {
+  opacity: 0.62;
+}
+
+.inspect-toggle[aria-pressed="true"] {
+  border-color: rgba(239, 228, 210, 0.58);
+  background: rgba(239, 228, 210, 0.12);
+  color: rgba(255, 250, 240, 0.98);
+  opacity: 1;
 }
 
 .realtime-arm-toggle {
@@ -4714,5 +4728,209 @@ button:disabled {
     bottom: 1rem;
     width: min(27rem, calc(100vw - 2rem));
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stage-active.stage-inspect-open .stage-workspace {
+  pointer-events: auto;
+}
+
+.stage-active.stage-inspect-open .stage-generated-stream {
+  opacity: 0.38;
+  filter: blur(0.8px);
+}
+
+.stage-active.stage-inspect-open .stage-presence {
+  opacity: 0.14;
+}
+
+.stage-active.stage-inspect-open .thread-console,
+.stage-active.stage-inspect-open .stage-field-orientation,
+.stage-active.stage-inspect-open .agent-feed,
+.stage-active.stage-inspect-open .approval-card,
+.stage-active.stage-inspect-open .artifact-stack,
+.stage-active.stage-inspect-open .research-capture {
+  display: grid !important;
+  opacity: 0.94;
+  pointer-events: auto;
+  transform: none;
+}
+
+.stage-active.stage-inspect-open .thread-console {
+  top: 1rem;
+  left: 1rem;
+  z-index: 34;
+  width: min(25rem, 34vw);
+}
+
+.stage-active.stage-inspect-open .stage-field-orientation {
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 34;
+  width: min(34rem, 43vw);
+}
+
+.stage-active.stage-inspect-open .agent-feed {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 34;
+  width: min(24rem, 29vw);
+  max-height: min(33vh, 18rem);
+}
+
+.stage-active.stage-inspect-open .approval-card {
+  position: absolute;
+  top: min(18.5rem, 39vh);
+  right: 1rem;
+  z-index: 35;
+  width: min(24rem, 29vw);
+  max-height: min(30vh, 18rem);
+}
+
+.stage-active.stage-inspect-open .artifact-stack {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 34;
+  width: min(24rem, 29vw);
+  max-height: min(28vh, 17rem);
+}
+
+.stage-active.stage-inspect-open .research-capture {
+  left: 1rem;
+  bottom: 7.2rem;
+  z-index: 34;
+  width: min(21rem, 31vw);
+  max-height: min(30vh, 18rem);
+  overflow: auto;
+}
+
+.stage-active.stage-inspect-open .research-capture .trace-metrics,
+.stage-active.stage-inspect-open .research-capture .trace-list,
+.stage-active.stage-inspect-open .research-capture .realtime-debug-summary {
+  display: grid;
+}
+
+.stage-active.stage-inspect-open .research-capture .trace-action-secondary {
+  display: inline-flex;
+}
+
+.stage-active.stage-inspect-open .stage-object-constellation {
+  z-index: 33;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stage-active.stage-inspect-open .stage-object,
+.stage-active.stage-inspect-open .stage-object[data-camera-focus="true"],
+.stage-active.stage-inspect-open .stage-object-approval-focus {
+  left: calc(var(--scene-x, 50) * 1%);
+  top: calc(var(--scene-y, 50) * 1%);
+  display: block;
+  width: min(var(--object-width), calc(100% - 1.4rem));
+  max-width: none;
+  max-height: min(31vh, 18rem);
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--object-accent) 28%, transparent);
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.74), rgba(1, 1, 1, 0.58)),
+    radial-gradient(
+      circle at 15% 0%,
+      color-mix(in srgb, var(--object-accent) 16%, transparent),
+      transparent 12rem
+    );
+  padding: 0.84rem;
+  opacity: 0.9 !important;
+  pointer-events: auto;
+  filter: none;
+  transform: translate(
+      calc(-50% + var(--object-shift-x, 0px) + var(--object-parallax-x, 0px)),
+      calc(-50% + var(--object-shift-y, 0px) + var(--object-parallax-y, 0px))
+    )
+    scale(calc(var(--scene-scale, 1) * 0.86));
+}
+
+.stage-active.stage-inspect-open .stage-object > :not(.object-chrome),
+.stage-active.stage-inspect-open
+  .stage-object:not([data-camera-focus="true"]):not(.stage-object-approval-focus)
+  > :not(.object-chrome) {
+  display: block;
+}
+
+.stage-active.stage-inspect-open .stage-object .object-list,
+.stage-active.stage-inspect-open .stage-object[data-camera-focus="true"] .object-list,
+.stage-active.stage-inspect-open .stage-object-approval-focus .object-list {
+  display: grid;
+}
+
+.stage-active.stage-inspect-open .stage-object h2,
+.stage-active.stage-inspect-open .stage-object[data-camera-focus="true"] h2,
+.stage-active.stage-inspect-open .stage-object-approval-focus h2 {
+  margin-top: 0.74rem;
+  font-size: clamp(1.1rem, 1.6vw, 1.6rem);
+  line-height: 1.08;
+  text-align: left;
+}
+
+.stage-active.stage-inspect-open .stage-object p,
+.stage-active.stage-inspect-open .stage-object[data-camera-focus="true"] p,
+.stage-active.stage-inspect-open .stage-object-approval-focus p {
+  max-width: none;
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .stage-active .intent-capture {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+  }
+
+  .stage-active .intent-capture .intent-submit,
+  .stage-active .intent-capture .inspect-toggle,
+  .stage-active .intent-capture .voice-affordance {
+    min-height: 1.98rem;
+    padding-inline: 0.5rem;
+    font-size: 0.58rem;
+  }
+
+  .stage-active.stage-inspect-open .thread-console,
+  .stage-active.stage-inspect-open .stage-field-orientation,
+  .stage-active.stage-inspect-open .agent-feed,
+  .stage-active.stage-inspect-open .approval-card,
+  .stage-active.stage-inspect-open .artifact-stack,
+  .stage-active.stage-inspect-open .research-capture {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-height: 24vh;
+  }
+
+  .stage-active.stage-inspect-open .thread-console {
+    top: 0.75rem;
+  }
+
+  .stage-active.stage-inspect-open .agent-feed {
+    top: 5.6rem;
+  }
+
+  .stage-active.stage-inspect-open .approval-card {
+    top: 35vh;
+  }
+
+  .stage-active.stage-inspect-open .artifact-stack {
+    bottom: 5.6rem;
+  }
+
+  .stage-active.stage-inspect-open .research-capture,
+  .stage-active.stage-inspect-open .stage-field-orientation {
+    display: none !important;
+  }
+
+  .stage-active.stage-inspect-open .stage-object-constellation {
+    display: none;
   }
 }
