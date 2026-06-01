@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"No stage-core tests configured yet.\"",
+    "test": "pnpm build && node --loader ./test/extensionResolver.mjs --test test/stageMorphFrame.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }
