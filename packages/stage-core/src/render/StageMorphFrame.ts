@@ -2,7 +2,10 @@ import type { ApprovalRequest } from "../domain/ApprovalRequest";
 import type { IntentThread } from "../domain/IntentThread";
 import type { StageObject, StageObjectType } from "../domain/StageObject";
 import type { StageEvent } from "../events/stageEvent";
-import type { StageShellScenarioId, TimedStageEvent } from "../fixtures/stageShellScenarios";
+import type {
+  StageShellScenarioId,
+  TimedStageEvent
+} from "../fixtures/stageShellScenarios";
 import {
   createApprovedScenarioStageEvents,
   createScenarioStageEvents,
@@ -61,7 +64,13 @@ export type StageMorphNucleus = {
   id: string;
   label: string;
   mode: StageMorphMode;
-  status: "idle" | "listening" | "digesting" | "generating" | "awaiting_approval" | "revealed";
+  status:
+    | "idle"
+    | "listening"
+    | "digesting"
+    | "generating"
+    | "awaiting_approval"
+    | "revealed";
   energy: number;
   voice: StageMorphVoiceEnvelope;
 };
@@ -102,7 +111,12 @@ export type StageMorphPatch = {
 };
 
 export type StageMorphCamera = {
-  mode: "void_center" | "orbit_field" | "digest_focus" | "socket_table" | "workbench_tilt";
+  mode:
+    | "void_center"
+    | "orbit_field"
+    | "digest_focus"
+    | "socket_table"
+    | "workbench_tilt";
   tilt: number;
   depth: number;
   focusX: number;
@@ -124,20 +138,68 @@ export type StageMorphWorkbench = {
   primarySocketId?: string;
 };
 
+export type StageMorphTransition = {
+  fromPhaseId?: StageMorphPhaseId;
+  toPhaseId: StageMorphPhaseId;
+  phaseIndex: number;
+  phaseCount: number;
+  phaseProgress: number;
+  completionRatio: number;
+  eventVelocity: number;
+  reason: string;
+};
+
+export type StageMorphPacket = {
+  id: string;
+  patchId: string;
+  op: StageMorphPatchOp;
+  status: StageMorphPatchStatus;
+  phaseId: StageMorphPhaseId;
+  lane: StageMorphSocketRole;
+  x: number;
+  y: number;
+  progress: number;
+  delayMs: number;
+};
+
+export type StageMorphCollapseVector = {
+  id: string;
+  sourceObjectId: string;
+  role: StageMorphOrbitObject["role"];
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  intensity: number;
+  active: boolean;
+};
+
+export type StageMorphDensityGovernor = {
+  density: number;
+  clutterRisk: "low" | "medium" | "high";
+  visiblePrimaryObjects: number;
+  suppressedAuditSurfaces: number;
+  inspectRecommended: boolean;
+};
+
 export type StageMorphFrame = {
   id: string;
   threadId: string;
   title: string;
   mode: StageMorphMode;
   activePhaseId: StageMorphPhaseId;
+  transition: StageMorphTransition;
   phases: StageMorphPhase[];
   nucleus: StageMorphNucleus;
   orbit: StageMorphOrbitObject[];
   sockets: StageMorphSocket[];
   patches: StageMorphPatch[];
+  packets: StageMorphPacket[];
+  collapseVectors: StageMorphCollapseVector[];
   camera: StageMorphCamera;
   approvalRitual?: StageMorphApprovalRitual;
   workbench: StageMorphWorkbench;
+  density: StageMorphDensityGovernor;
   updatedAt: string;
 };
 
@@ -213,6 +275,10 @@ export function createStageMorphFrame(
   const patches = createMorphPatches(renderableEvents, activePhaseId);
   const approvalRitual = createApprovalRitual(thread);
   const workbench = createMorphWorkbench(thread, activePhaseId, sockets, patches);
+  const transition = createMorphTransition(renderableEvents, activePhaseId, phases);
+  const packets = createMorphPackets(patches, sockets, transition);
+  const collapseVectors = createMorphCollapseVectors(orbit, activePhaseId);
+  const density = createMorphDensityGovernor(thread, patches, workbench);
 
   return {
     id: `morph_${thread.id}_${renderableEvents.length}`,
@@ -220,14 +286,18 @@ export function createStageMorphFrame(
     title: thread.title,
     mode,
     activePhaseId,
+    transition,
     phases,
     nucleus,
     orbit,
     sockets,
     patches,
+    packets,
+    collapseVectors,
     camera: createMorphCamera(activePhaseId, sockets),
     approvalRitual,
     workbench,
+    density,
     updatedAt: latestEventUpdatedAt(latestEvent) ?? thread.updatedAt
   };
 }
@@ -294,7 +364,10 @@ export function createStageMorphFixtureTimeline(
       id: `morph_fixture_${fixtureId}_${timedEvent.id}`,
       delayMs: timedEvent.delayMs,
       event: timedEvent.event,
-      frame: createStageMorphFrame(eventsThroughDelay(events, timedEvent.delayMs), thread)
+      frame: createStageMorphFrame(
+        eventsThroughDelay(events, timedEvent.delayMs),
+        thread
+      )
     };
   });
 }
@@ -311,7 +384,8 @@ function createMorphPhases(
     const eventCount = events.filter(
       (event) => eventToStageMorphPhaseId(event) === phaseId
     ).length;
-    const completed = index < activeOrder || phaseCompletionSignal(phaseId, thread, events, mode);
+    const completed =
+      index < activeOrder || phaseCompletionSignal(phaseId, thread, events, mode);
     const active = phaseId === activePhaseId;
 
     return {
@@ -336,13 +410,23 @@ function phaseCompletionSignal(
     case "nucleus_awake":
       return Boolean(thread.originalIntent || events.length > 0);
     case "context_orbit_started":
-      return thread.renderObjects.length > 0 || eventTypesInclude(events, "context.attached");
+      return (
+        thread.renderObjects.length > 0 || eventTypesInclude(events, "context.attached")
+      );
     case "context_collapsed":
-      return thread.agentEvents.length > 0 || thread.approvals.length > 0 || thread.artifacts.length > 0;
+      return (
+        thread.agentEvents.length > 0 ||
+        thread.approvals.length > 0 ||
+        thread.artifacts.length > 0
+      );
     case "mode_shifted":
       return mode !== "idle";
     case "sockets_allocated":
-      return thread.renderObjects.length > 0 || thread.approvals.length > 0 || thread.artifacts.length > 0;
+      return (
+        thread.renderObjects.length > 0 ||
+        thread.approvals.length > 0 ||
+        thread.artifacts.length > 0
+      );
     case "patch_applied":
       return events.length > 2;
     case "approval_ritual":
@@ -376,7 +460,9 @@ function createMorphOrbit(
   activePhaseId: StageMorphPhaseId
 ): StageMorphOrbitObject[] {
   const objects = thread.renderObjects
-    .filter((object) => object.type !== "approval_card" && object.type !== "artifact_card")
+    .filter(
+      (object) => object.type !== "approval_card" && object.type !== "artifact_card"
+    )
     .slice(0, 8);
   const count = Math.max(objects.length, 1);
 
@@ -403,11 +489,19 @@ function createMorphSockets(
     createSocket("nucleus", "Nucleus", 50, 43, 14, 14, "resolved", "/nucleus")
   ];
 
-  if (thread.renderObjects.length > 0 || phaseOrder >= stageMorphPhaseOrder.indexOf("context_orbit_started")) {
-    sockets.push(createSocket("context", "Context orbit", 22, 38, 28, 28, "filling", "/orbit"));
+  if (
+    thread.renderObjects.length > 0 ||
+    phaseOrder >= stageMorphPhaseOrder.indexOf("context_orbit_started")
+  ) {
+    sockets.push(
+      createSocket("context", "Context orbit", 22, 38, 28, 28, "filling", "/orbit")
+    );
   }
 
-  if (thread.renderObjects.length > 0 || phaseOrder >= stageMorphPhaseOrder.indexOf("sockets_allocated")) {
+  if (
+    thread.renderObjects.length > 0 ||
+    phaseOrder >= stageMorphPhaseOrder.indexOf("sockets_allocated")
+  ) {
     sockets.push(
       createSocket(
         "workspace",
@@ -416,7 +510,9 @@ function createMorphSockets(
         38,
         38,
         30,
-        phaseOrder >= stageMorphPhaseOrder.indexOf("patch_applied") ? "filling" : "empty",
+        phaseOrder >= stageMorphPhaseOrder.indexOf("patch_applied")
+          ? "filling"
+          : "empty",
         "/workbench"
       )
     );
@@ -431,7 +527,9 @@ function createMorphSockets(
         52,
         22,
         24,
-        thread.approvals.some((approval) => approval.status === "pending") ? "blocked" : "resolved",
+        thread.approvals.some((approval) => approval.status === "pending")
+          ? "blocked"
+          : "resolved",
         "/approvalRitual"
       )
     );
@@ -439,13 +537,31 @@ function createMorphSockets(
 
   if (thread.artifacts.length > 0) {
     sockets.push(
-      createSocket("artifact", "Artifact output", 62, 72, 34, 22, "resolved", "/artifacts")
+      createSocket(
+        "artifact",
+        "Artifact output",
+        62,
+        72,
+        34,
+        22,
+        "resolved",
+        "/artifacts"
+      )
     );
   }
 
   if (thread.agentEvents.length > 0) {
     sockets.push(
-      createSocket("telemetry", "Labor telemetry", 25, 75, 30, 14, "filling", "/telemetry")
+      createSocket(
+        "telemetry",
+        "Labor telemetry",
+        25,
+        75,
+        30,
+        14,
+        "filling",
+        "/telemetry"
+      )
     );
   }
 
@@ -468,6 +584,96 @@ function createMorphPatches(
       source: event.type,
       order: index + 1,
       status: resolvePatchStatus(phaseId, activePhaseId)
+    };
+  });
+}
+
+function createMorphTransition(
+  events: StageEvent[],
+  activePhaseId: StageMorphPhaseId,
+  phases: StageMorphPhase[]
+): StageMorphTransition {
+  const latestEvent = events.at(-1);
+  const previousEvent = events.at(-2);
+  const activePhase = phases.find((phase) => phase.id === activePhaseId);
+  const phaseIndex = stageMorphPhaseOrder.indexOf(activePhaseId) + 1;
+  const completedCount = phases.filter((phase) => phase.completed).length;
+  const phaseEventCount = activePhase?.eventCount ?? 0;
+  const phaseProgress = Number(
+    Math.min(
+      1,
+      Math.max(0.12, phaseEventCount / Math.max(2, events.length / 2))
+    ).toFixed(2)
+  );
+
+  return {
+    fromPhaseId: previousEvent ? eventToStageMorphPhaseId(previousEvent) : undefined,
+    toPhaseId: activePhaseId,
+    phaseIndex,
+    phaseCount: stageMorphPhaseOrder.length,
+    phaseProgress,
+    completionRatio: Number((completedCount / stageMorphPhaseOrder.length).toFixed(2)),
+    eventVelocity: Number(Math.min(1, events.length / 14).toFixed(2)),
+    reason: latestEvent ? formatEventLabel(latestEvent) : "awaiting intent"
+  };
+}
+
+function createMorphPackets(
+  patches: StageMorphPatch[],
+  sockets: StageMorphSocket[],
+  transition: StageMorphTransition
+): StageMorphPacket[] {
+  return patches.slice(-18).map((patch, index) => {
+    const lane = resolvePacketLane(patch);
+    const socket = sockets.find((candidate) => candidate.role === lane);
+    const phaseIndex = stageMorphPhaseOrder.indexOf(patch.phaseId);
+    const laneOffset = index % 4;
+
+    return {
+      id: `morph_packet_${patch.id}`,
+      patchId: patch.id,
+      op: patch.op,
+      status: patch.status,
+      phaseId: patch.phaseId,
+      lane,
+      x: Number((socket?.x ?? 16 + phaseIndex * 9 + laneOffset * 2.4).toFixed(2)),
+      y: Number(
+        (socket?.y ?? 24 + (phaseIndex % 4) * 14 + laneOffset * 1.8).toFixed(2)
+      ),
+      progress: resolvePacketProgress(patch.status, transition.phaseProgress),
+      delayMs: index * 74
+    };
+  });
+}
+
+function createMorphCollapseVectors(
+  orbit: StageMorphOrbitObject[],
+  activePhaseId: StageMorphPhaseId
+): StageMorphCollapseVector[] {
+  const active = [
+    "context_collapsed",
+    "mode_shifted",
+    "sockets_allocated",
+    "patch_applied",
+    "approval_ritual"
+  ].includes(activePhaseId);
+
+  return orbit.map((orbitObject) => {
+    const radians = (orbitObject.angle * Math.PI) / 180;
+    const radius = 18 + orbitObject.distance * 36;
+
+    return {
+      id: `morph_vector_${orbitObject.sourceObjectId}`,
+      sourceObjectId: orbitObject.sourceObjectId,
+      role: orbitObject.role,
+      fromX: Number((50 + Math.cos(radians) * radius).toFixed(2)),
+      fromY: Number((47 + Math.sin(radians) * radius * 0.58).toFixed(2)),
+      toX: 50,
+      toY: 47,
+      intensity: Number(
+        (active ? Math.max(0.28, orbitObject.weight) : 0.12).toFixed(2)
+      ),
+      active
     };
   });
 }
@@ -507,7 +713,9 @@ function createMorphCamera(
   }
 }
 
-function createApprovalRitual(thread: IntentThread): StageMorphApprovalRitual | undefined {
+function createApprovalRitual(
+  thread: IntentThread
+): StageMorphApprovalRitual | undefined {
   const approval = thread.approvals.at(-1);
 
   if (!approval) {
@@ -536,10 +744,9 @@ function createMorphWorkbench(
   const pendingApproval = thread.approvals.some(
     (approval) => approval.status === "pending"
   );
-  const state =
-    pendingApproval
-      ? "patching"
-      : phaseOrder >= revealPhaseOrder || thread.artifacts.length > 0
+  const state = pendingApproval
+    ? "patching"
+    : phaseOrder >= revealPhaseOrder || thread.artifacts.length > 0
       ? "revealed"
       : phaseOrder >= patchPhaseOrder
         ? "patching"
@@ -550,9 +757,50 @@ function createMorphWorkbench(
   return {
     state,
     density: Number(
-      Math.min(1, (thread.renderObjects.length + thread.artifacts.length + patches.length) / 16).toFixed(2)
+      Math.min(
+        1,
+        (thread.renderObjects.length + thread.artifacts.length + patches.length) / 16
+      ).toFixed(2)
     ),
     primarySocketId: sockets.find((socket) => socket.role === "workspace")?.id
+  };
+}
+
+function createMorphDensityGovernor(
+  thread: IntentThread,
+  patches: StageMorphPatch[],
+  workbench: StageMorphWorkbench
+): StageMorphDensityGovernor {
+  const auditSurfaceCount =
+    thread.renderObjects.length +
+    thread.agentEvents.length +
+    thread.approvals.length +
+    thread.artifacts.length;
+  const visiblePrimaryObjects =
+    workbench.state === "revealed" ? Math.min(4, thread.artifacts.length + 1) : 1;
+  const suppressedAuditSurfaces = Math.max(
+    0,
+    auditSurfaceCount - visiblePrimaryObjects
+  );
+  const density = Number(
+    Math.min(
+      1,
+      workbench.density + patches.length / 48 + suppressedAuditSurfaces / 80
+    ).toFixed(2)
+  );
+  const clutterRisk =
+    density > 0.72 || suppressedAuditSurfaces > 10
+      ? "high"
+      : density > 0.42 || suppressedAuditSurfaces > 5
+        ? "medium"
+        : "low";
+
+  return {
+    density,
+    clutterRisk,
+    visiblePrimaryObjects,
+    suppressedAuditSurfaces,
+    inspectRecommended: clutterRisk !== "low" && suppressedAuditSurfaces > 0
   };
 }
 
@@ -576,7 +824,11 @@ function resolveActiveMorphPhaseId(
       return "workbench_revealed";
     }
 
-    if (eventPhase === "context_orbit_started" && mode !== "idle" && thread.renderObjects.length > 1) {
+    if (
+      eventPhase === "context_orbit_started" &&
+      mode !== "idle" &&
+      thread.renderObjects.length > 1
+    ) {
       return "sockets_allocated";
     }
 
@@ -624,11 +876,19 @@ function resolveMorphMode(
     .join(" ")
     .toLowerCase();
 
-  if (modeText.includes("code") || modeText.includes("codex") || modeText.includes("build")) {
+  if (
+    modeText.includes("code") ||
+    modeText.includes("codex") ||
+    modeText.includes("build")
+  ) {
     return "coding";
   }
 
-  if (modeText.includes("research") || modeText.includes("synthesis") || modeText.includes("evidence")) {
+  if (
+    modeText.includes("research") ||
+    modeText.includes("synthesis") ||
+    modeText.includes("evidence")
+  ) {
     return "research";
   }
 
@@ -643,15 +903,21 @@ function resolveVoiceEnvelope(
   latestEvent: StageEvent | undefined,
   activePhaseId: StageMorphPhaseId
 ): StageMorphVoiceEnvelope {
-  const source = latestEvent?.type === "intent.submitted" && latestEvent.payload.inputMode === "voice"
-    ? "live"
-    : latestEvent
-      ? "simulated"
-      : "none";
+  const source =
+    latestEvent?.type === "intent.submitted" &&
+    latestEvent.payload.inputMode === "voice"
+      ? "live"
+      : latestEvent
+        ? "simulated"
+        : "none";
 
   switch (activePhaseId) {
     case "nucleus_awake":
-      return { source, energy: source === "none" ? 0.12 : 0.28, cadence: source === "none" ? "silent" : "wake" };
+      return {
+        source,
+        energy: source === "none" ? 0.12 : 0.28,
+        cadence: source === "none" ? "silent" : "wake"
+      };
     case "context_orbit_started":
       return { source, energy: 0.48, cadence: "context" };
     case "context_collapsed":
@@ -799,10 +1065,7 @@ function resolvePatchOp(event: StageEvent): StageMorphPatchOp {
   }
 }
 
-function resolvePatchPath(
-  event: StageEvent,
-  phaseId: StageMorphPhaseId
-): string {
+function resolvePatchPath(event: StageEvent, phaseId: StageMorphPhaseId): string {
   switch (event.type) {
     case "intent.submitted":
     case "thread.created":
@@ -849,6 +1112,39 @@ function resolvePatchStatus(
   return "queued";
 }
 
+function resolvePacketLane(patch: StageMorphPatch): StageMorphSocketRole {
+  switch (patch.path) {
+    case "/nucleus":
+      return "nucleus";
+    case "/orbit":
+      return "context";
+    case "/approvalRitual":
+      return "approval";
+    case "/workbench":
+      return patch.source === "artifact.created" || patch.source === "artifact.updated"
+        ? "artifact"
+        : "workspace";
+    default:
+      return patch.phaseId === "context_collapsed" ? "telemetry" : "workspace";
+  }
+}
+
+function resolvePacketProgress(
+  status: StageMorphPatchStatus,
+  phaseProgress: number
+): number {
+  switch (status) {
+    case "applied":
+      return 1;
+    case "streaming":
+      return Number(Math.max(0.24, phaseProgress).toFixed(2));
+    case "blocked":
+      return 0.66;
+    case "queued":
+      return 0.14;
+  }
+}
+
 function resolvePhaseIntensity(
   index: number,
   activeOrder: number,
@@ -863,7 +1159,9 @@ function resolvePhaseIntensity(
     return 0.72;
   }
 
-  return Number(Math.max(0.16, 0.34 - Math.max(0, index - activeOrder) * 0.04).toFixed(2));
+  return Number(
+    Math.max(0.16, 0.34 - Math.max(0, index - activeOrder) * 0.04).toFixed(2)
+  );
 }
 
 function formatModeLabel(mode: StageMorphMode): string {
@@ -951,10 +1249,7 @@ function eventTypesInclude(
   return events.some((event) => event.type === eventType);
 }
 
-function eventsThroughDelay(
-  events: TimedStageEvent[],
-  delayMs: number
-): StageEvent[] {
+function eventsThroughDelay(events: TimedStageEvent[], delayMs: number): StageEvent[] {
   return events
     .filter((candidate) => candidate.delayMs <= delayMs)
     .map((candidate) => candidate.event);
@@ -1023,7 +1318,10 @@ function applyStageMorphFixtureEvent(
   }
 }
 
-function upsertById<Item extends { id: string }>(items: Item[], nextItem: Item): Item[] {
+function upsertById<Item extends { id: string }>(
+  items: Item[],
+  nextItem: Item
+): Item[] {
   const index = items.findIndex((item) => item.id === nextItem.id);
 
   if (index === -1) {

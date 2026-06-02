@@ -46,6 +46,7 @@ Read these documents in order when starting the project.
 28. `28_cinematic_rendering_system.md` — video-informed render grammar, scene manifest, and cinematic renderer plan.
 29. `29_morphological_genui_stage_plan.md` — 20-step plan for streaming GenUI morphology: nucleus, orbit, collapse, mode shift, sockets, patch growth, and workbench reveal.
 30. `30_morphological_genui_demo_harness.md` — local demo/proof harness for the morphology slice, including startup URL, review script, screenshots, and validation commands.
+31. `31_morphology_deep_pass_two.md` — second 20-slice morphology pass for transition metrics, patch packets, collapse vectors, density governance, telemetry, and multi-scenario proof.
 
 ## Artifacts
 

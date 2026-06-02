@@ -38,15 +38,11 @@ test("maps stage events into the morphology phase taxonomy", () => {
 
   assert.equal(eventToStageMorphPhaseId(events[0]), "nucleus_awake");
   assert.equal(
-    eventToStageMorphPhaseId(
-      events.find((event) => event.type === "object.created")
-    ),
+    eventToStageMorphPhaseId(events.find((event) => event.type === "object.created")),
     "context_orbit_started"
   );
   assert.equal(
-    eventToStageMorphPhaseId(
-      events.find((event) => event.type === "agent.progress")
-    ),
+    eventToStageMorphPhaseId(events.find((event) => event.type === "agent.progress")),
     "context_collapsed"
   );
   assert.equal(
@@ -56,9 +52,7 @@ test("maps stage events into the morphology phase taxonomy", () => {
     "approval_ritual"
   );
   assert.equal(
-    eventToStageMorphPhaseId(
-      events.find((event) => event.type === "artifact.created")
-    ),
+    eventToStageMorphPhaseId(events.find((event) => event.type === "artifact.created")),
     "workbench_revealed"
   );
 });
@@ -68,15 +62,18 @@ test("builds deterministic fixture timelines with earned workbench reveal", () =
 
   assert.ok(timeline.length > 6);
   assert.equal(timeline[0].frame.activePhaseId, "nucleus_awake");
-  assert.ok(
-    timeline.some((entry) => entry.frame.activePhaseId === "approval_ritual")
-  );
+  assert.ok(timeline.some((entry) => entry.frame.activePhaseId === "approval_ritual"));
 
   const finalFrame = timeline.at(-1).frame;
 
   assert.equal(finalFrame.activePhaseId, "workbench_revealed");
   assert.equal(finalFrame.workbench.state, "revealed");
   assert.ok(finalFrame.patches.length >= 6);
+  assert.ok(finalFrame.packets.length >= 6);
+  assert.ok(finalFrame.collapseVectors.length >= 1);
+  assert.ok(finalFrame.transition.completionRatio > 0.7);
+  assert.equal(finalFrame.transition.phaseCount, stageMorphPhaseOrder.length);
+  assert.equal(finalFrame.density.clutterRisk, "high");
   assert.deepEqual(
     finalFrame.phases.map((phase) => phase.id),
     stageMorphPhaseOrder
@@ -84,5 +81,9 @@ test("builds deterministic fixture timelines with earned workbench reveal", () =
   assert.ok(
     finalFrame.sockets.some((socket) => socket.role === "workspace"),
     "fixture should allocate a workspace socket"
+  );
+  assert.ok(
+    finalFrame.packets.some((packet) => packet.lane === "artifact"),
+    "artifact patches should become artifact-lane packets"
   );
 });
