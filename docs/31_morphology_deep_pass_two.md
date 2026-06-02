@@ -99,3 +99,18 @@ Cards remain an inspect/audit layer only.
 - Density is measured and governed.
 - Tests prove laptop, phone, startup URL, and at least one alternate scenario.
 - The branch remains pushed with Cheick's configured GitHub attribution.
+
+## Execution Evidence
+
+Second-pass implementation log:
+`docs/research/runs/2026-06-01-morphology-deep-pass-two.md`.
+
+Focused proof command:
+
+```bash
+pnpm test:morphology
+```
+
+Final proof coverage: startup URL, research/planning scenarios, reduced motion,
+desktop approval-to-artifact stream, phone viewport guardrail, and in-app
+Browser desktop/phone visual QA.
