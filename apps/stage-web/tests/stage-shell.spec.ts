@@ -288,6 +288,62 @@ test("Stage Shell v0 runs the startup-intent morphology demo URL", async ({ page
   expect(startupDemoEvidence.morphologyResearchCount).toBeGreaterThan(1);
 });
 
+test("Stage Shell v0 adapts morphology across research and planning scenarios", async ({
+  page
+}) => {
+  test.setTimeout(180_000);
+
+  await page.goto("/?stageScenario=research_synthesis");
+  await expect(page.getByTestId("stage-workspace")).toContainText("Synthesis plan");
+
+  const researchEvidence = await page.evaluate(() => {
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+
+    return {
+      mode: stream?.dataset.morphMode,
+      phase: stream?.dataset.morphPhase,
+      density: Number(stream?.dataset.morphDensity ?? 0),
+      packetCount: Number(stream?.dataset.morphPacketCount ?? 0),
+      vectorCount: Number(stream?.dataset.morphVectorCount ?? 0),
+      text: stream?.textContent ?? ""
+    };
+  });
+
+  expect(["research", "approval"]).toContain(researchEvidence.mode);
+  expect(researchEvidence.phase).not.toBe("nucleus_awake");
+  expect(researchEvidence.density).toBeGreaterThan(0);
+  expect(researchEvidence.packetCount).toBeGreaterThan(0);
+  expect(researchEvidence.vectorCount).toBeGreaterThan(0);
+  expect(researchEvidence.text.toLowerCase()).toMatch(/research|synthesis/);
+
+  await page.goto("/?stageScenario=plan_seed_round");
+  await expect(page.getByTestId("stage-workspace")).toContainText("Raise plan");
+
+  const planningEvidence = await page.evaluate(() => {
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+
+    return {
+      mode: stream?.dataset.morphMode,
+      phase: stream?.dataset.morphPhase,
+      clutterRisk: stream?.dataset.morphClutterRisk,
+      packetCount: Number(stream?.dataset.morphPacketCount ?? 0),
+      text: stream?.textContent ?? ""
+    };
+  });
+
+  expect(["planning", "approval"]).toContain(planningEvidence.mode);
+  expect(planningEvidence.phase).not.toBe("nucleus_awake");
+  expect(["low", "medium", "high"]).toContain(planningEvidence.clutterRisk);
+  expect(planningEvidence.packetCount).toBeGreaterThan(0);
+  expect(planningEvidence.text.toLowerCase()).toMatch(
+    /raise|investor|round|founder|actions/
+  );
+});
+
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   page
 }) => {
@@ -1003,12 +1059,23 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
             eventType?: string;
             payload?: {
               active_socket_count?: number;
+              active_collapse_vector_count?: number;
+              clutter_risk?: string;
+              collapse_vector_count?: number;
+              density?: number;
+              inspect_recommended?: boolean;
               mode?: string;
+              packet_count?: number;
+              packet_lanes?: string[];
               phase?: string;
               render_schema?: string;
               socket_count?: number;
               source_event_type?: string;
               stage_event_count?: number;
+              transition_completion_ratio?: number;
+              transition_event_velocity?: number;
+              transition_phase_index?: number;
+              transition_phase_progress?: number;
               workbench_state?: string;
             };
           }>;
@@ -1036,6 +1103,23 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       morphologySourceEventType: morphologyEvent?.payload?.source_event_type,
       morphologySocketCount: morphologyEvent?.payload?.socket_count ?? 0,
       morphologyActiveSocketCount: morphologyEvent?.payload?.active_socket_count ?? 0,
+      morphologyPacketCount: morphologyEvent?.payload?.packet_count ?? 0,
+      morphologyPacketLanes: morphologyEvent?.payload?.packet_lanes ?? [],
+      morphologyVectorCount: morphologyEvent?.payload?.collapse_vector_count ?? 0,
+      morphologyActiveVectorCount:
+        morphologyEvent?.payload?.active_collapse_vector_count ?? 0,
+      morphologyDensity: morphologyEvent?.payload?.density ?? 0,
+      morphologyClutterRisk: morphologyEvent?.payload?.clutter_risk,
+      morphologyInspectRecommended:
+        morphologyEvent?.payload?.inspect_recommended ?? false,
+      morphologyTransitionPhaseIndex:
+        morphologyEvent?.payload?.transition_phase_index ?? 0,
+      morphologyTransitionProgress:
+        morphologyEvent?.payload?.transition_phase_progress ?? 0,
+      morphologyTransitionCompletionRatio:
+        morphologyEvent?.payload?.transition_completion_ratio ?? 0,
+      morphologyTransitionVelocity:
+        morphologyEvent?.payload?.transition_event_velocity ?? 0,
       morphologyStageEventCount: morphologyEvent?.payload?.stage_event_count ?? 0
     };
   });
@@ -1054,6 +1138,21 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   );
   expect(generatedSessionEvidence.morphologySocketCount).toBeGreaterThanOrEqual(3);
   expect(generatedSessionEvidence.morphologyActiveSocketCount).toBeGreaterThan(0);
+  expect(generatedSessionEvidence.morphologyPacketCount).toBeGreaterThanOrEqual(6);
+  expect(generatedSessionEvidence.morphologyPacketLanes).toEqual(
+    expect.arrayContaining(["approval", "artifact", "context"])
+  );
+  expect(generatedSessionEvidence.morphologyVectorCount).toBeGreaterThanOrEqual(3);
+  expect(generatedSessionEvidence.morphologyActiveVectorCount).toBeGreaterThanOrEqual(
+    0
+  );
+  expect(generatedSessionEvidence.morphologyDensity).toBeGreaterThan(0.4);
+  expect(["medium", "high"]).toContain(generatedSessionEvidence.morphologyClutterRisk);
+  expect(generatedSessionEvidence.morphologyInspectRecommended).toBe(true);
+  expect(generatedSessionEvidence.morphologyTransitionPhaseIndex).toBe(8);
+  expect(generatedSessionEvidence.morphologyTransitionProgress).toBeGreaterThan(0);
+  expect(generatedSessionEvidence.morphologyTransitionCompletionRatio).toBe(1);
+  expect(generatedSessionEvidence.morphologyTransitionVelocity).toBeGreaterThan(0);
   expect(generatedSessionEvidence.morphologyStageEventCount).toBeGreaterThan(0);
   await page.mouse.move(16, 16);
 

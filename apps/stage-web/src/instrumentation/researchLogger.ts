@@ -15,13 +15,25 @@ type MorphologyResearchPayload = {
   source_event_type: StageEvent["type"] | "none";
   phase: StageMorphFrame["activePhaseId"];
   mode: StageMorphFrame["mode"];
+  transition_phase_index: number;
+  transition_phase_progress: number;
+  transition_completion_ratio: number;
+  transition_event_velocity: number;
+  transition_reason_redacted: string;
   voice_cadence: StageMorphFrame["nucleus"]["voice"]["cadence"];
   voice_energy: number;
   workbench_state: StageMorphFrame["workbench"]["state"];
+  density: number;
+  clutter_risk: StageMorphFrame["density"]["clutterRisk"];
+  suppressed_audit_surfaces: number;
+  inspect_recommended: boolean;
   workbench_artifact_count: number;
   orbit_count: number;
   socket_count: number;
   patch_count: number;
+  packet_count: number;
+  collapse_vector_count: number;
+  active_collapse_vector_count: number;
   phase_count: number;
   active_socket_count: number;
   approval_ritual_state:
@@ -34,6 +46,8 @@ type MorphologyResearchPayload = {
   camera_tilt: number;
   socket_roles: StageMorphFrame["sockets"][number]["role"][];
   patch_statuses: Record<string, number>;
+  packet_statuses: Record<string, number>;
+  packet_lanes: StageMorphFrame["packets"][number]["lane"][];
 };
 
 export function createResearchEvent(
@@ -279,8 +293,19 @@ function createMorphologyResearchPayload(
     },
     {}
   );
+  const packetStatuses = frame.packets.reduce<Record<string, number>>(
+    (counts, packet) => {
+      counts[packet.status] = (counts[packet.status] ?? 0) + 1;
+
+      return counts;
+    },
+    {}
+  );
   const socketRoles = Array.from(
     new Set(frame.sockets.map((socket) => socket.role))
+  ).sort();
+  const packetLanes = Array.from(
+    new Set(frame.packets.map((packet) => packet.lane))
   ).sort();
 
   return {
@@ -290,9 +315,18 @@ function createMorphologyResearchPayload(
     source_event_type: stageEvents.at(-1)?.type ?? "none",
     phase: frame.activePhaseId,
     mode: frame.mode,
+    transition_phase_index: frame.transition.phaseIndex,
+    transition_phase_progress: roundMetric(frame.transition.phaseProgress),
+    transition_completion_ratio: roundMetric(frame.transition.completionRatio),
+    transition_event_velocity: roundMetric(frame.transition.eventVelocity),
+    transition_reason_redacted: redactIntentText(frame.transition.reason),
     voice_cadence: frame.nucleus.voice.cadence,
     voice_energy: roundMetric(frame.nucleus.voice.energy),
     workbench_state: frame.workbench.state,
+    density: roundMetric(frame.density.density),
+    clutter_risk: frame.density.clutterRisk,
+    suppressed_audit_surfaces: frame.density.suppressedAuditSurfaces,
+    inspect_recommended: frame.density.inspectRecommended,
     workbench_artifact_count: frame.patches.filter(
       (patch) =>
         patch.source === "artifact.created" || patch.source === "artifact.updated"
@@ -300,6 +334,11 @@ function createMorphologyResearchPayload(
     orbit_count: frame.orbit.length,
     socket_count: frame.sockets.length,
     patch_count: frame.patches.length,
+    packet_count: frame.packets.length,
+    collapse_vector_count: frame.collapseVectors.length,
+    active_collapse_vector_count: frame.collapseVectors.filter(
+      (vector) => vector.active
+    ).length,
     phase_count: frame.phases.length,
     active_socket_count: frame.sockets.filter((socket) => socket.state !== "empty")
       .length,
@@ -308,7 +347,9 @@ function createMorphologyResearchPayload(
     camera_depth: roundMetric(frame.camera.depth),
     camera_tilt: roundMetric(frame.camera.tilt),
     socket_roles: socketRoles,
-    patch_statuses: patchStatuses
+    patch_statuses: patchStatuses,
+    packet_statuses: packetStatuses,
+    packet_lanes: packetLanes
   };
 }
 

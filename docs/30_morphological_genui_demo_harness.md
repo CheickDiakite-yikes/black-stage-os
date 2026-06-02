@@ -45,8 +45,9 @@ Run the focused morphology proof:
 pnpm test:morphology
 ```
 
-This executes the startup-intent demo URL, the desktop approval-to-artifact
-stream, and the phone morphology viewport guardrail.
+This executes the startup-intent demo URL, research/planning scenario checks,
+the desktop approval-to-artifact stream, and the phone morphology viewport
+guardrail.
 
 ## Screenshot Artifacts
 
