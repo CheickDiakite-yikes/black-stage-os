@@ -3173,6 +3173,37 @@ button:disabled {
   }
 }
 
+@keyframes generated-packet-stream {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translate(-50%, -50%) scale(0.28);
+  }
+
+  48% {
+    opacity: calc(0.26 + var(--packet-progress, 0.4) * 0.58);
+    filter: blur(0.4px);
+  }
+
+  100% {
+    opacity: calc(0.16 + var(--packet-progress, 0.4) * 0.36);
+    filter: blur(0);
+    transform: translate(-50%, -50%)
+      scale(calc(0.62 + var(--packet-progress, 0.2) * 0.68));
+  }
+}
+
+@keyframes generated-vector-pulse {
+  0% {
+    filter: blur(6px);
+    opacity: 0;
+  }
+
+  100% {
+    filter: blur(0);
+  }
+}
+
 @keyframes scene-edge-flow {
   0% {
     opacity: 0.34;
@@ -3978,6 +4009,36 @@ button:disabled {
     transform 720ms ease;
 }
 
+.generated-morph-density-veil {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(55rem, 82vw);
+  aspect-ratio: 1.72;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--morph-primary) 12%, transparent),
+      transparent 60%
+    ),
+    repeating-radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--morph-primary) 10%, transparent) 0 1px,
+      transparent 1px 1.35rem
+    );
+  mask-image: radial-gradient(ellipse at center, black 0 42%, transparent 78%);
+  opacity: calc(0.1 + var(--morph-density, 0.2) * 0.28);
+  transform: translate(-50%, -50%) rotateX(var(--morph-tilt, 0deg));
+  transition:
+    opacity 560ms ease,
+    transform 720ms ease;
+}
+
+.generated-morph-density-veil[data-clutter-risk="high"] {
+  opacity: calc(0.18 + var(--morph-density, 0.4) * 0.36);
+}
+
 .stage-morph-mode_shifted .generated-morph-grid,
 .stage-morph-sockets_allocated .generated-morph-grid,
 .stage-morph-patch_applied .generated-morph-grid,
@@ -3985,6 +4046,32 @@ button:disabled {
 .stage-morph-workbench_revealed .generated-morph-grid {
   opacity: calc(0.16 + var(--morph-depth, 0.4) * 0.28);
   transform: rotateX(var(--morph-tilt, 0deg)) scale(1);
+}
+
+.generated-morph-collapse-vector {
+  position: absolute;
+  left: var(--vector-left);
+  top: var(--vector-top);
+  width: var(--vector-length);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--morph-primary) 58%, transparent),
+    transparent
+  );
+  box-shadow: 0 0 12px color-mix(in srgb, var(--morph-primary) 16%, transparent);
+  opacity: calc(var(--vector-intensity, 0.2) * 0.42);
+  transform: rotate(var(--vector-angle)) scaleX(var(--morph-phase-progress, 0.2));
+  transform-origin: left center;
+  transition:
+    opacity 520ms ease,
+    transform 720ms ease;
+  animation: generated-vector-pulse 1200ms ease var(--vector-delay, 0ms) both;
+}
+
+.generated-morph-collapse-vector[data-vector-active="false"] {
+  opacity: 0.08;
+  transform: rotate(var(--vector-angle)) scaleX(0.16);
 }
 
 .generated-morph-nucleus {
@@ -4129,6 +4216,40 @@ button:disabled {
 
 .generated-morph-socket[data-socket-role="artifact"] {
   border-color: rgba(151, 238, 190, 0.24);
+}
+
+.generated-morph-packet {
+  position: absolute;
+  left: var(--packet-left);
+  top: var(--packet-top);
+  width: clamp(0.36rem, 0.7vw, 0.62rem);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--morph-secondary) 48%, transparent);
+  background: color-mix(in srgb, var(--morph-primary) 64%, rgba(255, 255, 255, 0.14));
+  border-radius: 50%;
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--morph-primary) 28%, transparent),
+    0 0 38px color-mix(in srgb, var(--morph-primary) 12%, transparent);
+  opacity: 0;
+  transform: translate(-50%, -50%)
+    scale(calc(0.62 + var(--packet-progress, 0.2) * 0.68));
+  animation: generated-packet-stream 880ms ease var(--packet-delay, 0ms) both;
+}
+
+.generated-morph-packet[data-packet-status="applied"] {
+  opacity: 0.42;
+}
+
+.generated-morph-packet[data-packet-status="blocked"] {
+  border-color: rgba(255, 202, 143, 0.72);
+  background: rgba(255, 202, 143, 0.74);
+  box-shadow:
+    0 0 22px rgba(255, 188, 112, 0.34),
+    0 0 52px rgba(255, 188, 112, 0.14);
+}
+
+.generated-morph-packet[data-packet-lane="artifact"] {
+  background: rgba(151, 238, 190, 0.7);
 }
 
 .generated-morph-phase-rail {

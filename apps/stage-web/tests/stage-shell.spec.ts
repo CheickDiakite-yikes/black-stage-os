@@ -458,8 +458,18 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       generatedFrameSequence: Number(generatedStream?.dataset.frameSequence ?? 0),
       generatedMorphMode: generatedStream?.dataset.morphMode,
       generatedMorphPhase: generatedStream?.dataset.morphPhase,
+      generatedMorphPhaseProgress: Number(
+        generatedStream?.dataset.morphPhaseProgress ?? 0
+      ),
+      generatedMorphCompletionRatio: Number(
+        generatedStream?.dataset.morphCompletionRatio ?? 0
+      ),
+      generatedMorphDensity: Number(generatedStream?.dataset.morphDensity ?? 0),
+      generatedMorphClutterRisk: generatedStream?.dataset.morphClutterRisk,
       generatedMorphVoiceCadence: generatedStream?.dataset.morphVoiceCadence,
       generatedWorkbenchState: generatedStream?.dataset.workbenchState,
+      generatedMorphPacketCount: Number(generatedStream?.dataset.morphPacketCount ?? 0),
+      generatedMorphVectorCount: Number(generatedStream?.dataset.morphVectorCount ?? 0),
       generatedMorphCamera: generatedStream?.querySelector<HTMLElement>(
         ".generated-morph-field"
       )?.dataset.morphCamera,
@@ -472,6 +482,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         generatedStream?.querySelectorAll(".generated-morph-socket").length ?? 0,
       generatedMorphPhaseCount:
         generatedStream?.querySelectorAll(".generated-morph-phase-rail span").length ??
+        0,
+      generatedMorphPacketElementCount:
+        generatedStream?.querySelectorAll(".generated-morph-packet").length ?? 0,
+      generatedMorphVectorElementCount:
+        generatedStream?.querySelectorAll(".generated-morph-collapse-vector").length ??
         0,
       generatedPatchClockText: generatedPatchClock?.textContent ?? "",
       generatedPatchCount:
@@ -510,13 +525,27 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "approval_ritual",
     "workbench_revealed"
   ]).toContain(renderFieldEvidence.generatedMorphPhase);
+  expect(renderFieldEvidence.generatedMorphPhaseProgress).toBeGreaterThan(0);
+  expect(renderFieldEvidence.generatedMorphCompletionRatio).toBeGreaterThan(0);
+  expect(renderFieldEvidence.generatedMorphDensity).toBeGreaterThan(0);
+  expect(["low", "medium", "high"]).toContain(
+    renderFieldEvidence.generatedMorphClutterRisk
+  );
   expect(renderFieldEvidence.generatedMorphVoiceCadence).toBeTruthy();
   expect(renderFieldEvidence.generatedWorkbenchState).toBeTruthy();
+  expect(renderFieldEvidence.generatedMorphPacketCount).toBeGreaterThan(0);
+  expect(renderFieldEvidence.generatedMorphVectorCount).toBeGreaterThan(0);
   expect(renderFieldEvidence.generatedMorphCamera).toBeTruthy();
   expect(renderFieldEvidence.generatedMorphNucleusExists).toBe(true);
   expect(renderFieldEvidence.generatedMorphOrbitCount).toBeGreaterThanOrEqual(2);
   expect(renderFieldEvidence.generatedMorphSocketCount).toBeGreaterThanOrEqual(2);
   expect(renderFieldEvidence.generatedMorphPhaseCount).toBe(8);
+  expect(renderFieldEvidence.generatedMorphPacketElementCount).toBe(
+    renderFieldEvidence.generatedMorphPacketCount
+  );
+  expect(renderFieldEvidence.generatedMorphVectorElementCount).toBe(
+    renderFieldEvidence.generatedMorphVectorCount
+  );
   expect(renderFieldEvidence.generatedPatchClockText).toContain("patch");
   expect(renderFieldEvidence.generatedPatchCount).toBeGreaterThanOrEqual(3);
   expect(renderFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);
@@ -864,7 +893,21 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         generatedFrameSequence: Number(generatedStream?.dataset.frameSequence ?? 0),
         generatedMorphMode: generatedStream?.dataset.morphMode,
         generatedMorphPhase: generatedStream?.dataset.morphPhase,
+        generatedMorphPhaseProgress: Number(
+          generatedStream?.dataset.morphPhaseProgress ?? 0
+        ),
+        generatedMorphCompletionRatio: Number(
+          generatedStream?.dataset.morphCompletionRatio ?? 0
+        ),
+        generatedMorphDensity: Number(generatedStream?.dataset.morphDensity ?? 0),
+        generatedMorphClutterRisk: generatedStream?.dataset.morphClutterRisk,
         generatedWorkbenchState: generatedStream?.dataset.workbenchState,
+        generatedMorphPacketCount: Number(
+          generatedStream?.dataset.morphPacketCount ?? 0
+        ),
+        generatedMorphVectorCount: Number(
+          generatedStream?.dataset.morphVectorCount ?? 0
+        ),
         generatedMorphNucleusExists: Boolean(
           generatedStream?.querySelector(".generated-morph-nucleus")
         ),
@@ -872,6 +915,11 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
           generatedStream?.querySelectorAll(".generated-morph-socket").length ?? 0,
         generatedMorphPhaseCount:
           generatedStream?.querySelectorAll(".generated-morph-phase-rail span")
+            .length ?? 0,
+        generatedMorphPacketElementCount:
+          generatedStream?.querySelectorAll(".generated-morph-packet").length ?? 0,
+        generatedMorphVectorElementCount:
+          generatedStream?.querySelectorAll(".generated-morph-collapse-vector")
             .length ?? 0,
         generatedPatchClockText: generatedPatchClock?.textContent ?? "",
         generatedPatchCount:
@@ -915,10 +963,22 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(approvedFieldEvidence.generatedFrameSequence).toBeGreaterThan(0);
   expect(approvedFieldEvidence.generatedMorphMode).toBe("artifact");
   expect(approvedFieldEvidence.generatedMorphPhase).toBe("workbench_revealed");
+  expect(approvedFieldEvidence.generatedMorphPhaseProgress).toBeGreaterThan(0);
+  expect(approvedFieldEvidence.generatedMorphCompletionRatio).toBe(1);
+  expect(approvedFieldEvidence.generatedMorphDensity).toBeGreaterThan(0.4);
+  expect(["medium", "high"]).toContain(approvedFieldEvidence.generatedMorphClutterRisk);
   expect(approvedFieldEvidence.generatedWorkbenchState).toBe("revealed");
+  expect(approvedFieldEvidence.generatedMorphPacketCount).toBeGreaterThanOrEqual(6);
+  expect(approvedFieldEvidence.generatedMorphVectorCount).toBeGreaterThanOrEqual(3);
   expect(approvedFieldEvidence.generatedMorphNucleusExists).toBe(true);
   expect(approvedFieldEvidence.generatedMorphSocketCount).toBeGreaterThanOrEqual(3);
   expect(approvedFieldEvidence.generatedMorphPhaseCount).toBe(8);
+  expect(approvedFieldEvidence.generatedMorphPacketElementCount).toBe(
+    approvedFieldEvidence.generatedMorphPacketCount
+  );
+  expect(approvedFieldEvidence.generatedMorphVectorElementCount).toBe(
+    approvedFieldEvidence.generatedMorphVectorCount
+  );
   expect(approvedFieldEvidence.generatedPatchClockText).toContain("patch");
   expect(approvedFieldEvidence.generatedPatchCount).toBeGreaterThanOrEqual(2);
   expect(approvedFieldEvidence.generatedStreamTextLength).toBeGreaterThan(20);
@@ -1079,13 +1139,22 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
       approvalActionsInViewport: elementInViewport(approvalActionRect),
       morphMode: stream?.dataset.morphMode,
       morphPhase: stream?.dataset.morphPhase,
+      morphPhaseProgress: Number(stream?.dataset.morphPhaseProgress ?? 0),
+      morphDensity: Number(stream?.dataset.morphDensity ?? 0),
+      morphClutterRisk: stream?.dataset.morphClutterRisk,
       morphVoiceCadence: stream?.dataset.morphVoiceCadence,
       workbenchState: stream?.dataset.workbenchState,
+      packetCount: Number(stream?.dataset.morphPacketCount ?? 0),
+      vectorCount: Number(stream?.dataset.morphVectorCount ?? 0),
       morphCamera: morphField?.dataset.morphCamera,
       orbitCount: stream?.querySelectorAll(".generated-morph-orbit-object").length ?? 0,
       socketCount: stream?.querySelectorAll(".generated-morph-socket").length ?? 0,
       phaseCount:
         stream?.querySelectorAll(".generated-morph-phase-rail span").length ?? 0,
+      packetElementCount:
+        stream?.querySelectorAll(".generated-morph-packet").length ?? 0,
+      vectorElementCount:
+        stream?.querySelectorAll(".generated-morph-collapse-vector").length ?? 0,
       detailCount: stream?.querySelectorAll(".generated-stream-detail").length ?? 0
     };
   });
@@ -1103,12 +1172,19 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
     "approval_ritual",
     "workbench_revealed"
   ]).toContain(phoneEvidence.morphPhase);
+  expect(phoneEvidence.morphPhaseProgress).toBeGreaterThan(0);
+  expect(phoneEvidence.morphDensity).toBeGreaterThan(0);
+  expect(["low", "medium", "high"]).toContain(phoneEvidence.morphClutterRisk);
   expect(phoneEvidence.morphVoiceCadence).toBeTruthy();
   expect(phoneEvidence.workbenchState).toBeTruthy();
+  expect(phoneEvidence.packetCount).toBeGreaterThan(0);
+  expect(phoneEvidence.vectorCount).toBeGreaterThan(0);
   expect(phoneEvidence.morphCamera).toBeTruthy();
   expect(phoneEvidence.orbitCount).toBeGreaterThanOrEqual(2);
   expect(phoneEvidence.socketCount).toBeGreaterThanOrEqual(2);
   expect(phoneEvidence.phaseCount).toBe(8);
+  expect(phoneEvidence.packetElementCount).toBe(phoneEvidence.packetCount);
+  expect(phoneEvidence.vectorElementCount).toBe(phoneEvidence.vectorCount);
   expect(phoneEvidence.detailCount).toBeGreaterThanOrEqual(1);
 
   await page.screenshot({

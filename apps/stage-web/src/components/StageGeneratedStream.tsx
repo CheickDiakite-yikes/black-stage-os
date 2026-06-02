@@ -3,8 +3,10 @@ import {
   type ApprovalRequest,
   type IntentThread,
   type StageEvent,
+  type StageMorphCollapseVector,
   type StageMorphFrame,
   type StageMorphOrbitObject,
+  type StageMorphPacket,
   type StageMorphSocket
 } from "@blackstage/stage-core";
 import type { CSSProperties } from "react";
@@ -41,7 +43,9 @@ export function StageGeneratedStream({
   const clockStyle = {
     "--stream-progress": frame.sequence.progress.toString(),
     "--morph-depth": morphFrame.camera.depth.toString(),
+    "--morph-density": morphFrame.density.density.toString(),
     "--morph-energy": morphFrame.nucleus.energy.toString(),
+    "--morph-phase-progress": morphFrame.transition.phaseProgress.toString(),
     "--morph-tilt": `${morphFrame.camera.tilt}deg`
   } as CSSProperties;
 
@@ -53,7 +57,14 @@ export function StageGeneratedStream({
       data-frame-sequence={frame.sequence.index}
       data-frame-source={frame.source}
       data-morph-mode={morphFrame.mode}
+      data-morph-packet-count={morphFrame.packets.length}
       data-morph-phase={morphFrame.activePhaseId}
+      data-morph-phase-index={morphFrame.transition.phaseIndex}
+      data-morph-phase-progress={morphFrame.transition.phaseProgress}
+      data-morph-completion-ratio={morphFrame.transition.completionRatio}
+      data-morph-density={morphFrame.density.density}
+      data-morph-clutter-risk={morphFrame.density.clutterRisk}
+      data-morph-vector-count={morphFrame.collapseVectors.length}
       data-morph-voice-cadence={morphFrame.nucleus.voice.cadence}
       data-workbench-state={morphFrame.workbench.state}
       data-testid="stage-generated-stream"
@@ -107,12 +118,26 @@ function GeneratedMorphologyField({ morphFrame }: { morphFrame: StageMorphFrame 
       data-morph-camera={morphFrame.camera.mode}
     >
       <div className="generated-morph-grid" />
+      <div
+        className="generated-morph-density-veil"
+        data-clutter-risk={morphFrame.density.clutterRisk}
+      />
+      <div className="generated-morph-collapse-vectors">
+        {morphFrame.collapseVectors.map((vector, index) => (
+          <GeneratedMorphCollapseVector index={index} key={vector.id} vector={vector} />
+        ))}
+      </div>
       <div className="generated-morph-sockets">
         {morphFrame.sockets
           .filter((socket) => socket.role !== "nucleus")
           .map((socket, index) => (
             <GeneratedMorphSocket index={index} key={socket.id} socket={socket} />
           ))}
+      </div>
+      <div className="generated-morph-packets">
+        {morphFrame.packets.map((packet, index) => (
+          <GeneratedMorphPacket index={index} key={packet.id} packet={packet} />
+        ))}
       </div>
       <div className="generated-morph-orbit">
         {morphFrame.orbit.map((orbitObject, index) => (
@@ -145,6 +170,62 @@ function GeneratedMorphologyField({ morphFrame }: { morphFrame: StageMorphFrame 
         ))}
       </div>
     </div>
+  );
+}
+
+function GeneratedMorphCollapseVector({
+  index,
+  vector
+}: {
+  index: number;
+  vector: StageMorphCollapseVector;
+}) {
+  const dx = vector.toX - vector.fromX;
+  const dy = vector.toY - vector.fromY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+  const style = {
+    "--vector-angle": `${angle}deg`,
+    "--vector-delay": `${index * 85}ms`,
+    "--vector-intensity": vector.intensity.toString(),
+    "--vector-left": `${vector.fromX}%`,
+    "--vector-length": `${length}%`,
+    "--vector-top": `${vector.fromY}%`
+  } as CSSProperties;
+
+  return (
+    <span
+      className="generated-morph-collapse-vector"
+      data-vector-active={vector.active}
+      data-vector-role={vector.role}
+      style={style}
+    />
+  );
+}
+
+function GeneratedMorphPacket({
+  index,
+  packet
+}: {
+  index: number;
+  packet: StageMorphPacket;
+}) {
+  const style = {
+    "--packet-delay": `${packet.delayMs + index * 18}ms`,
+    "--packet-left": `${packet.x}%`,
+    "--packet-progress": packet.progress.toString(),
+    "--packet-top": `${packet.y}%`
+  } as CSSProperties;
+
+  return (
+    <span
+      className="generated-morph-packet"
+      data-packet-lane={packet.lane}
+      data-packet-op={packet.op}
+      data-packet-phase={packet.phaseId}
+      data-packet-status={packet.status}
+      style={style}
+    />
   );
 }
 
