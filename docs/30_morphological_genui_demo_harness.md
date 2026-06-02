@@ -46,8 +46,8 @@ pnpm test:morphology
 ```
 
 This executes the startup-intent demo URL, research/planning scenario checks,
-the desktop approval-to-artifact stream, and the phone morphology viewport
-guardrail.
+the reduced-motion morphology contract, the desktop approval-to-artifact stream,
+and the phone morphology viewport guardrail.
 
 ## Screenshot Artifacts
 

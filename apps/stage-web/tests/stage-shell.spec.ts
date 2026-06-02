@@ -331,6 +331,7 @@ test("Stage Shell v0 adapts morphology across research and planning scenarios", 
       phase: stream?.dataset.morphPhase,
       clutterRisk: stream?.dataset.morphClutterRisk,
       packetCount: Number(stream?.dataset.morphPacketCount ?? 0),
+      workbenchState: stream?.dataset.workbenchState,
       text: stream?.textContent ?? ""
     };
   });
@@ -339,9 +340,84 @@ test("Stage Shell v0 adapts morphology across research and planning scenarios", 
   expect(planningEvidence.phase).not.toBe("nucleus_awake");
   expect(["low", "medium", "high"]).toContain(planningEvidence.clutterRisk);
   expect(planningEvidence.packetCount).toBeGreaterThan(0);
+  expect(planningEvidence.workbenchState).not.toBe("revealed");
   expect(planningEvidence.text.toLowerCase()).toMatch(
-    /raise|investor|round|founder|actions/
+    /cadence|timeline|investor|founder|actions|segment/
   );
+});
+
+test("Stage Shell v0 keeps morphology legible under reduced motion", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.emulateMedia({
+    reducedMotion: "reduce"
+  });
+  await page.goto("/");
+
+  const reducedMotionEnabled = await page.evaluate(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+
+  expect(reducedMotionEnabled).toBe(true);
+
+  await submitIntent(page, "Build BlackStage");
+
+  await expect(page.getByTestId("stage-generated-stream")).toBeVisible();
+  await expect(page.getByTestId("stage-generated-stream")).toHaveAttribute(
+    "data-morph-mode",
+    /coding|approval/
+  );
+
+  const reducedMotionEvidence = await page.evaluate(() => {
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+    const morphField = stream?.querySelector<HTMLElement>(".generated-morph-field");
+    const packet = stream?.querySelector<HTMLElement>(".generated-morph-packet");
+    const vector = stream?.querySelector<HTMLElement>(
+      ".generated-morph-collapse-vector"
+    );
+    const streamStyle = stream ? getComputedStyle(stream) : null;
+
+    return {
+      horizontalOverflow:
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      morphMode: stream?.dataset.morphMode,
+      morphPhase: stream?.dataset.morphPhase,
+      morphPhaseProgress: Number(stream?.dataset.morphPhaseProgress ?? 0),
+      morphDensity: Number(stream?.dataset.morphDensity ?? 0),
+      morphCamera: morphField?.dataset.morphCamera,
+      packetCount: Number(stream?.dataset.morphPacketCount ?? 0),
+      packetElementCount:
+        stream?.querySelectorAll(".generated-morph-packet").length ?? 0,
+      vectorCount: Number(stream?.dataset.morphVectorCount ?? 0),
+      vectorElementCount:
+        stream?.querySelectorAll(".generated-morph-collapse-vector").length ?? 0,
+      packetVisible: packet ? Number(getComputedStyle(packet).opacity) > 0 : false,
+      vectorVisible: vector ? Number(getComputedStyle(vector).opacity) > 0 : false,
+      streamOpacity: streamStyle ? Number(streamStyle.opacity) : 0
+    };
+  });
+
+  expect(reducedMotionEvidence.horizontalOverflow).toBeLessThanOrEqual(1);
+  expect(["coding", "approval"]).toContain(reducedMotionEvidence.morphMode);
+  expect(reducedMotionEvidence.morphPhase).not.toBe("nucleus_awake");
+  expect(reducedMotionEvidence.morphPhaseProgress).toBeGreaterThan(0);
+  expect(reducedMotionEvidence.morphDensity).toBeGreaterThan(0);
+  expect(reducedMotionEvidence.morphCamera).toBeTruthy();
+  expect(reducedMotionEvidence.packetCount).toBeGreaterThan(0);
+  expect(reducedMotionEvidence.packetElementCount).toBe(
+    reducedMotionEvidence.packetCount
+  );
+  expect(reducedMotionEvidence.vectorCount).toBeGreaterThan(0);
+  expect(reducedMotionEvidence.vectorElementCount).toBe(
+    reducedMotionEvidence.vectorCount
+  );
+  expect(reducedMotionEvidence.packetVisible).toBe(true);
+  expect(reducedMotionEvidence.vectorVisible).toBe(true);
+  expect(reducedMotionEvidence.streamOpacity).toBeGreaterThan(0.5);
 });
 
 test("Stage Shell v0 streams intent into approval-gated artifacts", async ({

@@ -33,7 +33,7 @@
     "test": "pnpm check:workflow && pnpm test:scripts && pnpm -r --if-present test",
     "test:scripts": "node --test scripts/test/*.test.mjs",
     "test:e2e": "pnpm --filter @blackstage/stage-web test:e2e",
-    "test:morphology": "pnpm --filter @blackstage/stage-web test:e2e --grep \"startup-intent morphology demo URL|adapts morphology across research and planning scenarios|streams intent into approval-gated artifacts|preserves generated morphology on phone viewport\"",
+    "test:morphology": "pnpm --filter @blackstage/stage-web test:e2e --grep \"startup-intent morphology demo URL|adapts morphology across research and planning scenarios|keeps morphology legible under reduced motion|streams intent into approval-gated artifacts|preserves generated morphology on phone viewport\"",
     "typecheck": "pnpm -r --sort typecheck",
     "format": "prettier --write ."
   },
