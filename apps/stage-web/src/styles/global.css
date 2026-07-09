@@ -3309,6 +3309,43 @@ button:disabled {
   }
 }
 
+@keyframes generated-well-press {
+  0% {
+    opacity: 0;
+    scale: 0.42;
+  }
+
+  38% {
+    opacity: calc(0.44 + var(--morph-energy, 0.3) * 0.5);
+  }
+
+  100% {
+    scale: 1;
+  }
+}
+
+/* The field is a living medium: substrate layers keep a slow, desynchronized
+   breath between events so the stage never reads as frozen chrome. */
+@keyframes generated-field-breathe {
+  0% {
+    filter: brightness(0.82);
+  }
+
+  100% {
+    filter: brightness(1.28);
+  }
+}
+
+@keyframes generated-veil-breathe {
+  0% {
+    filter: blur(22px) brightness(0.82);
+  }
+
+  100% {
+    filter: blur(22px) brightness(1.3);
+  }
+}
+
 @keyframes generated-ritual-condense {
   0% {
     opacity: 0;
@@ -4248,6 +4285,13 @@ button:disabled {
     translate 1100ms cubic-bezier(0.22, 0.8, 0.32, 1);
 }
 
+/* Intent presses into the field: when the stage wakes, the pressure well
+   stamps in once — small and bright, then settling into its resting dent. */
+.stage-morph-nucleus_awake .generated-morph-field::after,
+.stage-morph-context_orbit_started .generated-morph-field::after {
+  animation: generated-well-press 2400ms cubic-bezier(0.24, 0.7, 0.3, 1) both;
+}
+
 .generated-morph-grid {
   position: absolute;
   inset: 12% 10%;
@@ -4305,6 +4349,9 @@ button:disabled {
     top 1200ms cubic-bezier(0.22, 0.8, 0.32, 1),
     opacity 560ms ease,
     transform 720ms ease;
+  /* The veil keyframes must restate the blur: filter is one property, so a
+     plain brightness breath would strip it. */
+  animation: generated-veil-breathe 14s ease-in-out infinite alternate;
 }
 
 .generated-morph-density-veil[data-clutter-risk="high"] {
