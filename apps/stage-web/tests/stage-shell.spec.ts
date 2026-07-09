@@ -310,7 +310,9 @@ test("Stage Shell v0 runs the startup-intent morphology demo URL", async ({ page
         ".thread-console",
         '[data-testid="stage-field-orientation"]',
         '[data-testid="agent-activity-feed"]',
-        '[data-testid="approval-card"]',
+        // A pending approval card is the deliberate central ritual surface,
+        // not a debug pane; only a non-pending card counts as a leak.
+        '[data-testid="approval-card"]:not([data-approval-status="pending"])',
         '[data-testid="artifact-stack"]',
         '[data-testid="research-capture"]'
       ].filter((selector) => visible(selector)).length,
@@ -874,7 +876,9 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       threadConsole: visible(".thread-console"),
       orientation: visible('[data-testid="stage-field-orientation"]'),
       agentFeed: visible('[data-testid="agent-activity-feed"]'),
-      approvalCard: visible('[data-testid="approval-card"]'),
+      approvalCard: visible(
+        '[data-testid="approval-card"]:not([data-approval-status="pending"])'
+      ),
       artifactStack: visible('[data-testid="artifact-stack"]'),
       researchCapture: visible('[data-testid="research-capture"]'),
       objectCount: Array.from(
@@ -1019,6 +1023,12 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
         getComputedStyle(approvalActionsElement).display !== "none" &&
         Number(getComputedStyle(approvalActionsElement).opacity) > 0
       ),
+      // Single ritual owner: while the pending card holds the decision, the
+      // stream's duplicate action row recedes to a ghost echo.
+      approvalActionsGhosted: Boolean(
+        approvalActionsElement &&
+        Number(getComputedStyle(approvalActionsElement).opacity) < 0.5
+      ),
       ritualHasApproval: ritualField?.dataset.hasApproval === "true",
       laborNodeCount: document.querySelectorAll('[data-testid="stage-labor-node"]')
         .length,
@@ -1051,6 +1061,7 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(pendingRitualEvidence.hiddenPlanVisibility).toBe("hidden");
   expect(pendingRitualEvidence.generatedStreamOpacity).toBeGreaterThan(0.9);
   expect(pendingRitualEvidence.approvalActionsVisible).toBe(true);
+  expect(pendingRitualEvidence.approvalActionsGhosted).toBe(true);
   expect(pendingRitualEvidence.ritualHasApproval).toBe(true);
   expect(pendingRitualEvidence.laborNodeCount).toBeGreaterThanOrEqual(4);
   expect(pendingRitualEvidence.thresholdStatus).toBe("pending");
@@ -1423,7 +1434,9 @@ test("Stage Shell v0 keeps audit inspect mode behind an explicit debug route", a
       threadConsole: visible(".thread-console"),
       orientation: visible('[data-testid="stage-field-orientation"]'),
       agentFeed: visible('[data-testid="agent-activity-feed"]'),
-      approvalCard: visible('[data-testid="approval-card"]'),
+      approvalCard: visible(
+        '[data-testid="approval-card"]:not([data-approval-status="pending"])'
+      ),
       artifactStack: visible('[data-testid="artifact-stack"]'),
       researchCapture: visible('[data-testid="research-capture"]'),
       objectCount: Array.from(
