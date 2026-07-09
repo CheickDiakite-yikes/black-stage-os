@@ -25,6 +25,7 @@ export function ApprovalCard({
     <section
       className="approval-card"
       aria-label="Approval request"
+      data-approval-status={approval.status}
       data-testid="approval-card"
     >
       <div className="panel-heading">

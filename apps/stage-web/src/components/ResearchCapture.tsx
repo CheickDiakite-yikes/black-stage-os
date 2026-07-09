@@ -35,6 +35,7 @@ export function ResearchCapture({
     <aside
       className="research-capture"
       aria-label="Research capture"
+      data-realtime-debug={realtimeDebugSummary ? "true" : "false"}
       data-testid="research-capture"
     >
       <div className="panel-heading">

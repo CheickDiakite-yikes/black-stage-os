@@ -10,6 +10,7 @@ apps/stage-web/test-results/
 out/
 .DS_Store
 .playwright-mcp/
+.claude/settings.local.json
 BlackStage_OS_Build_Pack/
 BlackStage_OS_Development_Tracker.xlsx
 blackstage-*.png

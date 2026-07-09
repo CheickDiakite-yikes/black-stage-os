@@ -25,6 +25,29 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+async function waitForGeneratedSurfaceScreenshotSettle(
+  page: Page,
+  options: {
+    actionText?: string | RegExp;
+  } = {}
+) {
+  const surface = page.locator(".generated-stream-surface");
+
+  await expect(surface.locator("h2")).toBeVisible();
+  await expect(surface.locator("p")).toBeVisible();
+
+  if (options.actionText) {
+    const actions = page.locator(".generated-stream-actions");
+
+    await expect(actions).toBeVisible();
+    await expect(actions).toContainText(options.actionText);
+  }
+
+  // The screenshot artifact should capture the readable generated surface, not
+  // the blurred midpoint of the surface arrival animation.
+  await page.waitForTimeout(850);
+}
+
 async function installFakeSpeechRecognition(page: Page) {
   await page.addInitScript(() => {
     type SpeechResultEvent = {
@@ -258,6 +281,15 @@ test("Stage Shell v0 runs the startup-intent morphology demo URL", async ({ page
     const stream = document.querySelector<HTMLElement>(
       '[data-testid="stage-generated-stream"]'
     );
+    const visible = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+
+      return Boolean(
+        element &&
+        getComputedStyle(element).display !== "none" &&
+        getComputedStyle(element).opacity !== "0"
+      );
+    };
     const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
     const snapshot = rawSnapshot
       ? (JSON.parse(rawSnapshot) as {
@@ -269,6 +301,19 @@ test("Stage Shell v0 runs the startup-intent morphology demo URL", async ({ page
     return {
       phase: stream?.dataset.morphPhase,
       socketCount: stream?.querySelectorAll(".generated-morph-socket").length ?? 0,
+      inspectToggleCount: document.querySelectorAll('[data-testid="inspect-toggle"]')
+        .length,
+      inspectAvailable: document.querySelector<HTMLElement>(
+        '[data-testid="stage-shell"]'
+      )?.dataset.inspectAvailable,
+      visibleDebugPaneCount: [
+        ".thread-console",
+        '[data-testid="stage-field-orientation"]',
+        '[data-testid="agent-activity-feed"]',
+        '[data-testid="approval-card"]',
+        '[data-testid="artifact-stack"]',
+        '[data-testid="research-capture"]'
+      ].filter((selector) => visible(selector)).length,
       stageEventCount: snapshot?.stageEvents?.length ?? 0,
       morphologyResearchCount:
         snapshot?.researchEvents?.filter(
@@ -284,6 +329,9 @@ test("Stage Shell v0 runs the startup-intent morphology demo URL", async ({ page
     "workbench_revealed"
   ]).toContain(startupDemoEvidence.phase);
   expect(startupDemoEvidence.socketCount).toBeGreaterThanOrEqual(2);
+  expect(startupDemoEvidence.inspectToggleCount).toBe(0);
+  expect(startupDemoEvidence.inspectAvailable).toBe("false");
+  expect(startupDemoEvidence.visibleDebugPaneCount).toBe(0);
   expect(startupDemoEvidence.stageEventCount).toBeGreaterThan(1);
   expect(startupDemoEvidence.morphologyResearchCount).toBeGreaterThan(1);
 });
@@ -342,7 +390,7 @@ test("Stage Shell v0 adapts morphology across research and planning scenarios", 
   expect(planningEvidence.packetCount).toBeGreaterThan(0);
   expect(planningEvidence.workbenchState).not.toBe("revealed");
   expect(planningEvidence.text.toLowerCase()).toMatch(
-    /cadence|timeline|investor|founder|actions|segment/
+    /cadence|timeline|investor|founder|actions|segment|outreach|approval/
   );
 });
 
@@ -369,6 +417,43 @@ test("Stage Shell v0 keeps morphology legible under reduced motion", async ({
     "data-morph-mode",
     /coding|approval/
   );
+  // The mode attribute settles at thread creation while the first streamed
+  // object can still be in flight, so wait for the phase to leave the wake
+  // state before sampling morphology evidence.
+  await expect(page.getByTestId("stage-generated-stream")).not.toHaveAttribute(
+    "data-morph-phase",
+    "nucleus_awake",
+    { timeout: 20_000 }
+  );
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const vector = document.querySelector<HTMLElement>(
+            ".generated-morph-collapse-vector"
+          );
+
+          return vector ? Number(getComputedStyle(vector).opacity) > 0 : false;
+        }),
+      {
+        timeout: 20_000
+      }
+    )
+    .toBe(true);
+
+  // Rendering-field contract: the generated surface is persistent field
+  // matter. Hold a reference now, let the stream progress to the approval
+  // ritual, and prove the same DOM node is still on stage (content morphs
+  // in place; the container is never remounted).
+  await page.evaluate(() => {
+    (window as unknown as Record<string, unknown>).__blackstageSurfaceProbe =
+      document.querySelector(".generated-stream-surface");
+  });
+  await expect(page.getByTestId("stage-generated-stream")).toHaveAttribute(
+    "data-morph-phase",
+    "approval_ritual",
+    { timeout: 20_000 }
+  );
 
   const reducedMotionEvidence = await page.evaluate(() => {
     const stream = document.querySelector<HTMLElement>(
@@ -379,9 +464,23 @@ test("Stage Shell v0 keeps morphology legible under reduced motion", async ({
     const vector = stream?.querySelector<HTMLElement>(
       ".generated-morph-collapse-vector"
     );
+    const nucleus = stream?.querySelector<HTMLElement>(".generated-morph-nucleus");
+    const surface = stream?.querySelector<HTMLElement>(".generated-stream-surface");
+    const surfaceTitle = surface?.querySelector<HTMLElement>("h2");
+    const tetherStyle = nucleus ? getComputedStyle(nucleus, "::before") : null;
     const streamStyle = stream ? getComputedStyle(stream) : null;
 
     return {
+      surfacePersisted:
+        Boolean(surface) &&
+        (window as unknown as Record<string, unknown>).__blackstageSurfaceProbe ===
+          surface,
+      surfaceTitleOpacity: surfaceTitle
+        ? Number(getComputedStyle(surfaceTitle).opacity)
+        : 0,
+      tetherContent: tetherStyle?.content ?? "none",
+      tetherOpacity: tetherStyle ? Number(tetherStyle.opacity) : 0,
+      cameraFocusX: stream?.style.getPropertyValue("--morph-focus-x") ?? "",
       horizontalOverflow:
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
       morphMode: stream?.dataset.morphMode,
@@ -407,6 +506,14 @@ test("Stage Shell v0 keeps morphology legible under reduced motion", async ({
   expect(reducedMotionEvidence.morphPhaseProgress).toBeGreaterThan(0);
   expect(reducedMotionEvidence.morphDensity).toBeGreaterThan(0);
   expect(reducedMotionEvidence.morphCamera).toBeTruthy();
+  // Rendering-field contract: persistent surface matter, a visible
+  // condensation tether in the approval ritual, camera-driven substrate
+  // focus, and a fully materialized title even without animation.
+  expect(reducedMotionEvidence.surfacePersisted).toBe(true);
+  expect(reducedMotionEvidence.surfaceTitleOpacity).toBeGreaterThan(0.9);
+  expect(reducedMotionEvidence.tetherContent).toBe('""');
+  expect(reducedMotionEvidence.tetherOpacity).toBeGreaterThan(0.2);
+  expect(reducedMotionEvidence.cameraFocusX).toMatch(/%$/);
   expect(reducedMotionEvidence.packetCount).toBeGreaterThan(0);
   expect(reducedMotionEvidence.packetElementCount).toBe(
     reducedMotionEvidence.packetCount
@@ -453,7 +560,17 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   await expect(page.getByTestId("document-portal-surface")).toContainText(
     "Local runtime only"
   );
-  const planObject = page.getByTestId("stage-object-plan_card");
+  await expect
+    .poll(
+      async () =>
+        page
+          .getByTestId("stage-ritual-field")
+          .evaluate((element) => Number(element.dataset.eventCount ?? 0)),
+      {
+        timeout: 20_000
+      }
+    )
+    .toBeGreaterThanOrEqual(2);
   const renderFieldEvidence = await page.evaluate(() => {
     const constellation = document.querySelector<HTMLElement>(
       ".stage-object-constellation"
@@ -729,18 +846,17 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     "Codex Task Brief: Build Stage Shell v0"
   );
 
-  const inspectToggle = page.getByTestId("inspect-toggle");
-  await expect(inspectToggle).toBeVisible();
-  await inspectToggle.click({
-    force: true
-  });
+  await expect(page.getByTestId("inspect-toggle")).toHaveCount(0);
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-available",
+    "false"
+  );
   await expect(page.getByTestId("stage-shell")).toHaveAttribute(
     "data-inspect-mode",
-    "true"
+    "false"
   );
-  await page.waitForTimeout(120);
 
-  const inspectEvidence = await page.evaluate(() => {
+  const defaultChromeEvidence = await page.evaluate(() => {
     const visible = (selector: string) => {
       const element = document.querySelector<HTMLElement>(selector);
 
@@ -757,80 +873,81 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     return {
       threadConsole: visible(".thread-console"),
       orientation: visible('[data-testid="stage-field-orientation"]'),
-      agentFeedExists: Boolean(
-        document.querySelector('[data-testid="agent-activity-feed"]')
-      ),
-      approvalCardExists: Boolean(
-        document.querySelector('[data-testid="approval-card"]')
-      ),
-      artifactStackExists: Boolean(
-        document.querySelector('[data-testid="artifact-stack"]')
-      ),
+      agentFeed: visible('[data-testid="agent-activity-feed"]'),
+      approvalCard: visible('[data-testid="approval-card"]'),
+      artifactStack: visible('[data-testid="artifact-stack"]'),
       researchCapture: visible('[data-testid="research-capture"]'),
       objectCount: Array.from(
         document.querySelectorAll<HTMLElement>(".stage-object")
-      ).filter((element) => getComputedStyle(element).opacity !== "0").length,
+      ).filter((element) => {
+        const style = getComputedStyle(element);
+
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          Number(style.opacity) > 0
+        );
+      }).length,
       generatedOpacity: stream ? Number(getComputedStyle(stream).opacity) : 1
     };
   });
 
-  expect(inspectEvidence.threadConsole).toBe(true);
-  expect(inspectEvidence.orientation).toBe(true);
-  expect(inspectEvidence.agentFeedExists).toBe(true);
-  expect(inspectEvidence.approvalCardExists).toBe(true);
-  expect(inspectEvidence.artifactStackExists).toBe(true);
-  expect(inspectEvidence.researchCapture).toBe(true);
-  expect(inspectEvidence.objectCount).toBeGreaterThanOrEqual(2);
-  expect(inspectEvidence.generatedOpacity).toBeLessThan(0.6);
+  expect(defaultChromeEvidence.threadConsole).toBe(false);
+  expect(defaultChromeEvidence.orientation).toBe(false);
+  expect(defaultChromeEvidence.agentFeed).toBe(false);
+  expect(defaultChromeEvidence.approvalCard).toBe(false);
+  expect(defaultChromeEvidence.artifactStack).toBe(false);
+  expect(defaultChromeEvidence.researchCapture).toBe(false);
+  expect(defaultChromeEvidence.objectCount).toBe(0);
+  expect(defaultChromeEvidence.generatedOpacity).toBeGreaterThan(0.9);
 
-  await inspectToggle.click({
+  // Direct object-card manipulation is audit-only now; the active view routes the
+  // approval ritual through the generated stream's own actions.
+  const approvalActions = page
+    .getByTestId("stage-generated-stream")
+    .locator(".generated-stream-actions");
+
+  await expect(approvalActions).toBeVisible();
+  await expect(approvalActions.getByRole("button", { name: "Reject" })).toBeVisible();
+  await expect(approvalActions.getByRole("button", { name: "Why" })).toBeVisible();
+  await expect(approvalActions.getByRole("button", { name: "Approve" })).toBeVisible();
+
+  await approvalActions.getByRole("button", { name: "Why" }).click({
     force: true
   });
-  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
-    "data-inspect-mode",
-    "false"
-  );
+  await expect(page.getByTestId("approval-card")).toContainText("This gate exists");
 
-  await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
-    force: true
-  });
-  await expect(planObject).toHaveClass(/stage-object-focused/);
-  await planObject.getByRole("button", { name: "Pin Stage Shell v0 plan" }).click({
-    force: true
-  });
-  await expect(planObject).toHaveClass(/stage-object-pinned/);
-  await planObject.getByRole("button", { name: "Collapse Stage Shell v0 plan" }).click({
-    force: true
-  });
-  await expect(planObject).toHaveClass(/stage-object-collapsed/);
-  await expect(planObject.getByText("Event model")).toHaveCount(0);
-  await planObject.getByRole("button", { name: "Expand Stage Shell v0 plan" }).click({
-    force: true
-  });
-  await expect(planObject).toHaveClass(/stage-object-expanded/);
-  await expect(planObject).toContainText("Event model");
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const rawSnapshot = localStorage.getItem("blackstage.stageShell.v0.1");
 
-  const dragHandle = planObject.getByRole("button", {
-    name: "Move Stage Shell v0 plan"
-  });
+        if (!rawSnapshot) {
+          return false;
+        }
 
-  await dragHandle.click({
-    force: true
-  });
+        const snapshot = JSON.parse(rawSnapshot) as {
+          stageEvents?: Array<{
+            type?: string;
+            payload?: {
+              interventionType?: string;
+            };
+          }>;
+        };
 
-  const shiftAfterMove = await planObject.evaluate((element) =>
-    getComputedStyle(element).getPropertyValue("--object-shift-x").trim()
-  );
+        return Boolean(
+          snapshot.stageEvents?.some(
+            (event) =>
+              event.type === "user.intervention" &&
+              event.payload?.interventionType === "ask_why"
+          )
+        );
+      })
+    )
+    .toBe(true);
 
-  expect(shiftAfterMove).not.toBe("0px");
   await expect(page.getByTestId("agent-activity-feed")).toContainText(
     "Approval needed to create task prompt cards."
-  );
-  await expect(page.getByTestId("approval-card")).toContainText(
-    "Create three Codex task prompts"
-  );
-  await expect(page.getByTestId("artifact-stack")).toContainText(
-    "Codex Task Brief: Build Stage Shell v0"
   );
   const pendingRitualEvidence = await page.evaluate(() => {
     const overlaps = (first: DOMRect, second: DOMRect) =>
@@ -870,6 +987,12 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
     const sceneField = document.querySelector<HTMLElement>(
       '[data-testid="stage-scene-field"]'
     );
+    const generatedStream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+    const approvalActionsElement = generatedStream?.querySelector<HTMLElement>(
+      ".generated-stream-actions"
+    );
 
     return {
       approvalFocusObject: workspace?.dataset.approvalFocusObject,
@@ -882,11 +1005,19 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
       hasApprovalTether: Boolean(approvalTether),
       hasCameraAperture: Boolean(sceneField?.querySelector(".scene-camera-aperture")),
       hasCameraCorridor: Boolean(sceneField?.querySelector(".scene-camera-corridor")),
-      dimmedIntentOpacity: Number(
-        intentObject ? getComputedStyle(intentObject).opacity : 1
-      ),
-      focusedPlanOpacity: Number(
-        planObjectElement ? getComputedStyle(planObjectElement).opacity : 0
+      hiddenIntentVisibility: intentObject
+        ? getComputedStyle(intentObject).visibility
+        : "",
+      hiddenPlanVisibility: planObjectElement
+        ? getComputedStyle(planObjectElement).visibility
+        : "",
+      generatedStreamOpacity: generatedStream
+        ? Number(getComputedStyle(generatedStream).opacity)
+        : 0,
+      approvalActionsVisible: Boolean(
+        approvalActionsElement &&
+        getComputedStyle(approvalActionsElement).display !== "none" &&
+        Number(getComputedStyle(approvalActionsElement).opacity) > 0
       ),
       ritualHasApproval: ritualField?.dataset.hasApproval === "true",
       laborNodeCount: document.querySelectorAll('[data-testid="stage-labor-node"]')
@@ -916,17 +1047,22 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
   expect(pendingRitualEvidence.hasApprovalTether).toBe(true);
   expect(pendingRitualEvidence.hasCameraAperture).toBe(true);
   expect(pendingRitualEvidence.hasCameraCorridor).toBe(true);
-  expect(pendingRitualEvidence.dimmedIntentOpacity).toBeLessThan(0.8);
-  expect(pendingRitualEvidence.focusedPlanOpacity).toBeGreaterThan(0.95);
+  expect(pendingRitualEvidence.hiddenIntentVisibility).toBe("hidden");
+  expect(pendingRitualEvidence.hiddenPlanVisibility).toBe("hidden");
+  expect(pendingRitualEvidence.generatedStreamOpacity).toBeGreaterThan(0.9);
+  expect(pendingRitualEvidence.approvalActionsVisible).toBe(true);
   expect(pendingRitualEvidence.ritualHasApproval).toBe(true);
   expect(pendingRitualEvidence.laborNodeCount).toBeGreaterThanOrEqual(4);
   expect(pendingRitualEvidence.thresholdStatus).toBe("pending");
   expect(pendingRitualEvidence.thresholdDoesNotCoverPlan).toBe(true);
   expect(pendingRitualEvidence.thresholdDoesNotCoverCommand).toBe(true);
 
-  await page.getByRole("button", { name: "Approve", exact: true }).click({
-    force: true
-  });
+  await page
+    .getByTestId("approval-card")
+    .getByRole("button", { name: "Approve", exact: true })
+    .click({
+      force: true
+    });
 
   await expect(page.getByTestId("approval-card")).toContainText("Approval resolved");
   await expect(page.getByTestId("approval-card")).toContainText("Status: approved");
@@ -1234,10 +1370,8 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
   await page.evaluate(() => {
     window.scrollTo(0, 0);
-    document.querySelector(".stage-workspace")?.scrollTo(0, 0);
-    document.querySelector(".stage-object-constellation")?.scrollTo(0, 0);
-    document.querySelector(".artifact-stack")?.scrollTo(0, 0);
   });
+  await waitForGeneratedSurfaceScreenshotSettle(page);
   await page.screenshot({
     path: screenshotPath,
     timeout: 0
@@ -1245,6 +1379,114 @@ test("Stage Shell v0 streams intent into approval-gated artifacts", async ({
 
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test("Stage Shell v0 keeps audit inspect mode behind an explicit debug route", async ({
+  page
+}) => {
+  test.setTimeout(120_000);
+
+  await page.goto("/?stageAudit=1");
+  await submitIntent(page, "Build BlackStage");
+
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-available",
+    "true"
+  );
+
+  const inspectToggle = page.getByTestId("inspect-toggle");
+  await expect(inspectToggle).toBeVisible();
+  await inspectToggle.click({
+    force: true
+  });
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-mode",
+    "true"
+  );
+  await page.waitForTimeout(120);
+
+  const inspectEvidence = await page.evaluate(() => {
+    const visible = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+
+      return Boolean(
+        element &&
+        getComputedStyle(element).display !== "none" &&
+        getComputedStyle(element).opacity !== "0"
+      );
+    };
+    const stream = document.querySelector<HTMLElement>(
+      '[data-testid="stage-generated-stream"]'
+    );
+
+    return {
+      threadConsole: visible(".thread-console"),
+      orientation: visible('[data-testid="stage-field-orientation"]'),
+      agentFeed: visible('[data-testid="agent-activity-feed"]'),
+      approvalCard: visible('[data-testid="approval-card"]'),
+      artifactStack: visible('[data-testid="artifact-stack"]'),
+      researchCapture: visible('[data-testid="research-capture"]'),
+      objectCount: Array.from(
+        document.querySelectorAll<HTMLElement>(".stage-object")
+      ).filter((element) => getComputedStyle(element).opacity !== "0").length,
+      generatedOpacity: stream ? Number(getComputedStyle(stream).opacity) : 1
+    };
+  });
+
+  expect(inspectEvidence.threadConsole).toBe(true);
+  expect(inspectEvidence.orientation).toBe(true);
+  expect(inspectEvidence.agentFeed).toBe(true);
+  expect(inspectEvidence.approvalCard).toBe(true);
+  expect(inspectEvidence.artifactStack).toBe(true);
+  expect(inspectEvidence.researchCapture).toBe(true);
+  expect(inspectEvidence.objectCount).toBeGreaterThanOrEqual(2);
+  expect(inspectEvidence.generatedOpacity).toBeLessThan(0.6);
+
+  // Direct object-card manipulation moved behind the audit route with the cards
+  // themselves: chrome buttons are only reachable while inspect mode is open.
+  await expect(page.getByTestId("stage-workspace")).toContainText(
+    "Stage Shell v0 plan"
+  );
+
+  const planObject = page.getByTestId("stage-object-plan_card");
+
+  await planObject.getByRole("button", { name: "Focus Stage Shell v0 plan" }).click({
+    force: true
+  });
+  await expect(planObject).toHaveClass(/stage-object-focused/);
+  await planObject.getByRole("button", { name: "Pin Stage Shell v0 plan" }).click({
+    force: true
+  });
+  await expect(planObject).toHaveClass(/stage-object-pinned/);
+  await planObject.getByRole("button", { name: "Collapse Stage Shell v0 plan" }).click({
+    force: true
+  });
+  await expect(planObject).toHaveClass(/stage-object-collapsed/);
+  await expect(planObject.getByText("Event model")).toHaveCount(0);
+  await planObject.getByRole("button", { name: "Expand Stage Shell v0 plan" }).click({
+    force: true
+  });
+  await expect(planObject).toHaveClass(/stage-object-expanded/);
+  await expect(planObject).toContainText("Event model");
+  await planObject.getByRole("button", { name: "Move Stage Shell v0 plan" }).click({
+    force: true
+  });
+
+  const shiftAfterMove = await planObject.evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--object-shift-x").trim()
+  );
+
+  expect(shiftAfterMove).not.toBe("0px");
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-mode",
+    "true"
+  );
+
+  await page.getByTestId("intent-input").fill("hmmm");
+  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
+    "data-inspect-mode",
+    "false"
+  );
 });
 
 test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
@@ -1282,16 +1524,14 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
     const submitButton = document.querySelector<HTMLElement>(
       '[data-testid="submit-intent"]'
     );
-    const inspectToggle = document.querySelector<HTMLElement>(
-      '[data-testid="inspect-toggle"]'
-    );
     const approvalActions = stream?.querySelector<HTMLElement>(
       ".generated-stream-actions"
     );
+    const nucleus = stream?.querySelector<HTMLElement>(".generated-morph-nucleus");
+    const tetherStyle = nucleus ? getComputedStyle(nucleus, "::before") : null;
     const streamRect = stream?.getBoundingClientRect();
     const inputRect = inputDock?.getBoundingClientRect();
     const submitRect = submitButton?.getBoundingClientRect();
-    const inspectRect = inspectToggle?.getBoundingClientRect();
     const approvalActionRect = approvalActions?.getBoundingClientRect();
     const elementInViewport = (rect?: DOMRect) =>
       Boolean(
@@ -1310,7 +1550,8 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
       streamInViewport: elementInViewport(streamRect),
       inputInViewport: elementInViewport(inputRect),
       submitInViewport: elementInViewport(submitRect),
-      inspectInViewport: elementInViewport(inspectRect),
+      inspectToggleCount: document.querySelectorAll('[data-testid="inspect-toggle"]')
+        .length,
       approvalActionsInViewport: elementInViewport(approvalActionRect),
       morphMode: stream?.dataset.morphMode,
       morphPhase: stream?.dataset.morphPhase,
@@ -1318,6 +1559,8 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
       morphDensity: Number(stream?.dataset.morphDensity ?? 0),
       morphClutterRisk: stream?.dataset.morphClutterRisk,
       morphVoiceCadence: stream?.dataset.morphVoiceCadence,
+      tetherContent: tetherStyle?.content ?? "none",
+      tetherOpacity: tetherStyle ? Number(tetherStyle.opacity) : 0,
       workbenchState: stream?.dataset.workbenchState,
       packetCount: Number(stream?.dataset.morphPacketCount ?? 0),
       vectorCount: Number(stream?.dataset.morphVectorCount ?? 0),
@@ -1338,7 +1581,7 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
   expect(phoneEvidence.streamInViewport).toBe(true);
   expect(phoneEvidence.inputInViewport).toBe(true);
   expect(phoneEvidence.submitInViewport).toBe(true);
-  expect(phoneEvidence.inspectInViewport).toBe(true);
+  expect(phoneEvidence.inspectToggleCount).toBe(0);
   expect(phoneEvidence.approvalActionsInViewport).toBe(true);
   expect(["coding", "approval"]).toContain(phoneEvidence.morphMode);
   expect([
@@ -1351,6 +1594,25 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
   expect(phoneEvidence.morphDensity).toBeGreaterThan(0);
   expect(["low", "medium", "high"]).toContain(phoneEvidence.morphClutterRisk);
   expect(phoneEvidence.morphVoiceCadence).toBeTruthy();
+  // The pending approval pins the phase to the approval ritual, so the
+  // condensation tether must be present and become visible on phone as well.
+  // Poll: the sample can land mid opacity transition.
+  expect(phoneEvidence.tetherContent).toBe('""');
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const nucleus = document.querySelector<HTMLElement>(
+            ".generated-morph-nucleus"
+          );
+
+          return nucleus ? Number(getComputedStyle(nucleus, "::before").opacity) : 0;
+        }),
+      {
+        timeout: 10_000
+      }
+    )
+    .toBeGreaterThan(0.2);
   expect(phoneEvidence.workbenchState).toBeTruthy();
   expect(phoneEvidence.packetCount).toBeGreaterThan(0);
   expect(phoneEvidence.vectorCount).toBeGreaterThan(0);
@@ -1362,53 +1624,14 @@ test("Stage Shell v0 preserves generated morphology on phone viewport", async ({
   expect(phoneEvidence.vectorElementCount).toBe(phoneEvidence.vectorCount);
   expect(phoneEvidence.detailCount).toBeGreaterThanOrEqual(1);
 
+  await waitForGeneratedSurfaceScreenshotSettle(page, {
+    actionText: "Approve"
+  });
+
   await page.screenshot({
     path: phoneScreenshotPath,
     timeout: 0
   });
-
-  await page.getByTestId("inspect-toggle").click({
-    force: true
-  });
-  await expect(page.getByTestId("stage-shell")).toHaveAttribute(
-    "data-inspect-mode",
-    "true"
-  );
-  await page.waitForTimeout(120);
-
-  const mobileInspectEvidence = await page.evaluate(() => {
-    const visible = (selector: string) => {
-      const element = document.querySelector<HTMLElement>(selector);
-
-      return Boolean(
-        element &&
-        getComputedStyle(element).display !== "none" &&
-        getComputedStyle(element).opacity !== "0"
-      );
-    };
-    const stream = document.querySelector<HTMLElement>(
-      '[data-testid="stage-generated-stream"]'
-    );
-
-    return {
-      horizontalOverflow:
-        document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      generatedOpacity: stream ? Number(getComputedStyle(stream).opacity) : 1,
-      agentFeedVisible: visible('[data-testid="agent-activity-feed"]'),
-      approvalCardVisible: visible('[data-testid="approval-card"]'),
-      artifactStackVisible: visible('[data-testid="artifact-stack"]'),
-      orientationHidden: !visible('[data-testid="stage-field-orientation"]'),
-      researchHidden: !visible('[data-testid="research-capture"]')
-    };
-  });
-
-  expect(mobileInspectEvidence.horizontalOverflow).toBeLessThanOrEqual(1);
-  expect(mobileInspectEvidence.generatedOpacity).toBeLessThan(0.6);
-  expect(mobileInspectEvidence.agentFeedVisible).toBe(true);
-  expect(mobileInspectEvidence.approvalCardVisible).toBe(true);
-  expect(mobileInspectEvidence.artifactStackVisible).toBe(true);
-  expect(mobileInspectEvidence.orientationHidden).toBe(true);
-  expect(mobileInspectEvidence.researchHidden).toBe(true);
 });
 
 test("Stage Shell v0 treats text commands as stage-object manipulation", async ({

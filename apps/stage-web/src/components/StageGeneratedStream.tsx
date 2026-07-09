@@ -45,6 +45,8 @@ export function StageGeneratedStream({
     "--morph-depth": morphFrame.camera.depth.toString(),
     "--morph-density": morphFrame.density.density.toString(),
     "--morph-energy": morphFrame.nucleus.energy.toString(),
+    "--morph-focus-x": `${morphFrame.camera.focusX}%`,
+    "--morph-focus-y": `${morphFrame.camera.focusY}%`,
     "--morph-phase-progress": morphFrame.transition.phaseProgress.toString(),
     "--morph-tilt": `${morphFrame.camera.tilt}deg`
   } as CSSProperties;
@@ -79,9 +81,11 @@ export function StageGeneratedStream({
         <span>{frame.sequence.label}</span>
         <i aria-hidden="true" />
       </div>
-      <div className="generated-stream-surface" key={frame.id}>
-        <h2>{frame.title}</h2>
-        <p>{frame.summary}</p>
+      {/* The surface is persistent field matter: the container never remounts,
+          only content that actually changed re-condenses. */}
+      <div className="generated-stream-surface">
+        <h2 key={frame.title}>{frame.title}</h2>
+        <p key={frame.summary}>{frame.summary}</p>
         {frame.blocks.length > 0 ? (
           <div className="generated-stream-body" aria-label="Generated UI body">
             {frame.blocks.slice(0, 4).map((block, index) => (
@@ -210,8 +214,12 @@ function GeneratedMorphPacket({
   index: number;
   packet: StageMorphPacket;
 }) {
+  const travelAngle = Math.atan2(packet.y - 47, packet.x - 50) * (180 / Math.PI);
   const style = {
+    "--packet-angle": `${travelAngle.toFixed(2)}deg`,
     "--packet-delay": `${packet.delayMs + index * 18}ms`,
+    "--packet-from-left": "50%",
+    "--packet-from-top": "47%",
     "--packet-left": `${packet.x}%`,
     "--packet-progress": packet.progress.toString(),
     "--packet-top": `${packet.y}%`
@@ -238,7 +246,7 @@ function GeneratedMorphOrbitObject({
 }) {
   const style = {
     "--orbit-angle": `${orbitObject.angle}deg`,
-    "--orbit-radius": `${10 + orbitObject.distance * 28}rem`,
+    "--orbit-radius": `min(${(10 + orbitObject.distance * 28).toFixed(2)}rem, 40vw)`,
     "--orbit-weight": orbitObject.weight.toString(),
     "--orbit-delay": `${index * 90}ms`
   } as CSSProperties;
@@ -246,6 +254,7 @@ function GeneratedMorphOrbitObject({
   return (
     <span
       className="generated-morph-orbit-object"
+      data-orbit-label={formatOrbitLabel(orbitObject.label)}
       data-orbit-role={orbitObject.role}
       data-orbit-status={orbitObject.status}
       style={style}
@@ -253,6 +262,12 @@ function GeneratedMorphOrbitObject({
       <i />
     </span>
   );
+}
+
+function formatOrbitLabel(label: string): string {
+  const compact = label.replace(/\s+/g, " ").trim();
+
+  return compact.length > 18 ? `${compact.slice(0, 17).trimEnd()}…` : compact;
 }
 
 function GeneratedMorphSocket({
@@ -273,6 +288,7 @@ function GeneratedMorphSocket({
   return (
     <span
       className="generated-morph-socket"
+      data-socket-label={socket.label}
       data-socket-role={socket.role}
       data-socket-state={socket.state}
       style={style}

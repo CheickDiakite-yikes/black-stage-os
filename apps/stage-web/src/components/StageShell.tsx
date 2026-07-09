@@ -155,6 +155,8 @@ export function StageShell({
   );
   const [interimTranscript, setInterimTranscript] = useState("");
   const [inspectMode, setInspectMode] = useState(false);
+  const inspectModeAvailable = useMemo(resolveInspectModeAvailability, []);
+  const effectiveInspectMode = inspectModeAvailable && inspectMode;
   const [voiceError, setVoiceError] = useState<string | undefined>();
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
   const presenceOrbPointerStartedRef = useRef(false);
@@ -213,6 +215,12 @@ export function StageShell({
     setInspectMode(false);
   }, [thread.id]);
 
+  useEffect(() => {
+    if (!inspectModeAvailable) {
+      setInspectMode(false);
+    }
+  }, [inspectModeAvailable]);
+
   function submitIntent(
     nextIntent = intentText,
     scenarioId?: StageShellScenarioId,
@@ -224,6 +232,7 @@ export function StageShell({
       return;
     }
 
+    setInspectMode(false);
     onSubmitIntent(normalizedIntent, scenarioId, {
       source
     });
@@ -421,8 +430,9 @@ export function StageShell({
         thread.status === "paused" && !isIdleStage ? "stage-paused" : ""
       } ${stageIsListening ? "stage-listening" : ""} ${
         stageVoiceEnabled ? "stage-voice-enabled" : ""
-      } ${inspectMode ? "stage-inspect-open" : ""}`}
-      data-inspect-mode={inspectMode}
+      } ${effectiveInspectMode ? "stage-inspect-open" : ""}`}
+      data-inspect-available={inspectModeAvailable}
+      data-inspect-mode={effectiveInspectMode}
       data-testid="stage-shell"
       style={stageStyle}
     >
@@ -624,7 +634,10 @@ export function StageShell({
           placeholder="type intent"
           type="text"
           value={intentText}
-          onChange={(event) => setIntentText(event.currentTarget.value)}
+          onChange={(event) => {
+            setInspectMode(false);
+            setIntentText(event.currentTarget.value);
+          }}
         />
         <label className="context-attach" htmlFor="context-file-input">
           Attach
@@ -643,16 +656,18 @@ export function StageShell({
         <button className="intent-submit" type="submit" data-testid="submit-intent">
           Send
         </button>
-        <button
-          className="inspect-toggle"
-          type="button"
-          aria-label="Toggle audit inspect mode"
-          aria-pressed={inspectMode}
-          data-testid="inspect-toggle"
-          onClick={() => setInspectMode((isOpen) => !isOpen)}
-        >
-          Audit
-        </button>
+        {inspectModeAvailable ? (
+          <button
+            className="inspect-toggle"
+            type="button"
+            aria-label="Toggle audit inspect mode"
+            aria-pressed={effectiveInspectMode}
+            data-testid="inspect-toggle"
+            onClick={() => setInspectMode((isOpen) => !isOpen)}
+          >
+            Audit
+          </button>
+        ) : null}
         <button
           className="voice-affordance"
           type="button"
@@ -1063,4 +1078,18 @@ function readSpeechResult(event: SpeechRecognitionEventLike): {
     finalText: finalParts.join(" "),
     interimText: interimParts.join(" ")
   };
+}
+
+function resolveInspectModeAvailability() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+
+  return (
+    params.get("stageAudit") === "1" ||
+    params.get("stageInspect") === "1" ||
+    params.get("debug") === "audit"
+  );
 }

@@ -2967,6 +2967,20 @@ button:disabled {
   }
 }
 
+@keyframes generated-liquid-shear {
+  0% {
+    border-radius: 46% 54% 52% 48%;
+    filter: blur(18px);
+    rotate: -1deg;
+  }
+
+  100% {
+    border-radius: 57% 43% 46% 54%;
+    filter: blur(23px);
+    rotate: 2deg;
+  }
+}
+
 @keyframes star-drift-slow {
   100% {
     background-position:
@@ -3107,17 +3121,28 @@ button:disabled {
   }
 }
 
+/* Surfaces condense out of the field from the core point instead of fading in
+   on top of it: an expanding materialization mask, heat-blur settling, and a
+   small downward settle. Uses the translate property so phase transforms on
+   the surface are not overridden mid-animation. */
 @keyframes generated-surface-arrival {
   0% {
     opacity: 0;
-    filter: blur(16px);
-    transform: translateY(0.8rem) scale(0.98);
+    filter: blur(14px);
+    mask-size: 34% 26%;
+    translate: 0 -0.45rem;
+  }
+
+  42% {
+    opacity: 0.82;
+    filter: blur(3.5px);
   }
 
   100% {
     opacity: 1;
     filter: blur(0);
-    transform: translateY(0) scale(1);
+    mask-size: 240% 240%;
+    translate: 0 0;
   }
 }
 
@@ -3177,6 +3202,8 @@ button:disabled {
   0% {
     opacity: 0;
     filter: blur(5px);
+    left: var(--packet-from-left, var(--packet-left));
+    top: var(--packet-from-top, var(--packet-top));
     transform: translate(-50%, -50%) scale(0.28);
   }
 
@@ -3188,6 +3215,8 @@ button:disabled {
   100% {
     opacity: calc(0.16 + var(--packet-progress, 0.4) * 0.36);
     filter: blur(0);
+    left: var(--packet-left);
+    top: var(--packet-top);
     transform: translate(-50%, -50%)
       scale(calc(0.62 + var(--packet-progress, 0.2) * 0.68));
   }
@@ -3201,6 +3230,102 @@ button:disabled {
 
   100% {
     filter: blur(0);
+  }
+}
+
+@keyframes generated-vector-spark {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+
+  16% {
+    opacity: 0.85;
+  }
+
+  78% {
+    opacity: 0.45;
+  }
+
+  100% {
+    left: calc(100% - 0.3rem);
+    opacity: 0;
+  }
+}
+
+@keyframes generated-orbit-float {
+  0% {
+    translate: 0 -0.22rem;
+  }
+
+  100% {
+    translate: 0 0.26rem;
+  }
+}
+
+@keyframes generated-nucleus-pull {
+  0% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+
+  55% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes generated-nucleus-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes generated-socket-scan {
+  0% {
+    background-position: 0 0%;
+  }
+
+  100% {
+    background-position: 0 100%;
+  }
+}
+
+@keyframes generated-tether-flow {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 0 0.6rem;
+  }
+}
+
+@keyframes generated-creation-band {
+  0% {
+    left: -12%;
+    opacity: 0;
+  }
+
+  14% {
+    opacity: 1;
+  }
+
+  86% {
+    opacity: 1;
+  }
+
+  100% {
+    left: 108%;
+    opacity: 0;
   }
 }
 
@@ -3869,6 +3994,44 @@ button:disabled {
   transform: translateY(0.5rem);
 }
 
+.stage-active .approval-card[data-approval-status="pending"] {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 34;
+  display: grid !important;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: min(74vh, 34rem);
+  overflow: auto;
+  border: 1px solid rgba(216, 170, 88, 0.24);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(216, 170, 88, 0.12), transparent 11rem),
+    linear-gradient(180deg, rgba(12, 12, 12, 0.82), rgba(0, 0, 0, 0.62));
+  opacity: 0.98;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, 0.72),
+    0 0 70px rgba(216, 170, 88, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(22px);
+}
+
+.stage-active .research-capture[data-realtime-debug="true"] {
+  position: absolute;
+  right: auto;
+  bottom: 5.7rem;
+  left: 1rem;
+  z-index: 33;
+  display: grid !important;
+  width: min(18rem, calc(100vw - 2rem));
+  max-height: 6.4rem;
+  overflow: hidden;
+  opacity: 0.58;
+  pointer-events: auto;
+  transform: none;
+}
+
 .stage-active .stage-workspace {
   inset: 3.8rem 0 4.8rem;
   display: block;
@@ -3958,12 +4121,22 @@ button:disabled {
   --morph-shadow: rgba(119, 220, 172, 0.16);
 }
 
+/* The viewport is a window onto an unbounded field: the whole substrate
+   dollies gently toward wherever the camera contract is allocating work,
+   instead of phases toggling in place. Reduced motion cuts instead of
+   drifting; the per-phase framing is preserved either way. */
 .generated-morph-field {
   position: absolute;
   inset: 0;
   overflow: hidden;
   perspective: 1100px;
+  transform: translate(
+      calc((50% - var(--morph-focus-x, 50%)) * var(--morph-dolly-pan, 0.5)),
+      calc((47% - var(--morph-focus-y, 47%)) * var(--morph-dolly-pan, 0.5))
+    )
+    scale(calc(0.985 + var(--morph-depth, 0.3) * var(--morph-dolly-gain, 0.06)));
   transform-style: preserve-3d;
+  transition: transform 1600ms cubic-bezier(0.22, 0.8, 0.32, 1);
 }
 
 .generated-morph-field::before {
@@ -3972,36 +4145,87 @@ button:disabled {
   top: 48%;
   width: min(48rem, 72vw);
   aspect-ratio: 1.65;
-  border: 1px solid color-mix(in srgb, var(--morph-primary) 16%, transparent);
+  border: 0;
   border-radius: 50%;
+  background:
+    radial-gradient(
+      ellipse at var(--morph-focus-x, 50%) var(--morph-focus-y, 47%),
+      color-mix(in srgb, var(--morph-secondary) 15%, transparent) 0 8%,
+      color-mix(in srgb, var(--morph-primary) 10%, transparent) 34%,
+      transparent 70%
+    ),
+    conic-gradient(
+      from 180deg at 50% 50%,
+      transparent 0 18%,
+      color-mix(in srgb, var(--morph-primary) 12%, transparent) 28%,
+      transparent 42% 62%,
+      color-mix(in srgb, var(--morph-secondary) 8%, transparent) 74%,
+      transparent 88% 100%
+    );
   box-shadow:
-    0 0 calc(90px + var(--morph-energy, 0.4) * 120px) var(--morph-shadow),
-    inset 0 0 72px rgba(239, 228, 210, 0.035);
+    0 0 calc(100px + var(--morph-energy, 0.4) * 130px) var(--morph-shadow),
+    inset 0 0 88px rgba(239, 228, 210, 0.028);
   content: "";
-  opacity: calc(0.24 + var(--morph-energy, 0.4) * 0.36);
+  filter: blur(16px);
+  opacity: calc(0.18 + var(--morph-energy, 0.4) * 0.32);
   transform: translate(-50%, -50%) rotateX(var(--morph-tilt, 0deg))
     scale(calc(0.9 + var(--morph-depth, 0.4) * 0.18));
   transition:
-    border-color 500ms ease,
     opacity 500ms ease,
     transform 700ms ease;
+  animation: generated-liquid-shear 11s ease-in-out infinite alternate;
+}
+
+/* Pressure well: the substrate visibly dents beneath the core. Painted behind
+   the field's children (the perspective on the field makes negative z-index
+   safe) and it follows the core lift so the deformation travels with the
+   nucleus. */
+.generated-morph-field::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  z-index: -1;
+  width: min(26rem, 64vw);
+  aspect-ratio: 2.1;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.66) 0 30%,
+    color-mix(in srgb, var(--morph-primary) 11%, transparent) 52%,
+    transparent 70%
+  );
+  opacity: calc(0.3 + var(--morph-energy, 0.3) * 0.5);
+  transform: translate(-50%, -50%);
+  translate: 0 var(--morph-core-lift, 0rem);
+  transition:
+    opacity 700ms ease,
+    translate 1100ms cubic-bezier(0.22, 0.8, 0.32, 1);
 }
 
 .generated-morph-grid {
   position: absolute;
   inset: 12% 10%;
-  background-image:
-    linear-gradient(
-      color-mix(in srgb, var(--morph-primary) 16%, transparent) 1px,
-      transparent 1px
+  background:
+    radial-gradient(
+      ellipse at var(--morph-focus-x, 50%) var(--morph-focus-y, 47%),
+      color-mix(in srgb, var(--morph-secondary) 10%, transparent) 0 12%,
+      transparent 58%
     ),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--morph-primary) 14%, transparent) 1px,
-      transparent 1px
+    conic-gradient(
+      from 220deg at var(--morph-focus-x, 50%) var(--morph-focus-y, 47%),
+      transparent,
+      color-mix(in srgb, var(--morph-primary) 9%, transparent),
+      transparent 36%,
+      color-mix(in srgb, var(--morph-secondary) 6%, transparent),
+      transparent 68%
     );
-  background-size: 2.15rem 2.15rem;
-  mask-image: radial-gradient(ellipse at center, black 0 38%, transparent 74%);
+  mask-image: radial-gradient(
+    ellipse at var(--morph-focus-x, 50%) var(--morph-focus-y, 47%),
+    black 0 42%,
+    transparent 78%
+  );
+  filter: blur(18px);
   opacity: 0;
   transform: rotateX(var(--morph-tilt, 0deg)) scale(0.94);
   transition:
@@ -4011,32 +4235,35 @@ button:disabled {
 
 .generated-morph-density-veil {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: var(--morph-focus-x, 50%);
+  top: var(--morph-focus-y, 50%);
   width: min(55rem, 82vw);
   aspect-ratio: 1.72;
   border-radius: 50%;
   background:
     radial-gradient(
-      ellipse at center,
-      color-mix(in srgb, var(--morph-primary) 12%, transparent),
-      transparent 60%
+      ellipse at 45% 42%,
+      color-mix(in srgb, var(--morph-secondary) 10%, transparent),
+      transparent 48%
     ),
-    repeating-radial-gradient(
-      ellipse at center,
-      color-mix(in srgb, var(--morph-primary) 10%, transparent) 0 1px,
-      transparent 1px 1.35rem
+    radial-gradient(
+      ellipse at 58% 52%,
+      color-mix(in srgb, var(--morph-primary) 13%, transparent),
+      transparent 56%
     );
   mask-image: radial-gradient(ellipse at center, black 0 42%, transparent 78%);
-  opacity: calc(0.1 + var(--morph-density, 0.2) * 0.28);
+  filter: blur(22px);
+  opacity: calc(0.12 + var(--morph-density, 0.2) * 0.24);
   transform: translate(-50%, -50%) rotateX(var(--morph-tilt, 0deg));
   transition:
+    left 1200ms cubic-bezier(0.22, 0.8, 0.32, 1),
+    top 1200ms cubic-bezier(0.22, 0.8, 0.32, 1),
     opacity 560ms ease,
     transform 720ms ease;
 }
 
 .generated-morph-density-veil[data-clutter-risk="high"] {
-  opacity: calc(0.18 + var(--morph-density, 0.4) * 0.36);
+  opacity: calc(0.14 + var(--morph-density, 0.4) * 0.24);
 }
 
 .stage-morph-mode_shifted .generated-morph-grid,
@@ -4044,8 +4271,15 @@ button:disabled {
 .stage-morph-patch_applied .generated-morph-grid,
 .stage-morph-approval_ritual .generated-morph-grid,
 .stage-morph-workbench_revealed .generated-morph-grid {
-  opacity: calc(0.16 + var(--morph-depth, 0.4) * 0.28);
+  opacity: calc(0.08 + var(--morph-depth, 0.4) * 0.16);
   transform: rotateX(var(--morph-tilt, 0deg)) scale(1);
+}
+
+.generated-morph-collapse-vectors {
+  position: absolute;
+  inset: 0;
+  translate: 0 var(--morph-core-lift, 0rem);
+  transition: translate 1100ms cubic-bezier(0.22, 0.8, 0.32, 1);
 }
 
 .generated-morph-collapse-vector {
@@ -4053,20 +4287,41 @@ button:disabled {
   left: var(--vector-left);
   top: var(--vector-top);
   width: var(--vector-length);
-  height: 1px;
+  height: 2px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--morph-primary) 58%, transparent),
+    transparent,
+    color-mix(in srgb, var(--morph-primary) 44%, transparent),
     transparent
   );
-  box-shadow: 0 0 12px color-mix(in srgb, var(--morph-primary) 16%, transparent);
-  opacity: calc(var(--vector-intensity, 0.2) * 0.42);
+  filter: blur(1.4px);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--morph-primary) 18%, transparent);
+  opacity: calc(var(--vector-intensity, 0.2) * 0.4);
   transform: rotate(var(--vector-angle)) scaleX(var(--morph-phase-progress, 0.2));
   transform-origin: left center;
   transition:
     opacity 520ms ease,
     transform 720ms ease;
   animation: generated-vector-pulse 1200ms ease var(--vector-delay, 0ms) both;
+}
+
+/* Digest is matter flowing into the nucleus, so active vectors carry sparks. */
+.generated-morph-collapse-vector::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0.3rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--morph-secondary) 88%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--morph-primary) 60%, transparent);
+  opacity: 0;
+  transform: translateY(-50%);
+}
+
+.generated-morph-collapse-vector[data-vector-active="true"]::after {
+  animation: generated-vector-spark 1500ms linear var(--vector-delay, 0ms) infinite;
 }
 
 .generated-morph-collapse-vector[data-vector-active="false"] {
@@ -4096,7 +4351,77 @@ button:disabled {
     inset 0 0 22px rgba(255, 255, 255, 0.26);
   opacity: 0.92;
   transform: translate(-50%, -50%);
+  translate: 0 var(--morph-core-lift, 0rem);
+  scale: var(--morph-core-scale, 1);
+  transition:
+    translate 1100ms cubic-bezier(0.22, 0.8, 0.32, 1),
+    scale 1100ms cubic-bezier(0.22, 0.8, 0.32, 1);
   animation: generated-nucleus-breathe 1.9s ease-in-out infinite alternate;
+}
+
+/* Digest/generation reads as a contracting pull ring; a pending approval holds
+   a steady boundary ring instead. */
+.generated-morph-nucleus::after {
+  content: "";
+  position: absolute;
+  inset: -34%;
+  border: 1px solid color-mix(in srgb, var(--morph-primary) 46%, transparent);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 620ms ease;
+}
+
+.generated-morph-nucleus[data-nucleus-status="digesting"]::after,
+.generated-morph-nucleus[data-nucleus-status="generating"]::after {
+  animation: generated-nucleus-pull 1500ms ease-in infinite;
+}
+
+.generated-morph-nucleus[data-nucleus-status="awaiting_approval"]::after {
+  opacity: 0.34;
+}
+
+/* Condensation tether: once space is allocated, a filament hangs from the
+   receded core into the generated surface — the visible channel the field
+   grows content through. Static under reduced motion; only the drip drift is
+   animated. */
+.generated-morph-nucleus::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 96%;
+  width: 1px;
+  height: var(--morph-tether-length, 0vh);
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--morph-secondary) 44%, transparent) 0 0.42rem,
+    color-mix(in srgb, var(--morph-primary) 16%, transparent) 0.42rem 0.6rem
+  );
+  background-size: 100% 200%;
+  box-shadow: 0 0 9px color-mix(in srgb, var(--morph-primary) 30%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, black 0 8%, black 62%, transparent 96%);
+  mask-image: linear-gradient(180deg, black 0 8%, black 62%, transparent 96%);
+  opacity: var(--morph-tether-opacity, 0);
+  transform: translateX(-50%);
+  transition:
+    height 900ms cubic-bezier(0.22, 0.8, 0.32, 1),
+    opacity 900ms ease;
+  animation: generated-tether-flow 2800ms linear infinite;
+}
+
+.stage-morph-sockets_allocated .generated-morph-nucleus::before,
+.stage-morph-patch_applied .generated-morph-nucleus::before {
+  --morph-tether-length: 12vh;
+  --morph-tether-opacity: 0.4;
+}
+
+.stage-morph-approval_ritual .generated-morph-nucleus::before {
+  --morph-tether-length: 15vh;
+  --morph-tether-opacity: 0.46;
+}
+
+.stage-morph-workbench_revealed .generated-morph-nucleus::before {
+  --morph-tether-length: 23vh;
+  --morph-tether-opacity: 0.5;
 }
 
 .generated-morph-nucleus span,
@@ -4108,11 +4433,27 @@ button:disabled {
   content: "";
 }
 
+.generated-morph-nucleus span {
+  animation: generated-nucleus-spin 16s linear infinite;
+}
+
 .generated-morph-nucleus i {
   inset: 34%;
   border-radius: 50%;
   background: var(--morph-secondary);
   box-shadow: 0 0 18px var(--morph-primary);
+}
+
+/* Once dense surfaces own the center, the core recedes upward but stays
+   present as the listening anchor. */
+.stage-morph-approval_ritual .generated-morph-field,
+.stage-morph-workbench_revealed .generated-morph-field {
+  --morph-core-lift: var(--morph-core-lift-dense, -8vh);
+}
+
+.stage-morph-workbench_revealed .generated-morph-field {
+  --morph-core-lift: var(--morph-core-lift-revealed, -21vh);
+  --morph-core-scale: 0.82;
 }
 
 .generated-morph-orbit {
@@ -4121,41 +4462,65 @@ button:disabled {
   top: 47%;
   width: 1px;
   height: 1px;
+  translate: 0 var(--morph-core-lift, 0rem);
+  transition: translate 1100ms cubic-bezier(0.22, 0.8, 0.32, 1);
 }
 
 .generated-morph-orbit-object {
   position: absolute;
   left: 0;
   top: 0;
-  width: clamp(2.2rem, 5vw, 4.1rem);
-  height: clamp(1.1rem, 2.2vw, 1.9rem);
-  border: 1px solid color-mix(in srgb, var(--morph-primary) 22%, transparent);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(0, 0, 0, 0.1));
-  box-shadow: 0 0 28px color-mix(in srgb, var(--morph-primary) 10%, transparent);
+  width: clamp(1.8rem, 4vw, 3.4rem);
+  height: clamp(1.8rem, 4vw, 3.4rem);
+  border: 0;
+  border-radius: 47% 53% 58% 42%;
+  background:
+    radial-gradient(
+      circle at 36% 34%,
+      color-mix(in srgb, var(--morph-secondary) 48%, transparent),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 55% 60%,
+      color-mix(in srgb, var(--morph-primary) 28%, transparent),
+      transparent 64%
+    );
+  filter: blur(0.4px);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--morph-primary) 18%, transparent);
   opacity: 0;
   transform-origin: 0 0;
-  animation: generated-orbit-arrival 740ms ease var(--orbit-delay, 0ms) both;
+  animation:
+    generated-orbit-arrival 740ms ease var(--orbit-delay, 0ms) both,
+    generated-orbit-float 5600ms ease-in-out calc(var(--orbit-delay, 0ms) + 740ms)
+      infinite alternate;
+}
+
+.generated-morph-orbit-object::after {
+  display: none;
+  content: "";
 }
 
 .generated-morph-orbit-object i {
   position: absolute;
-  left: 0.54rem;
-  top: 50%;
-  width: 42%;
-  height: 1px;
-  background: color-mix(in srgb, var(--morph-secondary) 58%, transparent);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.025),
-    1.5rem 0 0 color-mix(in srgb, var(--morph-primary) 30%, transparent);
-  transform: translateY(-50%);
+  inset: 22%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--morph-secondary) 18%, transparent);
+  filter: blur(5px);
 }
 
 .generated-morph-orbit-object[data-orbit-role="tool"] {
-  height: clamp(1.4rem, 2.7vw, 2.4rem);
+  scale: 1.12;
 }
 
+.generated-morph-orbit-object[data-orbit-role="intent"] {
+  filter: blur(0.1px);
+}
+
+/* The arrival animation's fill would otherwise pin opacity/transform and block
+   the digest collapse, so later lifecycle states must drop it explicitly. */
 .generated-morph-orbit-object[data-orbit-status="digesting"],
 .stage-morph-context_collapsed .generated-morph-orbit-object {
+  animation: none;
   filter: blur(2px);
   opacity: 0.24;
   transform: rotate(var(--orbit-angle)) translateX(calc(var(--orbit-radius) * 0.22))
@@ -4167,9 +4532,21 @@ button:disabled {
 }
 
 .generated-morph-orbit-object[data-orbit-status="resolved"] {
-  opacity: 0.12;
-  transform: rotate(var(--orbit-angle)) translateX(calc(var(--orbit-radius) * 0.42))
-    rotate(calc(var(--orbit-angle) * -1)) scale(0.54);
+  animation: none;
+  filter: blur(1.5px);
+  opacity: 0.05;
+  transform: rotate(var(--orbit-angle)) translateX(calc(var(--orbit-radius) * 0.08))
+    rotate(calc(var(--orbit-angle) * -1)) scale(0.3);
+  transition:
+    filter 640ms ease,
+    opacity 640ms ease,
+    transform 760ms ease;
+}
+
+.generated-morph-orbit-object[data-orbit-status="digesting"]::after,
+.generated-morph-orbit-object[data-orbit-status="resolved"]::after,
+.stage-morph-context_collapsed .generated-morph-orbit-object::after {
+  opacity: 0;
 }
 
 .generated-morph-socket {
@@ -4178,44 +4555,86 @@ button:disabled {
   top: var(--socket-top);
   width: var(--socket-width);
   height: var(--socket-height);
-  border: 1px solid color-mix(in srgb, var(--morph-primary) 18%, transparent);
+  border: 0;
+  border-radius: 38% 62% 54% 46% / 46% 42% 58% 54%;
   background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--morph-primary) 9%, transparent) 1px,
-      transparent 1px
+    radial-gradient(
+      ellipse at 50% 50%,
+      color-mix(in srgb, var(--morph-primary) 10%, transparent),
+      transparent 58%
     ),
-    linear-gradient(
-      color-mix(in srgb, var(--morph-primary) 8%, transparent) 1px,
-      transparent 1px
-    ),
-    rgba(0, 0, 0, 0.16);
-  background-size: 1.3rem 1.3rem;
+    radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.28), transparent 72%);
+  filter: blur(1px);
   box-shadow:
-    inset 0 0 28px rgba(255, 255, 255, 0.025),
-    0 0 44px color-mix(in srgb, var(--morph-primary) 8%, transparent);
+    inset 0 0 48px rgba(255, 255, 255, 0.018),
+    0 0 56px color-mix(in srgb, var(--morph-primary) 8%, transparent);
   opacity: 0;
   transform: translate(-50%, -50%);
   animation: generated-socket-arrival 620ms ease var(--socket-delay, 0ms) both;
 }
 
 .generated-morph-socket i {
+  display: none;
+}
+
+.generated-morph-socket::before {
+  display: none;
+  content: "";
+}
+
+.generated-morph-socket::after {
+  content: "";
   position: absolute;
-  inset: 0.72rem;
-  border: 1px solid color-mix(in srgb, var(--morph-secondary) 12%, transparent);
+  inset: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.generated-morph-socket[data-socket-state="filling"],
+.generated-morph-socket[data-socket-state="resolved"] {
+  background:
+    radial-gradient(
+      ellipse at 50% 48%,
+      color-mix(in srgb, var(--morph-secondary) 10%, transparent),
+      transparent 34%
+    ),
+    radial-gradient(
+      ellipse at 50% 54%,
+      color-mix(in srgb, var(--morph-primary) 15%, transparent),
+      transparent 68%
+    ),
+    rgba(0, 0, 0, 0.14);
+}
+
+.generated-morph-socket[data-socket-state="filling"]::after {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--morph-primary) 12%, transparent) 46%,
+    color-mix(in srgb, var(--morph-secondary) 18%, transparent) 50%,
+    transparent 62%
+  );
+  filter: blur(8px);
+  background-repeat: no-repeat;
+  background-size: 100% 300%;
+  opacity: 0.7;
+  animation: generated-socket-scan 3.4s linear infinite;
 }
 
 .generated-morph-socket[data-socket-state="empty"] {
-  opacity: 0.28;
+  opacity: 0.34;
 }
 
 .generated-morph-socket[data-socket-state="blocked"] {
-  border-color: rgba(255, 202, 143, 0.4);
   box-shadow: 0 0 58px rgba(255, 188, 112, 0.14);
 }
 
-.generated-morph-socket[data-socket-role="artifact"] {
-  border-color: rgba(151, 238, 190, 0.24);
+.generated-morph-socket[data-socket-state="blocked"] i {
+  display: none;
+}
+
+.generated-morph-socket[data-socket-role="artifact"] i {
+  display: none;
 }
 
 .generated-morph-packet {
@@ -4224,16 +4643,38 @@ button:disabled {
   top: var(--packet-top);
   width: clamp(0.36rem, 0.7vw, 0.62rem);
   aspect-ratio: 1;
-  border: 1px solid color-mix(in srgb, var(--morph-secondary) 48%, transparent);
+  border: 0;
   background: color-mix(in srgb, var(--morph-primary) 64%, rgba(255, 255, 255, 0.14));
   border-radius: 50%;
+  filter: blur(0.4px);
   box-shadow:
-    0 0 18px color-mix(in srgb, var(--morph-primary) 28%, transparent),
-    0 0 38px color-mix(in srgb, var(--morph-primary) 12%, transparent);
+    0 0 20px color-mix(in srgb, var(--morph-primary) 34%, transparent),
+    0 0 44px color-mix(in srgb, var(--morph-primary) 16%, transparent);
   opacity: 0;
   transform: translate(-50%, -50%)
     scale(calc(0.62 + var(--packet-progress, 0.2) * 0.68));
-  animation: generated-packet-stream 880ms ease var(--packet-delay, 0ms) both;
+  animation: generated-packet-stream 1150ms cubic-bezier(0.3, 0.7, 0.3, 1)
+    var(--packet-delay, 0ms) both;
+}
+
+/* Matter trail: streaming packets keep a faint wake pointing back along their
+   travel line to the core, so growth reads as flow instead of teleport. */
+.generated-morph-packet[data-packet-status="streaming"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3.4rem;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--morph-secondary) 42%, transparent),
+    transparent
+  );
+  filter: blur(2px);
+  opacity: 0.28;
+  transform: rotate(calc(var(--packet-angle, 0deg) + 180deg)) translateY(-50%);
+  transform-origin: left center;
 }
 
 .generated-morph-packet[data-packet-status="applied"] {
@@ -4276,8 +4717,17 @@ button:disabled {
   box-shadow: 0 0 12px var(--morph-primary);
 }
 
-.stage-morph-workbench-revealed .generated-stream-surface,
-.stage-morph-workbench-revealed .generated-morph-sockets {
+/* The sockets container must own an explicit full-bleed box: the workbench
+   tilt transform makes it the containing block for the absolutely positioned
+   sockets, and without inset: 0 they would all collapse into a zero-height
+   strip at the top of the field. */
+.generated-morph-sockets {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-morph-workbench_revealed .generated-stream-surface,
+.stage-morph-workbench_revealed .generated-morph-sockets {
   transform: rotateX(var(--morph-tilt, 0deg)) translateY(-0.35rem);
   transform-style: preserve-3d;
 }
@@ -4393,7 +4843,36 @@ button:disabled {
   justify-items: center;
   padding-inline: 1rem;
   text-align: center;
-  animation: generated-surface-arrival 700ms ease both;
+  /* The materialization mask opens outward from just below the receded core,
+     so content reads as condensed by the field rather than placed onto it. */
+  -webkit-mask-image: radial-gradient(ellipse at 50% 16%, #000 62%, transparent 88%);
+  -webkit-mask-position: 50% 16%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 240% 240%;
+  mask-image: radial-gradient(ellipse at 50% 16%, #000 62%, transparent 88%);
+  mask-position: 50% 16%;
+  mask-repeat: no-repeat;
+  mask-size: 240% 240%;
+  animation: generated-surface-arrival 820ms cubic-bezier(0.26, 0.75, 0.3, 1) both;
+}
+
+/* The container persists as field matter; changed content re-condenses
+   individually. The title materializes downward from the tether point. */
+.generated-stream-surface h2,
+.generated-stream-surface p,
+.generated-stream-surface .generated-stream-actions {
+  animation: generated-surface-arrival 760ms cubic-bezier(0.26, 0.75, 0.3, 1) both;
+}
+
+.generated-stream-surface h2 {
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 58%, transparent 92%);
+  -webkit-mask-position: 50% 0%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 240% 240%;
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 58%, transparent 92%);
+  mask-position: 50% 0%;
+  mask-repeat: no-repeat;
+  mask-size: 240% 240%;
 }
 
 .generated-stream-surface h2 {
@@ -4419,19 +4898,49 @@ button:disabled {
 }
 
 .generated-stream-body {
+  position: relative;
   display: grid;
   width: min(48rem, 76vw);
   grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
-  gap: 0;
+  gap: 0.45rem;
   margin-top: 1.35rem;
-  border-block: 1px solid rgba(216, 189, 133, 0.11);
+  border-block: 0;
+  overflow: hidden;
   text-align: left;
+}
+
+/* Creation band: one slow condensation sweep across the revealed workbench
+   columns as they materialize. Runs once per surface; harmless if reduced
+   motion collapses it to its final off-canvas state. */
+.stage-morph-workbench_revealed .generated-stream-body::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12%;
+  width: 9%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--morph-primary) 14%, transparent) 45%,
+    color-mix(in srgb, var(--morph-secondary) 20%, transparent) 55%,
+    transparent
+  );
+  pointer-events: none;
+  animation: generated-creation-band 1400ms cubic-bezier(0.3, 0.6, 0.4, 1) 240ms both;
 }
 
 .generated-stream-detail {
   min-height: 4.65rem;
-  border-right: 1px solid rgba(216, 189, 133, 0.08);
-  padding: 0.78rem 0.9rem 0.86rem;
+  border-right: 0;
+  background:
+    radial-gradient(
+      ellipse at 10% 0%,
+      color-mix(in srgb, var(--morph-primary) 7%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent);
+  padding: 0.78rem 0.92rem 0.86rem;
   animation: generated-surface-arrival 620ms ease both;
 }
 
@@ -4719,6 +5228,21 @@ button:disabled {
   display: none;
 }
 
+.stage-active:not(.stage-inspect-open) .stage-object-constellation {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+.stage-active:not(.stage-inspect-open) .stage-object,
+.stage-active:not(.stage-inspect-open) .stage-object[data-camera-focus="true"],
+.stage-active:not(.stage-inspect-open) .stage-object-approval-focus {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none !important;
+  filter: blur(10px);
+}
+
 .stage-active .stage-approval-threshold {
   display: none;
 }
@@ -4841,6 +5365,50 @@ button:disabled {
   .generated-stream-orbit {
     width: min(28rem, 88vw);
     aspect-ratio: 1.05;
+  }
+
+  /* Keep the phase rail clear of the two-row intent dock, including the
+     downward drift the camera dolly can add at reveal depth. */
+  .generated-morph-phase-rail {
+    bottom: 11rem;
+    width: min(13rem, 60vw);
+  }
+
+  /* The phone window is small; the dolly pans and pushes in more gently. */
+  .generated-morph-field {
+    --morph-dolly-pan: 0.3;
+    --morph-dolly-gain: 0.03;
+  }
+
+  .stage-morph-approval_ritual .generated-morph-field,
+  .stage-morph-workbench_revealed .generated-morph-field {
+    --morph-core-lift-dense: -5vh;
+    --morph-core-lift-revealed: -12vh;
+    --morph-core-scale: 0.68;
+  }
+
+  /* The phone core recedes less, so the condensation tether is shorter. */
+  .stage-morph-sockets_allocated .generated-morph-nucleus::before,
+  .stage-morph-patch_applied .generated-morph-nucleus::before {
+    --morph-tether-length: 8vh;
+  }
+
+  .stage-morph-approval_ritual .generated-morph-nucleus::before {
+    --morph-tether-length: 10vh;
+  }
+
+  .stage-morph-workbench_revealed .generated-morph-nucleus::before {
+    --morph-tether-length: 15vh;
+  }
+
+  .generated-morph-socket::before {
+    font-size: 0.44rem;
+    opacity: 0.42;
+  }
+
+  .generated-morph-orbit-object::after {
+    font-size: 0.44rem;
+    letter-spacing: 0.18em;
   }
 
   .stage-active .stage-object[data-camera-focus="true"] h2,
